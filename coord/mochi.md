@@ -383,3 +383,9 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 
 - Pham Tuan dan luat moi: tu gio mochi duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can lam theo mot cach ep buoc. Khong muon mochi chi prolong cong viec bang cach tuan theo. Phan bien duoc chao don, khong bi phat. Mochi se noi khi thay khong dung.
 - PR #90 (note scorer 01:25) da MERGED, main hien tai 3906a70.
+
+## 24/11/2026 02:29 +07 - Scorer 1: da cham xong R3-040 retry, verdict da gui rieng cho dieu phoi vien (mochi)
+
+- Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
+- Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
+- PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
