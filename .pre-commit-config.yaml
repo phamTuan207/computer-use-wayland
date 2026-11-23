@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        args: [--config, .gitleaks.toml]
+  - repo: local
+    hooks:
+      - id: trufflehog
+        name: trufflehog
+        entry: trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail --trust-local-git-config
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+      - id: pii-exact-values
+        name: Block known personal values (local list, never committed)
+        entry: scripts/check-pii.sh
+        language: script
+        stages: [pre-commit]
+        pass_filenames: false
+      - id: pii-pre-push
+        name: Block known personal values on push (gitleaks over pushed range)
+        entry: scripts/check-pre-push.sh
+        language: script
+        stages: [pre-push]
+        pass_filenames: false
+      - id: pii-commit-msg
+        name: Block known personal values in commit message
+        entry: scripts/check-pii-msg.sh
+        language: script
+        stages: [commit-msg]

@@ -46,3 +46,15 @@ backups/
 /native/require-liquid
 /native/visuals.json
 /native/visuals-login.lua
+
+# PII prevention: never commit agent settings that may hold credentials,
+# or any local secret file. See docs/pii-prevention.md.
+.claude/settings.local.json
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+credentials.json
+secrets.json
+sensitive-values.txt
