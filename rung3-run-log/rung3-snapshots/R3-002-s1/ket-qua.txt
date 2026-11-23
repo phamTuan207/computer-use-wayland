@@ -1,0 +1,11 @@
+Snippet 1:
+Error: Expecting property name enclosed in double quotes (trailing comma), line 1, column 23.
+Fixed JSON: {"ten": "Lan", "tuoi": 30}
+
+Snippet 2:
+Error: Expecting ',' delimiter, line 1, column 44.
+Fixed JSON: {"ten": "Lan", "tuoi": 30, "thanh_pho": "Ha Noi", "so_tien": 100}
+
+Snippet 3:
+Error: Expecting '}' delimiter, line 1, column 24.
+Fixed JSON: {"ten": "Lan", "tuoi": 30}
