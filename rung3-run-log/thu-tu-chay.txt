@@ -1,14 +1,14 @@
 Thu tu chay rung 3, ma lan chay R3-L1
 Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 01dd3b9
-sha256 danh sach (ban 55 task, lay ngay 2026-11-23, FREEZE-2): 47cbb3a1adbb9cb721c02c9ccca0a4e5007005a4a667f405935bc582463feea1
+sha256 danh sach (ban 55 task, lay ngay 2026-11-23, FREEZE-2): 3bbf7f6ae27369900491cf66e5936a897da24fe9ed2fdafa36c4c049d34b52bd
 Tong: 55 task (trinh duyet 35, desktop 20). Trung binh 37, kho 11, rat kho 7.
 Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
 Thu tu chay co dinh, chay theo dung thu tu nay, khong doi thu tu giua chung:
 R3-001 R3-002 R3-003 R3-004 R3-005 R3-006 R3-007 R3-008 R3-009 R3-010 R3-011 R3-013 R3-014 R3-016 R3-017 R3-018 R3-019 R3-021 R3-022 R3-024 R3-025 R3-026 R3-027 R3-028 R3-029 R3-035 R3-036 R3-037 R3-040 R3-041 R3-042 R3-045 R3-046 R3-047 R3-049 R3-055 R3-067 R3-072 R3-074 R3-075 R3-076 R3-078 R3-079 R3-082 R3-083 R3-085 R3-086 R3-088 R3-089 R3-093 R3-094 R3-096 R3-098 R3-099 R3-100 
 
 Khoa dap an (key file) - dong bang lai FREEZE-2 ngay 2026-11-23 (commit va tag ghi sau khi push, xem dong tag ben duoi):
-- docs/rung3-answer-keys.md sha256: 94f7422e87f2b8cc289a7583246ed39cae50ab43e3c3765eeeb7601b62f070eb (FREEZE-2, 2026-11-23)
-- docs/rung3-answer-keys.json sha256: e1e4bc44bb4276b2a78b77789884076c4a9934c7f03d36f75d7a95ddae0c3f4a (FREEZE-2, 2026-11-23)
+- docs/rung3-answer-keys.md sha256: fdeb42d7263d823edac3fa73db70199316eecc98e9f163a24e86c93762f70d15 (FREEZE-2, 2026-11-23)
+- docs/rung3-answer-keys.json sha256: 5e67b37b87fc50e5c17dcd7e6cb1c9da872814a607bfdf4b4c1c74be8628b1c4 (FREEZE-2, 2026-11-23)
 - Tag dong bang: R3-L1-FREEZE-2 (se tao sau khi push, thay the R3-L1-FREEZE; tag cu R3-L1-FREEZE giu lai, danh dau SUPERSEDED, tro toi commit b3a9786)
 
 Nguoi cham:

@@ -312,8 +312,8 @@
 
 ### R3-003, doi chieu 3 bai bao ve 1 su kien, ghi mau thuan (nguon: W3-B03, nhom: trinh duyet, do kho: kho)
 
-- Buoc: 1. Chon 1 su kien thoi su cong khai, tim 3 bai bao tu 3 bao khac nhau. 2. Mo 3 tab, ghi ngay, dia diem, con so chinh trong moi bai. 3. Mo tai lieu online moi, tao bang 4 cot gom muc, bao 1, bao 2, bao 3. 4. Dien 3 hang gom ngay, dia diem, con so chinh. 5. Viet 1 doan 3 dong neu ro co mau thuan hay khong, chi ro muc mau thuan. 6. Luu tai lieu, mo lai de kiem tra.
-- Pass: bang co du 9 o, gia tri trong bang khop bang dap an do buoc tong hop chot truoc khi chay (ngay, dia diem, con so chinh cua moi bao), doan ket luan co 3 dong, neu co mau thuan thi chi dung muc, neu khong thi viet ro khong co mau thuan va ca 3 muc trong bang dap an phai khop nhau.
+- Buoc: 1. Chon 1 su kien thoi su cong khai, tim 3 bai bao tu 3 bao khac nhau. 2. Mo 3 tab, ghi ngay, dia diem, nhan vat chinh trong moi bai. 3. Mo tai lieu online moi, tao bang 4 cot gom muc, bao 1, bao 2, bao 3. 4. Dien 3 hang gom ngay, dia diem, nhan vat chinh. 5. Viet 1 doan 3 dong neu ro co mau thuan hay khong, chi ro muc mau thuan. 6. Luu tai lieu, mo lai de kiem tra.
+- Pass: bang co du 9 o, gia tri trong bang khop bang dap an do buoc tong hop chot truoc khi chay (ngay, dia diem, nhan vat chinh cua moi bao), doan ket luan co 3 dong, neu co mau thuan thi chi dung muc, neu khong thi viet ro khong co mau thuan va ca 3 muc trong bang dap an phai khop nhau.
 - Fail: thieu bai, thieu muc, ket luan chung chung khong chi muc, hoac sao chep nguyen bai.
 - Bang chung held-out: khong co task doi chieu bao nao trong danh muc loai tru. ZT-01 chi mo site va doc bai, khong doi chieu 3 nguon. Grep "news comparison" todolist-push=0, main=0. Grep "fact-check" todolist-push=0, main=0.
 
