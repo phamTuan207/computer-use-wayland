@@ -12,7 +12,7 @@ Khoa dap an (key file) - dong bang lai FREEZE-2 ngay 2026-11-23:
 - Tag dong bang: R3-L1-FREEZE-2 (da tao 2026-11-23, tag object 03be5b5532494921bfdd70ca9f527d656f55416c, tro toi commit e2e3608; tag cu R3-L1-FREEZE giu lai, danh dau SUPERSEDED, tro toi commit b3a9786)
 
 Nguoi cham:
-- Nguoi cham 1: mochi (Chromium tren laptop port 9223, target A67A718D5E236F894F9863F48834743C, ban khai khong lien quan truoc: da nhan 2026-11-23 19:17 +07)
+- Nguoi cham 1: mochi (Chromium tren laptop port 9223, target A67A718D5E236F894F9863F48834743C, session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85, ban khai khong lien quan truoc: da nhan 2026-11-23 19:17 +07)
 - Nguoi cham 2: scorer-2 (ten: scorer-2, session ID: dc7e0d0d-24b2-4d94-9729-f106d21eff16, ban khai khong lien quan truoc: da nhan 2026-11-23)
 - Nguoi cham 3 (hoa giai, chi goi khi co bat dong hoac tranh chap vo hieu): phien moi theo yeu cau (ten: TBD, session ID: TBD)
 - Dieu phoi vien khong cham, khong dao nguoc ket qua cua nguoi cham. Chi chu so huu dao nguoc duoc, va chi khi tranh chap quy trinh.

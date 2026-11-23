@@ -4,6 +4,7 @@
 - Your role: scorer 1. You score every task independently from the evidence snapshot plus the frozen key file. You never see scorer 2's verdict, and scorer 2 never sees yours, until both are recorded.
 - Availability confirmed: yes, 2026-11-23 19:16 +07 (reply read 19:17 +07).
 - Written no-prior-involvement declaration received: yes. Mochi confirmed in writing it did not author the list, did not write any answer key, did not run any rung 3 task, did not run the preflight trial, and did not write runner code.
+- Session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85 (assigned 2026-11-23 23:26 +07, Phase 1; distinct from runner sessions and list author sessions; the coordinator checks the ID before accepting any grade).
 
 ## Independence conditions (all must hold for every grade)
 
