@@ -1,0 +1,268 @@
+{
+ "_comment": "TEST KEY ONLY. Built solely from values already in docs/rung3-list-100-tasks.md section 8, the R3-014 Pass line in section 6, and the preserved trial inputs for R3-007. No value is invented. Never grade a real run against this file. The frozen key is docs/rung3-answer-keys.json (written by the synthesis step); the Tier A driver defaults to it. DP-02 is null because its 5 keywords are allocated by synthesis before the freeze; the driver reports SKIP for it.",
+ "frozen": false,
+ "tasks": {
+  "DP-02": null,
+  "DP-05": {
+   "group_qty": [
+    [
+     "Ban",
+     14
+    ],
+    [
+     "Ghe",
+     5
+    ],
+    [
+     "Den",
+     20
+    ],
+    [
+     "Tu",
+     3
+    ]
+   ],
+   "group_row_count": 4,
+   "group_value": [
+    [
+     "Ban",
+     2100
+    ],
+    [
+     "Ghe",
+     1250
+    ],
+    [
+     "Den",
+     1600
+    ],
+    [
+     "Tu",
+     1200
+    ]
+   ],
+   "join_row_count": 5,
+   "join_rows": [
+    [
+     "Ban",
+     10
+    ],
+    [
+     "Ban",
+     4
+    ],
+    [
+     "Ghe",
+     5
+    ],
+    [
+     "Den",
+     20
+    ],
+    [
+     "Tu",
+     3
+    ]
+   ],
+   "type": "sql-join"
+  },
+  "R3-002": {
+   "rows": [
+    {
+     "col": 27,
+     "line": 1
+    },
+    {
+     "col": 50,
+     "line": 1
+    },
+    {
+     "col": 26,
+     "line": 1
+    }
+   ],
+   "type": "json-errors"
+  },
+  "R3-007": {
+   "inputs": [
+    [
+     10,
+     "km",
+     "miles",
+     "miles"
+    ],
+    [
+     5,
+     "miles",
+     "km",
+     "km"
+    ],
+    [
+     10,
+     "kg",
+     "lb",
+     "lb"
+    ],
+    [
+     25,
+     "C",
+     "F",
+     "F"
+    ],
+    [
+     2,
+     "L",
+     "gal",
+     "US gallons"
+    ]
+   ],
+   "type": "unit-conversion"
+  },
+  "R3-013": {
+   "rows": [
+    {
+     "count": 2,
+     "matches": [
+      "lan@example.com",
+      "minh@test.org"
+     ],
+     "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+    },
+    {
+     "count": 2,
+     "matches": [
+      "0901234567",
+      "0912345678"
+     ],
+     "pattern": "0\\d{9}"
+    },
+    {
+     "count": 1,
+     "matches": [
+      "15/08/2026"
+     ],
+     "pattern": "\\d{2}/\\d{2}/\\d{4}"
+    },
+    {
+     "count": 1,
+     "matches": [
+      "14:30"
+     ],
+     "pattern": "\\d{2}:\\d{2}"
+    },
+    {
+     "count": 1,
+     "matches": [
+      "1.250.000"
+     ],
+     "pattern": "\\d{1,3}(?:\\.\\d{3})+"
+    }
+   ],
+   "type": "regex-counts"
+  },
+  "R3-014": {
+   "rows": [
+    {
+     "hex": "#FF0000",
+     "rgb": [
+      255,
+      0,
+      0
+     ]
+    },
+    {
+     "hex": "#008080",
+     "rgb": [
+      0,
+      128,
+      128
+     ]
+    },
+    {
+     "hex": "#FFD700",
+     "rgb": [
+      255,
+      215,
+      0
+     ]
+    }
+   ],
+   "type": "color-rgb"
+  },
+  "R3-021": {
+   "order": [
+    [
+     "Giuong",
+     600
+    ],
+    [
+     "Tu",
+     400
+    ],
+    [
+     "Ghe",
+     250
+    ],
+    [
+     "Ban",
+     150
+    ]
+   ],
+   "total": 6750,
+   "type": "sql-order-total"
+  },
+  "R3-072": {
+   "rows": [
+    {
+     "file": "d72-anh-1.png",
+     "size": "800x600"
+    },
+    {
+     "file": "d72-anh-2.png",
+     "size": "1024x768"
+    },
+    {
+     "file": "d72-anh-3.png",
+     "size": "640x480"
+    },
+    {
+     "file": "d72-anh-4.png",
+     "size": "1280x720"
+    },
+    {
+     "file": "d72-anh-5.png",
+     "size": "400x400"
+    }
+   ],
+   "type": "image-sizes"
+  },
+  "R3-076": {
+   "type": "report-consistency"
+  },
+  "R3-082": {
+   "rows": [
+    {
+     "expr": "(12 + 8) * 3 - 5",
+     "result": 55
+    },
+    {
+     "expr": "100 / 4 + 25 * 2",
+     "result": 75
+    },
+    {
+     "expr": "(45 - 15) * 2 + 10",
+     "result": 70
+    },
+    {
+     "expr": "200 / 8 * 3 - 7",
+     "result": 68
+    },
+    {
+     "expr": "(9 + 6) * 4 / 2",
+     "result": 30
+    }
+   ],
+   "type": "calculations"
+  }
+ }
+}

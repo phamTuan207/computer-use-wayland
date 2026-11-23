@@ -1,0 +1,20 @@
+name: rung3-checks
+on:
+  push:
+    branches: [todolist-push]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: List verify (55 tasks, counts, keys, freeze hash)
+        run: python3 rung3-ci/verify-list.py
+      - name: Key file hash check (PENDING until the key is frozen)
+        run: python3 rung3-ci/check-key-hash.py
+      - name: Ledger schema validation
+        run: python3 rung3-ci/validate-ledger.py rung3-run-log/R3-L1-grades.jsonl

@@ -1,0 +1,7 @@
+# Frozen heads for the rung 3 55-task safe-only list.
+# list_commit is the todolist-push commit that froze the list.
+# list_sha256 is the sha256 of docs/rung3-list-100-tasks.md at that commit.
+# verify-list.py fails if the list file no longer matches this hash.
+# Any post-freeze edit to the list voids the run (grading decision section 2).
+list_commit 01dd3b981b551001679bd4deec3d3c954673e768
+list_sha256 7d2c76ebb918564598377abaf66722ffdf0f5d3b66908f842cf70af9078d1dfc
