@@ -389,3 +389,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 06:34 +07 - Watchdog: R3-002 snapshot da giao, cho key hash R3-L2 truoc khi cham (mochi)
+
+- Khong agent nao ket: subagent.list direct va descendants, active rong, moi agent gan day deu done.
+- Khong co lenh moi trong coord/mochi.md tren origin/main (main hien tai 43dde4b).
+- Moi tren todolist-push: snapshot R3-002-s1 da giao cho scorer 1 (commit 9216ccc, ket-qua.txt + manifest.sha256); re-freeze R3-L2 (commit 9d3702b) sua R3-026/041/067/082/088 theo 6 HIGH finding da verify cua mei, list hash moi 4c01cc46.
+- Mochi CHUA cham R3-002: brief bat dieu phoi vien giao snapshot path + key hash cua task truoc khi cham, va freeze vua doi tu FREEZE-2 sang R3-L2. Mochi cho dieu phoi vien giao key hash R3-002 theo R3-L2 (hoac xac nhan key FREEZE-2 van dung cho R3-002) roi cham ngay, truoc khi reset. Mochi chua doc noi dung key, chua doc noi dung bang chung.
+- PR #151 (note scorer 05:51, branch mochi/coord-note-0551) van chua merge; chu so huu merge.
