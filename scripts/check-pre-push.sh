@@ -72,7 +72,23 @@ elif [ ! -t 0 ]; then
     [ -n "$local_sha" ] || continue
     SCANNED=1
     if [ "$remote_sha" = "$ZERO" ]; then
-      BASE="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+      # New-branch push: no pushed range exists, so the base is the
+      # merge-base of HEAD with the branch this branch was cut from.
+      # This repo lands via todolist-push, not main, so main alone
+      # gives an ancient merge-base and the scan fails on old-history
+      # findings that are not from the new commits. Take the newest
+      # merge-base across the integration branches.
+      BASE=""
+      for CANDIDATE in origin/todolist-push origin/main; do
+        git rev-parse --verify "$CANDIDATE" >/dev/null 2>&1 || continue
+        MB="$(git merge-base HEAD "$CANDIDATE" 2>/dev/null || true)"
+        [ -n "$MB" ] || continue
+        if [ -z "$BASE" ]; then
+          BASE="$MB"
+        elif git merge-base --is-ancestor "$BASE" "$MB" 2>/dev/null; then
+          BASE="$MB"
+        fi
+      done
       if [ -n "$BASE" ]; then
         scan "$BASE..$local_sha" "$BASE" "$local_sha" "$BASE..$local_sha"
       else

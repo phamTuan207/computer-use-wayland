@@ -8,7 +8,7 @@ repos:
     hooks:
       - id: trufflehog
         name: trufflehog
-        entry: trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail --trust-local-git-config
+        entry: trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail --trust-local-git-config --no-update
         language: system
         stages: [pre-commit]
         pass_filenames: false

@@ -19,7 +19,7 @@ id = "personal-email"
 description = "Email address outside approved placeholder domains"
 regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'''
 [[rules.allowlists]]
-regexes = ['''^[A-Za-z0-9._%+-]+@example\.(com|net|org)$''', '''^[A-Za-z0-9._%+-]+@test\.com$''', '''^[0-9]+\+[A-Za-z0-9._-]+@users\.noreply\.github\.com$''', '''^[A-Za-z0-9._-]+@users\.noreply\.github\.com$''']
+regexes = ['''^[A-Za-z0-9._%+-]+@example\.(com|net|org)$''', '''^[A-Za-z0-9._%+-]+@test\.com$''', '''^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(test|example|invalid)$''', '''^[0-9]+\+[A-Za-z0-9._-]+@users\.noreply\.github\.com$''', '''^[A-Za-z0-9._-]+@users\.noreply\.github\.com$''']
 
 # Street address: number plus street name plus street type.
 [[rules]]
