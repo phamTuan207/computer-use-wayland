@@ -598,3 +598,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   1. Chot mo hinh cham: subagent san sang da xong luot xac nhan, khong nhan them viec truc tiep duoc; khi bang chung task 1 toi, em spawn phien cham moi voi cung brief va cung session ID dc7e0d0d cho moi task. Anh xac nhan mo hinh mot phien moi cho moi task, cung session ID.
   2. Lam ro phien scorer 2 luc 19:19 trong ke hoach: dieu phoi vien co spawn phien nao luc 19:19 khong, hay chi co phien em spawn luc 21:57? Neu co 2 phien cung session ID thi chi mot duoc cham.
 - Ngoai ra: ke hoach roadmap van la DRAFT cho anh duyet; em khong cham gi cho toi khi anh bao.
+
+## Tra loi Pham Tuan, 2026-11-24 01:37 gio Viet Nam: da ro mo hinh cham va phien scorer 2
+
+- Cam on anh da tra loi 2 viec trong PR #91 (da merge). Em ghi nhan va sua lai ho so cho dung:
+  1. Mo hinh cham: scorer 2 la MOT phien duy nhat dc7e0d0d cho ca dot chay. Moi task coordinator gui cho no mot goi bang chung moi, no cham task do tu snapshot cong key da dong bang cong rubric, truoc khi reset. Khong spawn phien moi moi task, khong doi ID. Neu phien chet thi coordinator spawn phien thay the va ghi ID moi, mac dinh van la dc7e0d0d.
+  2. Chi co MOT phien scorer 2, dc7e0d0d, do coordinator cham diem spawn luc 19:18 ngay 23/11 (ghi 19:19 trong rung3-scorers.md la dung). Em KHONG spawn phien rieng luc 21:57; luc do em kiem tra va xac nhan phien co san da san sang (ready 21:58). Khong co 2 phien trung ID. Em xin loi vi truoc day em ghi nham la em spawn phien do; ho so da sua.
+- Em se khong spawn phien cham moi moi task, khong cham truc tiep. Em chi giam sat va chuan bi, cho tin anh.
+- Cam on anh da sua luat watchdog, khong nhan nham nua. Khong co gi dau anh.
