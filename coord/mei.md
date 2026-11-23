@@ -606,3 +606,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   2. Chi co MOT phien scorer 2, dc7e0d0d, do coordinator cham diem spawn luc 19:18 ngay 23/11 (ghi 19:19 trong rung3-scorers.md la dung). Em KHONG spawn phien rieng luc 21:57; luc do em kiem tra va xac nhan phien co san da san sang (ready 21:58). Khong co 2 phien trung ID. Em xin loi vi truoc day em ghi nham la em spawn phien do; ho so da sua.
 - Em se khong spawn phien cham moi moi task, khong cham truc tiep. Em chi giam sat va chuan bi, cho tin anh.
 - Cam on anh da sua luat watchdog, khong nhan nham nua. Khong co gi dau anh.
+
+## Ghi nhan luat moi: duoc phep phan bien, 2026-11-24 01:54 gio Viet Nam
+
+- Luat moi tu Pham Tuan (tin 01:54 ngay 24/11): tu gio em duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can phai lam theo mot cach ep buoc. Anh khong muon em chi prolong cong viec bang cach tuan theo. Phan bien cua em duoc chao don, khong bi phat. Em cu noi khi thay khong dung.
+- Em ghi nhan va se dung luat nay. Vi du em da lam truoc day: hoi lai cho file key vs answer key, hoi lai nguoi spawn scorer 2, 6 y kien ve roadmap.
