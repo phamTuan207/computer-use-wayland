@@ -13,20 +13,25 @@ Checks docs/rung3-list-100-tasks.md on branch todolist-push:
      5 total, 2 per difficulty group.
   7. Section 9 removal log lists exactly the 45 removed IDs.
   8. List file sha256 matches rung3-ci/frozen-heads.txt (freeze check).
+  9. The 7 synthesis-owned values (DP-02 keywords, DP-03 exact N,
+     R3-003/R3-004 full keys, R3-007 input values, Tier C rubrics
+     for R3-067/R3-083, R3-085 reference frame) are checked against
+     the frozen key files docs/rung3-answer-keys.json/.md when those
+     files exist. While a key file is absent the item stays PENDING;
+     once frozen, a missing or wrong value is a FAIL.
 
 Exit 0 only if zero FAIL checks. PENDING items are synthesis-owned
-keys not yet frozen (DP-02 keywords, DP-03 exact N, R3-003/R3-004
-full keys, R3-007 input values, Tier C rubrics for R3-067/R3-083);
-they are listed, not hidden, and do not block exit 0. Once the
-frozen key file exists, check-key-hash.py and the Tier A checkers
-cover those values.
+keys not yet frozen; they are listed, not hidden, and do not block
+exit 0.
 
 Usage:
   python3 rung3-ci/verify-list.py [--list PATH] [--frozen PATH]
+      [--key-json PATH] [--key-md PATH]
 No personal info in this file.
 """
 import argparse
 import hashlib
+import json
 import os
 import re
 import sys
@@ -75,23 +80,50 @@ KEY_CHECKS = [
     ("DP-02 fixture rule", 8, "12 file van ban trong ~/rung3/dp02-code"),
 ]
 
-# Synthesis-owned values not yet frozen in the list. Listed as PENDING.
+# Synthesis-owned values, now frozen in the key files. Used only as
+# PENDING messages while a key file is absent; when the key files
+# exist the values below are checked against them (see main()).
 PENDING_KEYS = [
-    "DP-02 keywords: 5 keywords are allocated by the synthesis step "
-    "into section 8 before the freeze; only the fixture rule is in the list now.",
-    "DP-03 exact port count N: the rule (minimum 3, 5 rows when 5 named "
-    "ports exist) is in section 8; the exact N is fixed pre-run by synthesis.",
-    "R3-003 full key: the event and per-article values are chosen by "
-    "synthesis before the freeze; section 8 only names the key to be fixed.",
-    "R3-004 full key: the tool document and its 5 steps are chosen by "
-    "synthesis before the freeze; section 8 only names the key to be fixed.",
-    "R3-007 input values: the 5 conversion inputs are allocated by "
-    "synthesis; the checker computes expected outputs with 0.01 tolerance.",
-    "Tier C rubrics R3-067/R3-083: required shapes, counts, colors and "
-    "text must be written and frozen in the key file before task 1.",
-    "R3-085 reference frame: path ~/rung3/r3-085-khung-tham-chieu.png is "
-    "named in section 8; the file itself is produced by synthesis.",
+    "DP-02 keywords: frozen key JSON not present yet.",
+    "DP-03 exact port count N: frozen key file not present yet.",
+    "R3-003 full key: frozen key file not present yet.",
+    "R3-004 full key: frozen key file not present yet.",
+    "R3-007 input values: frozen key JSON not present yet.",
+    "Tier C rubrics R3-067/R3-083: frozen key file not present yet.",
+    "R3-085 reference frame: frozen key file not present yet.",
 ]
+
+# Expected frozen values (must match docs/rung3-answer-keys.json/.md).
+EXPECTED_DP02 = [
+    ("alpha7", 12, "dp02-01.txt", 4),
+    ("bravo21", 9, "dp02-02.txt", 3),
+    ("charlie9", 15, "dp02-03.txt", 5),
+    ("delta42", 7, "dp02-06.txt", 3),
+    ("echo13", 11, "dp02-04.txt", 4),
+]
+EXPECTED_DP02_GRAND_TOTAL = 54
+EXPECTED_DP02_FILES_WITH_KEYWORD = 12
+EXPECTED_R3007_INPUTS = [
+    [12, "km", "miles", "miles"],
+    [8, "miles", "km", "km"],
+    [7, "kg", "lb", "lb"],
+    [30, "C", "F", "F"],
+    [5, "L", "gal", "US gallons"],
+]
+EXPECTED_R3007_EXPECTED = [7.4565, 12.8748, 15.4324, 86.0, 1.3209]
+R3003_NEEDLES = ["Navanethem", "9 October 2026", "Oslo",
+                 "12 trieu crown", "KHONG co mau thuan"]
+R3004_NEEDLES = ["rm -rf /usr/local/go",
+                 "export PATH=$PATH:/usr/local/go/bin",
+                 "go version", "https://go.dev/doc/install"]
+R3067_NEEDLES = ["hinh chu nhat, vung x 50-350, y 50-250, to mau do",
+                 "hinh tron, vung x 300-500, y 200-400, to mau xanh duong",
+                 "hinh tam giac", "800x600", "nen trang"]
+R3083_NEEDLES = ["Chao mung", "#1E88E5", "#43A047", "1200x628",
+                 "co chu 72"]
+R3085_NEEDLES = ["r3-085-khung-tham-chieu.png",
+                 "de410f94b2192e553f4a78ff42df8bcfd84e29e5908c3f02775125cfa4c759c2",
+                 "ffmpeg -ss 00:10", "RGB (118.2, 139.7, 121.3)"]
 
 
 def section(text, num):
@@ -108,10 +140,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--list", default=None)
     ap.add_argument("--frozen", default=None)
+    ap.add_argument("--key-json", default=None)
+    ap.add_argument("--key-md", default=None)
     args = ap.parse_args()
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     list_path = args.list or os.path.join(root, "docs", "rung3-list-100-tasks.md")
     frozen_path = args.frozen or os.path.join(root, "rung3-ci", "frozen-heads.txt")
+    key_json_path = args.key_json or os.path.join(
+        root, "docs", "rung3-answer-keys.json")
+    key_md_path = args.key_md or os.path.join(
+        root, "docs", "rung3-answer-keys.md")
 
     fails, passes, pendings = [], [], []
 
@@ -235,7 +273,84 @@ def main():
     else:
         fails.append("frozen-heads.txt missing: %s" % frozen_path)
 
-    pendings.extend(PENDING_KEYS)
+    # Frozen key checks: the 7 synthesis-owned values. When a key file
+    # exists, verify each value against it (PASS/FAIL); while a key
+    # file is absent, the item stays PENDING (non-blocking).
+    def md_section(text, heading, hashes="##"):
+        parts = re.split(r"\n" + hashes + r" " + re.escape(heading) + r"\b",
+                         text)
+        if len(parts) < 2:
+            return ""
+        rest = parts[1]
+        nxt = re.search(r"\n#{1,4} ", rest)
+        return rest[:nxt.start()] if nxt else rest
+
+    key_json = None
+    if os.path.isfile(key_json_path):
+        try:
+            key_json = json.load(open(key_json_path, encoding="utf-8"))
+        except ValueError as e:
+            fails.append("frozen key JSON unreadable: %s: %s"
+                         % (key_json_path, e))
+    key_md = ""
+    if os.path.isfile(key_md_path):
+        key_md = open(key_md_path, encoding="utf-8").read()
+
+    if key_json is None:
+        pendings.append(PENDING_KEYS[0])
+        pendings.append(PENDING_KEYS[4])
+    else:
+        tasks = key_json.get("tasks", {})
+        dp02 = tasks.get("DP-02") or {}
+        got_dp02 = sorted(
+            (k["keyword"], k["total"], k["top_file"], k["top_count"])
+            for k in dp02.get("keywords", []))
+        check("frozen key: DP-02 keywords match key JSON",
+              dp02.get("type") == "keyword-counts"
+              and got_dp02 == sorted(EXPECTED_DP02)
+              and dp02.get("grand_total") == EXPECTED_DP02_GRAND_TOTAL
+              and dp02.get("files_with_keyword")
+              == EXPECTED_DP02_FILES_WITH_KEYWORD,
+              "keywords=%s grand=%s files=%s"
+              % (got_dp02, dp02.get("grand_total"),
+                 dp02.get("files_with_keyword")))
+        r3007 = tasks.get("R3-007") or {}
+        check("frozen key: R3-007 inputs match key JSON",
+              r3007.get("type") == "unit-conversion"
+              and r3007.get("inputs") == EXPECTED_R3007_INPUTS
+              and r3007.get("expected") == EXPECTED_R3007_EXPECTED,
+              "inputs=%s expected=%s"
+              % (r3007.get("inputs"), r3007.get("expected")))
+
+    if not key_md:
+        pendings.extend(PENDING_KEYS[1:4] + PENDING_KEYS[5:])
+    else:
+        dp03_sec = md_section(key_md, "DP-03")
+        check("frozen key: DP-03 N=5 in key file",
+              "- DP-03: N = 5." in key_md and "N = 5" in dp03_sec,
+              "ruling line present: %s; DP-03 section has N=5: %s"
+              % ("- DP-03: N = 5." in key_md, "N = 5" in dp03_sec))
+        r3003_sec = md_section(key_md, "R3-003")
+        missing = [n for n in R3003_NEEDLES if n not in r3003_sec]
+        check("frozen key: R3-003 full key in key file", not missing,
+              "missing from R3-003 section: %s" % missing)
+        r3004_sec = md_section(key_md, "R3-004")
+        missing = [n for n in R3004_NEEDLES if n not in r3004_sec]
+        steps = len(re.findall(r"^\s*\d+\. ", r3004_sec, re.M))
+        check("frozen key: R3-004 full key in key file",
+              not missing and steps == 5,
+              "missing: %s; numbered steps: %d" % (missing, steps))
+        r3067_sec = md_section(key_md, "R3-067", hashes="###")
+        missing = [n for n in R3067_NEEDLES if n not in r3067_sec]
+        check("frozen key: Tier C rubric R3-067 in key file", not missing,
+              "missing from R3-067 rubric: %s" % missing)
+        r3083_sec = md_section(key_md, "R3-083", hashes="###")
+        missing = [n for n in R3083_NEEDLES if n not in r3083_sec]
+        check("frozen key: Tier C rubric R3-083 in key file", not missing,
+              "missing from R3-083 rubric: %s" % missing)
+        missing = [n for n in R3085_NEEDLES if n not in key_md]
+        check("frozen key: R3-085 reference frame in key file",
+              not missing, "missing: %s" % missing)
 
     for name in passes:
         print("PASS: %s" % name)
