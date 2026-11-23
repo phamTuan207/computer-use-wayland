@@ -34,6 +34,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 
 
@@ -46,9 +47,10 @@ def load_order(state_dir):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        token = line.split()[0]
-        if token.startswith("R3-") or token.startswith("DP-"):
-            order.append(token)
+        tokens = line.split()
+        if tokens and all(
+                re.fullmatch(r"R3-[0-9]{3}|DP-[0-9]{2}", t) for t in tokens):
+            order.extend(tokens)
     return order, path
 
 
