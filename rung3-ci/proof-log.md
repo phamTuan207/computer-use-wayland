@@ -6,27 +6,60 @@ Trial evidence used only as read-only test input, on copies under
 /tmp/rung3-proof, never in place. The preserved trial evidence
 folders were not modified. No rung 3 task was run for real.
 
-## Item 1: list verify script
+## Update 2026-11-23 20:15 +07 (Worker 3, post CI fix)
+
+- CI fix commit 11268d0 (2026-11-23 19:52 +07) changed the facts
+  recorded in items 1, 2, and 4 below. Current state:
+  - verify-list.py: 57 pass, 0 pending, 0 fail, exit 0.
+  - check-key-hash.py: PASS (thu-tu-chay.txt present, key hash
+    matches).
+  - validate-ledger.py: PASS, 1 row, 0 errors (the flagged TEST
+    row).
+  - tier-a-check.py: DP-02 keyword-counts checker added; Tier A run
+    against the real frozen key (see item 4).
+  - rung3-checks run 45178370489 on tip 11268d0: SUCCESS (green).
+  - secret-scan run 45178370468 on the same tip: FAILURE, 2
+    findings, both generic-api-key on the two sha256 key-hash lines
+    in rung3-run-log/thu-tu-chay.txt (lines 10-11). Accepted as
+    false positives, not a task-1 blocker; see the secret-scan
+    acceptance record (VM-local,
+    ~/workspace/rung3-secret-scan-acceptance.md). .gitleaks.toml
+    was NOT edited; no key file was edited.
+- Liveness config fix (this commit, see item 10): the R3-076
+  d42-bao-cao.txt fixture entry and the R3-022 google-test-account
+  entry were removed from rung3-ci/liveness-config.json.
+- The items below keep their original wording except where marked
+  UPDATED; the update above is the current state.
+
+## Item 1: list verify script (UPDATED)
 
 Command: `python3 rung3-ci/verify-list.py`
-Result: exit 0. `RESULT: 49 pass, 7 pending, 0 fail`.
+Result: exit 0. `RESULT: 57 pass, 0 pending, 0 fail` (after fix 3
+in the CI fix log: the 7 former PENDING items now check
+docs/rung3-answer-keys.json/.md when present).
 Frozen check: list sha256
 `7d2c76ebb918`
 matches frozen-heads.txt, frozen commit 01dd3b9.
-The 7 PENDING items are synthesis-owned keys not yet frozen
-(DP-02 keywords, DP-03 exact N, R3-003/R3-004 full keys, R3-007
-input values, Tier C rubrics R3-067/R3-083, R3-085 reference
-frame file). They are listed by the script, not hidden.
+Negative test: tampered key JSON + key MD gives 4 FAIL (DP-02,
+R3-007, DP-03, R3-085), exit 1. Absent key files: 7 PENDING,
+49 pass, exit 0.
+(Original pre-fix result, kept for history: 49 pass, 7 pending,
+0 fail. The 7 PENDING items were synthesis-owned keys not yet
+frozen: DP-02 keywords, DP-03 exact N, R3-003/R3-004 full keys,
+R3-007 input values, Tier C rubrics R3-067/R3-083, R3-085
+reference frame file.)
 
-## Item 2: GitHub Actions workflow
+## Item 2: GitHub Actions workflow (UPDATED)
 
 File: `.github/workflows/rung3-checks.yml` (runs verify-list.py,
 check-key-hash.py, validate-ledger.py on every push to
-todolist-push). The three steps were run locally in sequence and
-all pass (see items 1, 5, and the key-hash check below). The green
-Actions run link is recorded after the push of this package:
-PENDING until the push lands; the coordinator records the run link
-from the Actions tab.
+todolist-push).
+- CI fix commit 11268d0, rung3-checks run 45178370489: completed
+  SUCCESS. Link: https://github.com/phamTuan207/computer-use-wayland/actions/runs/45178370489
+- Earlier runs on this package: 45174054376 SUCCESS,
+  45174575493 SUCCESS (see the Commit section below).
+- secret-scan is a separate workflow and stays red on this branch
+  (see the Update section above); it does not block rung3-checks.
 
 ## Item 3: evidence collection script
 
@@ -47,7 +80,7 @@ Run against copies of the preserved trial evidence:
   `MISSING: missing file: ket-qua.txt`, `MISSING: timestamped
   screenshots: found 0, need 5`.
 
-## Item 4: Tier A checkers (test key rung3-ci/test-keys.json)
+## Item 4: Tier A checkers (UPDATED)
 
 Test key sha256:
 `9ee6f57a818d`.
@@ -67,19 +100,32 @@ Synthetic evidence built from the key (no trial folder exists):
 - R3-002 PASS, corrupt (col 27 changed to 28) FAIL
 - R3-014 PASS, R3-021 PASS, R3-072 PASS, DP-05 PASS,
   corrupt DP-05 (Ghe 1250 changed to 9999) FAIL
-- DP-02 SKIP, exit 2: `no Tier A key for DP-02` (keywords are
-  allocated by synthesis before the freeze).
+
+DP-02 keyword-counts checker (added in commit 11268d0, was SKIP
+before): check_keyword_counts in tier-a-check.py, wired as type
+"keyword-counts". It recounts fixture files with real grep -o -F
+and parses bao-cao.txt totals/top files; either source alone can
+PASS. Synthetic tests (evidence built from the frozen key, totals
+verified first with independent real grep -r -o -F 12/9/15/7/11):
+good fixture+report PASS; corrupted fixture FAIL; corrupted report
+FAIL; report-only PASS; fixture-only PASS; root-layout PASS;
+missing evidence dir SKIP exit 2; empty dir FAIL exit 1. One real
+bug caught by the tests: the grand-total regex grabbed "5" from
+"ca 5 tu khoa" instead of 54; fixed to take the value after the
+colon.
+
+Integration against the real key file
+`docs/rung3-answer-keys.json`: DONE (was PENDING). Tier A run
+against the real frozen key: DP-02 synthetic PASS; R3-007
+frozen-key synthetic PASS; R3-013 trial PASS; R3-082 trial PASS;
+R3-076 trial PASS; R3-007 trial FAIL (expected: trial inputs
+differ from frozen key inputs by design, key file says so).
 
 Note: R3-076 is Tier B in the grading decision, with a script
 check where the task is file or value based. The driver checks it
 for internal consistency against its saved command-output files,
 not against a frozen key, because its values are live system
 values. That is why it can PASS here and still be a Tier B task.
-
-PENDING: integration against the real key file
-`docs/rung3-answer-keys.json` (synthesis step, not yet written).
-The driver defaults to that path; re-run the Tier A proof with
-the real key once it lands.
 
 ## Item 5: run ledger
 
@@ -124,6 +170,21 @@ Red checks and why:
 The report must be re-run on the laptop before task 1; this VM
 report is not a go/no-go verdict.
 
+Addendum 2026-11-23 20:10 +07 (Worker 3): the laptop re-run of
+the same script (19:57 +07) gave 39 OK, 12 FAIL, 3 PENDING,
+4 SKIP (report /home/james/rung3-liveness-2026-11-23.md, VM copy
+~/workspace/rung3-liveness-2026-11-23-laptop.md). Two of its FAILs
+were config errors fixed in this commit (see item 10): R3-076
+d42-bao-cao.txt was runner output, not a fixture; R3-022
+google-test-account was spurious (no login needed). The remaining
+FAILs need browser confirmation before any invalid declaration.
+Curl re-test 20:10 +07 from the laptop (curl only, not a browser
+confirmation): zxing.org now returns HTTP 200 (was connection
+refused); timeanddate.com still 403; openverse.org still 403;
+coolors.co still 403; web.archive.org still 429; gutenberg.org
+still 503; namecheap.com 301; www.bbc.com DNS still fails on the
+laptop (getent exit 2, curl 000) while the VM returns 200.
+
 ## Item 8: resume mechanism
 
 Dry-run on a copy of the state (/tmp/rung3-proof/state):
@@ -138,6 +199,14 @@ R3-082, DP-02; ledger copy with R3-001, R3-002, R3-007 graded.
   manifest hash matches
   `329f7c955f55`.
 
+TEST-row handling (verified 2026-11-23 20:09 +07, Worker 3, from
+the tip sources): resume.py load_graded skips rows with
+test_row true (lines 69-70), and validate-ledger.py skips the
+session and consistency checks for test rows (lines 57-62) and
+excludes R3-TEST from the duplicate check (lines 141-142). The
+production ledger needs no re-initialization before task 1; its
+one flagged TEST row is skipped by both tools.
+
 ## Item 9: scoring snapshot tool
 
 Command: `snapshot.py /tmp/rung3-proof/evidence/R3-007
@@ -148,6 +217,21 @@ Snapshot: `/tmp/rung3-proof/snapshots/R3-007-20261123-192238`,
 Independent re-hash of every source file against the snapshot
 manifest: all 7 MATCH (conv1..conv5 PNGs, ket-qua.txt,
 manifest.json).
+
+## Item 10: liveness config fix (2026-11-23, Worker 3, this commit)
+
+- Removed {"path": "d42-bao-cao.txt", "task": "R3-076"} from the
+  fixtures list in rung3-ci/liveness-config.json. d42-bao-cao.txt
+  is the runner's output file for R3-076, not a pre-run fixture,
+  so its FAIL in the 19:57 laptop liveness run was a false fail.
+- Removed {"service": "google-test-account", "status":
+  "pending-synthesis", "task": "R3-022"} from the accounts list.
+  The R3-022 task body uses translate.google.com with no login,
+  so no account is needed. The reason is recorded in the config
+  _comment.
+- liveness-check.py needed no change: fixtures and accounts are
+  config-driven (it iterates cfg fixtures and cfg accounts; no
+  hardcoded reference to either entry).
 
 ## Commit
 
@@ -164,6 +248,14 @@ manifest.json).
   2026-11-23 19:28 +07, verified with git ls-remote.
   rung3-checks run 45174575493: completed success in 16s.
   Link: https://github.com/phamTuan207/computer-use-wayland/actions/runs/45174575493
+- CI fix commit 11268d0944009225e878821357d6dbbc0f75eea5
+  (verify-list frozen-key checks, DP-02 keyword-counts checker,
+  thu-tu-chay.txt), pushed 2026-11-23 19:52 +07, verified with
+  git ls-remote. rung3-checks run 45178370489: completed success.
+  Link: https://github.com/phamTuan207/computer-use-wayland/actions/runs/45178370489
+- Liveness config fix + this proof-log update: commit PENDING, to
+  be filled in after the push lands, with the new rung3-checks run
+  link.
 
 ### Secret-scan findings on 56b34f5 and what happened to them
 
