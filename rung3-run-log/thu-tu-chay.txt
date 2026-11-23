@@ -1,15 +1,15 @@
 Thu tu chay rung 3, ma lan chay R3-L1
 Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 01dd3b9
-sha256 danh sach (ban 55 task, lay ngay 2026-11-23): 7d2c76ebb918564598377abaf66722ffdf0f5d3b66908f842cf70af9078d1dfc
+sha256 danh sach (ban 55 task, lay ngay 2026-11-23, FREEZE-2): 47cbb3a1adbb9cb721c02c9ccca0a4e5007005a4a667f405935bc582463feea1
 Tong: 55 task (trinh duyet 35, desktop 20). Trung binh 37, kho 11, rat kho 7.
 Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
 Thu tu chay co dinh, chay theo dung thu tu nay, khong doi thu tu giua chung:
 R3-001 R3-002 R3-003 R3-004 R3-005 R3-006 R3-007 R3-008 R3-009 R3-010 R3-011 R3-013 R3-014 R3-016 R3-017 R3-018 R3-019 R3-021 R3-022 R3-024 R3-025 R3-026 R3-027 R3-028 R3-029 R3-035 R3-036 R3-037 R3-040 R3-041 R3-042 R3-045 R3-046 R3-047 R3-049 R3-055 R3-067 R3-072 R3-074 R3-075 R3-076 R3-078 R3-079 R3-082 R3-083 R3-085 R3-086 R3-088 R3-089 R3-093 R3-094 R3-096 R3-098 R3-099 R3-100 
 
-Khoa dap an (key file) - da dong bang 2026-11-23, commit b3a9786:
-- docs/rung3-answer-keys.md sha256: 490069ad0453d1965c214235df9e3b58593cb575109305304df25dccd69cdf60 (commit b3a9786, 2026-11-23)
-- docs/rung3-answer-keys.json sha256: 35f96c9330bc23c0dd136ed18b4cd09a5b237177947005ba10d585cabc3c5ae5 (commit b3a9786, 2026-11-23)
-- Tag dong bang: R3-L1-FREEZE (da tao 2026-11-23, tag object 4acfc93a8200d3c062e1c62fddee876deb19a465, tro toi commit b3a9786)
+Khoa dap an (key file) - dong bang lai FREEZE-2 ngay 2026-11-23 (commit va tag ghi sau khi push, xem dong tag ben duoi):
+- docs/rung3-answer-keys.md sha256: 94f7422e87f2b8cc289a7583246ed39cae50ab43e3c3765eeeb7601b62f070eb (FREEZE-2, 2026-11-23)
+- docs/rung3-answer-keys.json sha256: e1e4bc44bb4276b2a78b77789884076c4a9934c7f03d36f75d7a95ddae0c3f4a (FREEZE-2, 2026-11-23)
+- Tag dong bang: R3-L1-FREEZE-2 (se tao sau khi push, thay the R3-L1-FREEZE; tag cu R3-L1-FREEZE giu lai, danh dau SUPERSEDED, tro toi commit b3a9786)
 
 Nguoi cham:
 - Nguoi cham 1: mochi (session ID: TBD, chay Chromium tren laptop port 9223, ban khai khong lien quan truoc: da nhan 2026-11-23 19:17 +07)
@@ -20,7 +20,7 @@ Nguoi cham:
 
 Cam doc tai lieu thu nghiem (trial contamination):
 - Nguoi chay, nguoi cham 1 va nguoi cham 2 deu CAM doc ~/workspace/rung3-preflight-trial.md va ~/workspace/rung3-preflight-REPORT.md truoc va trong luc chay va cham.
-- 5 task da chay thu (R3-076, R3-007, R3-082, R3-011, R3-013) Quyet dinh cua dieu phoi vien 2026-11-23: GIU NGUYEN 5 task trong danh sach, ly do bang van ban trong key file (bao cao thu chi nam o ~/workspace tren VM, khong commit len GitHub, khong co tren laptop; nguoi chay va ca 2 nguoi cham la phien moi co lenh cam doc bang van ban; bang chung thu tren laptop da xoa 2026-11-23 19:20:04).
+- 5 task da chay thu (R3-076, R3-007, R3-082, R3-011, R3-013) Quyet dinh FREEZE-2 (council wave 3 (a), 2026-11-23): GIU 3 task R3-076, R3-007, R3-011; THAY NOI DUNG MOI cung ID cho 2 task R3-082, R3-013, dap an trial cu la dap an SAI cho noi dung moi. Ly do bang van ban trong key file (bao cao thu khong commit len GitHub, khong co tren laptop; nguoi chay va ca 2 nguoi cham la phien moi co lenh cam doc bang van ban; bang chung thu tren laptop da xoa 2026-11-23 19:20:04).
 
 Ghi chu doi chay (fleet):
 - Viec chay task se chia cho doi mei/mochi/fcc/codex theo brief cua dieu phoi vien (parent). Khong co dinh mot session chay duy nhat la nguoi chay duy nhat. Session chay thuc te cua tung task ghi vao run log.
@@ -36,7 +36,7 @@ Quy tac vo hieu:
 - Dieu phoi vien dong ky moi quyet dinh vo hieu. Chu so huu duoc bao o muc vo hieu 3, 4, 5.
 
 Cac rulings da chot truoc khi chay:
-- R3-082: dung omacalc (gnome-calculator khong co tren laptop), tinh tung buoc, tu xu ly thu tu uu tien (khong dung ngoac, khong dung che do khoa hoc). Ket qua ky vong: 55, 75, 70, 68, 30. Bang viet trong nano.
+- R3-082: dung omacalc (gnome-calculator khong co tren laptop), tinh tung buoc, tu xu ly thu tu uu tien (khong dung ngoac, khong dung che do khoa hoc). Ket qua ky vong (FREEZE-2): 71, 78, 120, 89, 25. Bang viet trong nano.
 - R3-013: mau 3 dang escaped duoc dong bang trong key file (dau / la delimiter o regex101 JS flavor).
 - DP-03: N = 5 (so cong TCP co ten tien trinh hien du, do ngay 2026-11-23 19:20, co 9 cong, lay 5 cong dau theo thu tu cong tang dan). N toi thieu 3.
 - R3-086: 2 ten mien do buoc tong hop cap phat: example.com, en.wikipedia.org.

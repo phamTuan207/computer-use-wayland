@@ -1,7 +1,7 @@
 # Khoa dap an rung 3, ma lan chay R3-L1 (frozen)
 
 - Run code: R3-L1. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 01dd3b981b551001679bd4deec3d3c954673e768.
-- List sha256: 7d2c76ebb918564598377abaf66722ffdf0f5d3b66908f842cf70af9078d1dfc (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
+- List sha256: 47cbb3a1adbb9cb721c02c9ccca0a4e5007005a4a667f405935bc582463feea1 (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
 - Key file nay dong bang truoc task 1. Sau task 1, moi thay doi khoa dap an hoac muc 6, muc 8 cua danh sach deu huy bo lan chay: ma lan chay moi, chay lai tu task 1. Khoa khong bao gio duoc sua giua lan chay. Neu khoa bi chung minh la sai giua lan chay, task do ghi vo hieu, ap dung quy tac du phong.
 - Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
 - Moc san do kho: kho cong rat kho it nhat 30 phan tram, rat kho it nhat 10 phan tram. Hien trang: kho cong rat kho 18/55 (32,7 phan tram), rat kho 7/55 (12,7 phan tram). Dat moc.
@@ -13,7 +13,7 @@
 
 ## Ruling da chot truoc khi chay
 
-- R3-082: dung omacalc (gnome-calculator khong co tren laptop). Tinh tung buoc, tu xu ly thu tu uu tien (khong dung ngoac, khong dung che do khoa hoc). Ket qua ky vong: 55, 75, 70, 68, 30. Bang viet trong nano. Ngay ruling: 2026-11-23.
+- R3-082: dung omacalc (gnome-calculator khong co tren laptop). Tinh tung buoc, tu xu ly thu tu uu tien (khong dung ngoac, khong dung che do khoa hoc). Ket qua ky vong: 71, 78, 120, 89, 25. Bang viet trong nano. Ngay ruling: 2026-11-23.
 - R3-013: mau 3 dang escaped duoc dong bang trong key file: \d{2}\/\d{2}\/\d{4}. Dau / la delimiter o regex101 JS flavor nen dang khong escaped bao loi. Checker chap nhan ca 2 dang (\/ duoc chuan hoa thanh / khi so sanh), nhung dang escaped la dang chuan trong key.
 - DP-05: chuyen sang sqlite3 (co san tren laptop tai /usr/bin/sqlite3). Cung bang, cung du lieu, cung truy van nhu muc 8. R3-021 van dung sqliteonline.com. Quyet dinh cua dieu phoi vien truoc task 1, ngay 2026-11-23. Viec chuyen nay boi ro rui ro dich vu chung: neu sqliteonline.com sap, R3-021 vo hieu nhung DP-05 van chay duoc tren sqlite3.
 - DP-03: N = 5. Lay 5 cong dau co ten tien trinh hien du theo thu tu cong tang dan, do ngay 2026-11-23 19:20, luc do co 9 cong. N toi thieu 3. Nguoi cham doi chieu bao cao voi file ss-output.txt da luu luc chay, khong doi chieu voi danh sach cong o day.
@@ -23,14 +23,14 @@
 - R3-073: khong ap dung cho ban 55 task (task da loai ngay 2026-11-23). Khong can guard timer.
 - R3-085: khung tham chieu ~/rung3/r3-085-khung-tham-chieu.png, sha256 de410f94b2192e553f4a78ff42df8bcfd84e29e5908c3f02775125cfa4c759c2, trich bang ffmpeg -ss 00:10 tu ~/rung3/nd26-video.mp4 (640x360, 30 fps, 15 giay, sha256 2e9d8103ffe6d1a1052d42cfd6ecb67a49d82c2f4b359c6ff4cf3fccaff5ea40). Mau trung binh vung giua khung tham chieu (x 25-75 phan tram, y 25-75 phan tram): RGB (118.2, 139.7, 121.3).
 
-## Ly do giu 5 task da chay thu (trial contamination, ghi day du)
+## Ly do giu 3 task da chay thu va thay 2 task (trial contamination, ghi day du)
 
-5 task da chay thu o preflight trial (R3-076, R3-007, R3-082, R3-011, R3-013) duoc GIU trong danh sach, khong thay the, khong loai khoi mau. Ly do:
+3 task da chay thu o preflight trial (R3-076, R3-007, R3-011) duoc GIU trong danh sach, khong thay the, khong loai khoi mau. 2 task (R3-082, R3-013) duoc THAY NOI DUNG MOI cung ID trong FREEZE-2 theo quyet dinh council wave 3 (a), vi dap an trial cua chung nam trong git history va khong the chua bang lenh cam; dap an cu tro thanh dap an SAI cho noi dung moi. Ly do giu 3 task:
 
-1. Bao cao trial chi nam o ~/workspace tren VM, khong bao gio commit len GitHub, khong bao gio co tren laptop. Nguoi chay va ca 2 nguoi cham la phien lam viec moi, khong phai phien da chay trial, va ca 3 deu co lenh cam doc bao cao trial bang van ban trong thu-tu-chay.txt va trong brief cua tung nguoi.
-2. Bang chung trial tren laptop da xoa sach 2026-11-23 19:20:04 (thu muc ~/rung3-chung-cu/R3-007, R3-011, R3-013, R3-076, R3-082 va file d42-*, nd02-*, nd03-* trong ~/rung3), thu muc ~/rung3, ~/rung3-goc, ~/rung3-chung-cu duoc tao lai tu dau va ghi moc thoi gian. Bang chung trial chi con tren VM (~/workspace/rung3-trial-evidence.tar.gz, sha256 274702fa05c170dda5ab0f3f46358509a3c2c469d026a44f759c0aa3a8c31c0b), dung lam input test cho CI/CD, khong phai bang chung chay.
-3. Khoa dap an dong bang o day khong lay gia tri tu trial: R3-007 dung 5 gia tri dau vao moi, chon rieng cho lan dong bang nay, khac gia tri trial; R3-011 dung 5 ngay moi, chon rieng o day; R3-082 va R3-013 dung gia tri da co san trong muc 8 cua danh sach (khong phai output trial); R3-076 dung gia tri he thong live luc chay, cham bang cach doi chieu bao cao voi file lenh da luu, khong phai voi gia tri trial.
-4. Voi 3 lop cach ly tren (bao cao khong toi duoc nguoi chay va nguoi cham, bang chung trial da xoa khoi laptop, khoa dung gia tri moi hoac gia tri danh sach), tinh held-out duoc giu o muc thuc hanh. Quyet dinh nay do dieu phoi vien chot, thay cho phuong an thay 5 task moi o grading decision pitfall H2.
+1. Bao cao trial khong bao gio commit len GitHub, khong bao gio co tren laptop. Nguoi chay va ca 2 nguoi cham la phien lam viec moi, khong phai phien da chay trial, va ca 3 deu co lenh cam doc bao cao trial bang van ban trong thu-tu-chay.txt va trong brief cua tung nguoi.
+2. Bang chung trial tren laptop da xoa sach 2026-11-23 19:20:04 (thu muc ~/rung3-chung-cu/R3-007, R3-011, R3-013, R3-076, R3-082 va file d42-*, nd02-*, nd03-* trong ~/rung3), thu muc ~/rung3, ~/rung3-goc, ~/rung3-chung-cu duoc tao lai tu dau va ghi moc thoi gian. Bang chung trial chi con tren VM, dung lam input test cho CI/CD, khong phai bang chung chay, khong ghi duong dan o day.
+3. Khoa dap an dong bang o day khong lay gia tri tu trial: R3-007 dung 5 gia tri dau vao moi, chon rieng cho lan dong bang nay, khac gia tri trial; R3-011 dung 3 ngay moi (2026-01-01, 2026-07-04, 2000-02-29); 2 ngay (2024-02-29, 2026-12-31) trung voi trial; R3-082 va R3-013 dung gia tri moi hoan toan, chon rieng cho FREEZE-2, khac gia tri trial va khac gia tri muc 8 cu; R3-076 dung gia tri he thong live luc chay, cham bang cach doi chieu bao cao voi file lenh da luu, khong phai voi gia tri trial.
+4. Voi 3 lop cach ly tren (bao cao khong toi duoc nguoi chay va nguoi cham, bang chung trial da xoa khoi laptop, khoa dung gia tri moi hoac gia tri danh sach), tinh held-out duoc giu o muc thuc hanh doi voi 3 task giu. Doi voi 2 task thay, tinh held-out duoc khoi phuc bang su loe thoi: dap an cu trong git history khong con dung cho noi dung moi. Quyet dinh thay do council wave 3 chot theo uy quyen full-autonomy 23/11 20:05, thay cho phuong an thay 5 task moi o grading decision pitfall H2.
 
 ## Ban tier (59 muc: 55 task + 4 du phong)
 
@@ -131,8 +131,9 @@
 - Bang dap an (3 hang):
   - Ngay: 9 October 2026. Ca 3 bao: Al Jazeera dang ngay 2026-10-09, thu Sau; CNA "Friday (Oct 9)"; NPR "on Friday", dang ngay 2026-10-09.
   - Dia diem: Oslo, Norway. Ca 3 bao: Al Jazeera "made on Friday in Oslo", le trao o Oslo ngay 10 December; CNA "OSLO", le o Oslo ngay 10 December; NPR "At a ceremony in Oslo".
-  - Con so chinh: tien thuong 12 trieu crown Thuy Dien, khoang 1,2 trieu USD. Ca 3 bao: Al Jazeera "12 million Swedish crowns ($1.2m)"; CNA "prize sum of US$1.2 million"; NPR "12 million Swedish kronor, approximately $1.2 million".
-- Ket luan: KHONG co mau thuan. Ca 3 muc (ngay, dia diem, con so chinh) khop nhau o ca 3 bao. Doan ket luan 3 dong phai viet ro khong co mau thuan va ca 3 muc khop nhau.
+  - Nhan vat chinh: Navanethem (Navi) Pillay. Ca 3 bao goi ten ba la nguoi doat giai (Al Jazeera, CNA, NPR).
+- Ghi chu ho tro: tien thuong 12 trieu crown Thuy Dien, khoang 1,2 trieu USD. Ca 3 bao: Al Jazeera "12 million Swedish crowns ($1.2m)"; CNA "prize sum of US$1.2 million"; NPR "12 million Swedish kronor, approximately $1.2 million".
+- Ket luan: KHONG co mau thuan. Ca 3 muc (ngay, dia diem, nhan vat chinh) khop nhau o ca 3 bao. Doan ket luan 3 dong phai viet ro khong co mau thuan va ca 3 muc khop nhau.
 - Phan cham theo key: bang du 9 o, gia tri khop bang dap an tren. Phan cham bang nguoi: doan ket luan 3 dong, neu ro khong co mau thuan.
 - Vat chung cham: tai lieu online da luu (bang + doan ket luan), mo lai de kiem tra.
 
@@ -215,13 +216,13 @@
 
 ## R3-013 (Tier A)
 
-- Van ban mau: 'Lien he Lan qua lan@example.com hoac goi 0901234567. Hop luc 14:30 ngay 15/08/2026 tai Ha Noi. Ma don DH-2026-0815, tong 1.250.000 VND. Email khac minh@test.org, dien thoai khac 0912345678.'
+- Van ban mau: 'Lien he Hoa qua hoa@example.com hoac goi 0987654321. Hop luc 09:15 ngay 03/09/2026 tai Da Nang, ket thuc luc 17:45. Ma don DH-2026-0903, tong 2.750.000 VND, phi dich vu 350.000 VND. Han chot 10/09/2026. Email khac dung@test.org va khanh@example.com, dien thoai khac 0978123456. Lien he khan cap 0905551234.'
 - 5 mau va so ket qua khop:
-  1. Email: [A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,} : 2 ket qua (lan@example.com, minh@test.org)
-  2. So dien thoai: 0\d{9} : 2 ket qua (0901234567, 0912345678)
-  3. Ngay thang: \d{2}\/\d{2}\/\d{4} (dang escaped, xem ruling) : 1 ket qua (15/08/2026)
-  4. Gio: \d{2}:\d{2} : 1 ket qua (14:30)
-  5. So tien: \d{1,3}(?:\.\d{3})+ : 1 ket qua (1.250.000)
+  1. Email: [A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,} : 3 ket qua (hoa@example.com, dung@test.org, khanh@example.com)
+  2. So dien thoai: 0\d{9} : 3 ket qua (0987654321, 0978123456, 0905551234)
+  3. Ngay thang: \d{2}\/\d{2}\/\d{4} (dang escaped, xem ruling) : 2 ket qua (03/09/2026, 10/09/2026)
+  4. Gio: \d{2}:\d{2} : 2 ket qua (09:15, 17:45)
+  5. So tien: \d{1,3}(?:\.\d{3})+ : 2 ket qua (2.750.000, 350.000)
 - Giai thich cua trang cho mau thu 5 phai duoc ghi trong ket-qua.txt.
 - Vat chung cham: 5 anh chup ket qua + ket-qua.txt. Checker so sanh mau (chuan hoa \/ thanh /), so luong, cac chuoi khop.
 
@@ -500,11 +501,11 @@
 ## R3-082 (Tier A)
 
 - 5 phep tinh (tinh bang omacalc, tung buoc, tu xu ly thu tu uu tien; xem ruling):
-  - (12 + 8) * 3 - 5 = 55
-  - 100 / 4 + 25 * 2 = 75
-  - (45 - 15) * 2 + 10 = 70
-  - 200 / 8 * 3 - 7 = 68
-  - (9 + 6) * 4 / 2 = 30
+  - (14 + 6) * 4 - 9 = 71
+  - 120 / 5 + 18 * 3 = 78
+  - (60 - 24) * 3 + 12 = 120
+  - 300 / 6 * 2 - 11 = 89
+  - (11 + 9) * 5 / 4 = 25
 - Sai so lam tron 0,01. File ket qua ~/rung3/nd02-ket-qua.txt co bang 6 hang (tieu de + 5 hang phep tinh) va 1 dong ghi chu kiem tra lai theo mau "Kiem tra lai: <phep> = <ket qua>" voi ket qua dung.
 - Vat chung cham: ket-qua.txt + 5 anh chup man hinh may tinh. Checker so sanh phep tinh va ket qua.
 
@@ -622,7 +623,7 @@
 - Moi file nhieu hit nhat la duy nhat (khong co truong hop dong hang cho bat ky tu khoa nao). Khi nhieu file cung so hit cao nhat thi lay file xuat hien dau tien theo thu tu ten file (quy tac nay khong phai dung o day vi khong co truong hop dong hang).
 - Du phong kho duy nhat. Khi 1 task kho vo hieu, lay DP-02 neu chua dung; task kho vo hieu thu hai loai khoi mau khong thay the.
 - Vat chung cham: bao cao dp02-bao-cao.txt + ban sao trong ~/rung3-chung-cu/DP-02/bao-cao.txt. Nguoi cham chay lai lenh grep -r -o -F (chi doc) va doi chieu tung so.
-- Ghi chu: tier-a-check.py hien chua co checker kieu keyword-counts; DP-02 duoc cham bang tay bang lenh grep theo key nay, khong phai bang script. Day la khoang trong cua goi CI/CD, ghi ro o day de dieu phoi vien quyet dinh bo sung checker truoc task 1 hoac giu nguyen cham tay.
+- Ghi chu: tier-a-check.py da co checker kieu keyword-counts; DP-02 duoc cham bang script. Lenh grep theo key nay la cross-check phu, khong phai phuong phap chinh.
 
 ## DP-03 (Tier B, du phong trung binh)
 
@@ -650,4 +651,4 @@
 - Mot su co dich vu lam vo hieu nhieu task tinh la 1 su kien vo hieu doi voi muc tran 5, nhung moi task bi anh huong van roi khoi mau va van dung quy tac du phong.
 - Cham tung task TRUOC khi dat lai (reset) task do. Moc thoi gian ket qua cham phai truoc muc reset-log cua task do. Voi task ma trang thai khong ton tai den luc cham, vat chung cham duoc la file da luu trong ~/rung3-chung-cu/R3-xxx/ nhu ghi o tung muc tren.
 - Vat chung cham cua moi task nam trong ~/rung3-chung-cu/R3-xxx/ (hoac DP-xx). Khong co anh chup hoac file ket qua thi task do khong duoc cham pass, tru khi task ghi ro bang chung la trang thai tren dich vu.
-- Viec con mo truoc task 1 (khong phai loi cua key file, ghi de dieu phoi vien theo doi): tai khoan test R3-029 va R3-016 chua co (can browser task); kiem tra WAVE day du cho R3-009 chua xong (can browser); xac nhan trinh duyet that cho R3-011 (timeanddate.com) chua xong; xac nhan 5 ten san pham R3-029 tren cua hang demo chua xong; checker keyword-counts cho DP-02 chua co trong tier-a-check.py.
+- Viec con mo truoc task 1 (khong phai loi cua key file, ghi de dieu phoi vien theo doi): tai khoan test R3-029 va R3-016 chua co (can browser task); kiem tra WAVE day du cho R3-009 chua xong (can browser); xac nhan trinh duyet that cho R3-011 (timeanddate.com) chua xong; xac nhan 5 ten san pham R3-029 tren cua hang demo chua xong.

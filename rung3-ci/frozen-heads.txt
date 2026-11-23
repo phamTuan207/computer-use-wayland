@@ -4,4 +4,4 @@
 # verify-list.py fails if the list file no longer matches this hash.
 # Any post-freeze edit to the list voids the run (grading decision section 2).
 list_commit 01dd3b981b551001679bd4deec3d3c954673e768
-list_sha256 7d2c76ebb918564598377abaf66722ffdf0f5d3b66908f842cf70af9078d1dfc
+list_sha256 47cbb3a1adbb9cb721c02c9ccca0a4e5007005a4a667f405935bc582463feea1
