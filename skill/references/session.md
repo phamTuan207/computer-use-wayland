@@ -30,6 +30,51 @@ response and keeps the relay alive.
 EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
 Do not automatically resume or repeat input after cancellation/failure.
 
+### Submitting a code-exec program (copy this snippet, do not retype it)
+
+Send a program to the relay with one `exec` script. Copy the snippet below
+verbatim and fill in only the program text, `RELAY_SESSION_ID`,
+`RUN_START_ISO`, the intent, and the wall seconds. Do not retype it from
+memory and do not rename any variable on one side only.
+
+Why this is strict: on 2026-11-23 a retyped copy defined `thinkMs` but
+referenced bare `think_ms` in the final capture object. JavaScript object
+shorthand needs a variable with exactly that name, so the script threw
+`ReferenceError: think_ms is not defined` at the capture line, after the
+program had already been sent to the relay. The write result was discarded,
+nothing was stored or printed, and the program response was lost. The probe
+script in that same session had no think bookkeeping and never hit this path.
+
+Rules the snippet enforces:
+- The think value is always the explicit mapping `think_ms: thinkMs`, never
+  bare shorthand `think_ms`. The variable is named `thinkMs`. There is no
+  variable named `think_ms` anywhere in the snippet.
+- `store("a1_program_result", r)` runs before `text(...)`, so the response
+  survives even if the print line ever fails. Recover it with
+  `load("a1_program_result")`.
+- Every name in the final capture object is defined above it in the same
+  script: `program`, `thinkMs`, `submitMs`, `r`. A regression test
+  (`tests/code_exec_submit_capture.mjs`) runs this exact snippet with stubbed
+  tool globals and fails if any capture name is undefined.
+
+```js
+// @exec: {"yield_time_ms": 1000, "max_output_tokens": 3000}
+const program = `started = dom_start()
+assert_state(started["ok"], "dom start failed")`;
+const RELAY_SESSION_ID = 0; // replace 0 with your relay session id
+const RUN_START_ISO = "2026-11-23T13:03:39.831Z"; // replace with your run start timestamp
+const submitMs = Date.now();
+const startMs = Date.parse(RUN_START_ISO);
+const thinkMs = submitMs - startMs;
+const request = {
+  args: ["code-exec", "--program", "-", "--endpoint", "http://127.0.0.1:9223", "--intent", "Setup DOM start probe (no fixture)", "--wall-seconds", "30"],
+  stdin: program + "\n"
+};
+const r = await tools.write_stdin({session_id: RELAY_SESSION_ID, chars: JSON.stringify(request) + "\n", yield_time_ms: 1000, max_output_tokens: 3000});
+store("a1_program_result", r);
+text(JSON.stringify({program_chars: program.length, think_ms: thinkMs, submit_ms: submitMs, submit_utc: new Date(submitMs).toISOString(), write_result: r}));
+```
+
 ## Shutdown after use (mandatory)
 
 When your task is done, shut computer-use down. Every agent, every time.
