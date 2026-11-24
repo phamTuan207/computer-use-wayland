@@ -11,12 +11,17 @@ Khoa dap an (key file) - dong bang R3-L3 ngay 2026-11-24:
 - docs/rung3-answer-keys.json sha256: 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8 (R3-L3, 2026-11-24)
 - Tag dong bang: R3-L3-FREEZE (se tao sau khi commit dong bang, tro toi commit dong bang; tag cu R3-L1-FREEZE-2 giu lai, danh dau SUPERSEDED, tro toi commit e2e3608)
 
-Nguoi cham:
-- Nguoi cham 1: mochi (Chromium tren laptop port 9223, target A67A718D5E236F894F9863F48834743C, session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85, ban khai khong lien quan truoc: da nhan 2026-11-23 19:17 +07)
-- Nguoi cham 2: scorer-2 (ten: scorer-2, session ID: dc7e0d0d-24b2-4d94-9729-f106d21eff16, ban khai khong lien quan truoc: da nhan 2026-11-23)
-- Nguoi cham 3 (hoa giai, chi goi khi co bat dong hoac tranh chap vo hieu): phien moi theo yeu cau (ten: TBD, session ID: TBD)
+Nguoi cham (2 cap, theo quyet dinh tang toc 2026-11-24):
+- Cap A (vi tri 1-28, fcc, R3-001 den R3-037):
+  - Nguoi cham 1A: mochi (Chromium tren laptop port 9223, target A67A718D5E236F894F9863F48834743C, session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85, ban khai khong lien quan truoc: da nhan 2026-11-23 19:17 +07)
+  - Nguoi cham 2A: scorer-2 (ten: scorer-2, session ID: dc7e0d0d-24b2-4d94-9729-f106d21eff16, ban khai khong lien quan truoc: da nhan 2026-11-23)
+  - Hoa giai du phong cap A: session ID: 6e844611-a34b-448b-ace1-5120a3644444, ban khai da nhan 2026-11-24 16:53 +07, calibration PASS (R3-041 PASS, R3-002 FAIL, khop ket qua R3-L2). Chi goi khi cap A bat dong hoac tranh chap vo hieu.
+- Cap B (vi tri 29-55, codex, R3-040 den R3-100):
+  - Nguoi cham 1B: session ID: 2890a5de-61bd-4240-8045-eca744cf59a7, ban khai da nhan 2026-11-24 16:53:47 +07, calibration PASS (R3-041 PASS, R3-002 FAIL, khop ket qua R3-L2).
+  - Nguoi cham 2B: session ID: b8c9b7b8-d2ec-4d07-8f27-590bf160e22d, ban khai da nhan 2026-11-24 16:53:29 +07, calibration PASS (R3-041 PASS, R3-002 FAIL, khop ket qua R3-L2).
+  - Hoa giai du phong cap B: session ID: 3f3aca86-57f1-4ade-81ec-838f65c61f07, ban khai da nhan 2026-11-24 16:54:18 +07, calibration PASS (R3-041 PASS, R3-002 FAIL, khop ket qua R3-L2). Chi goi khi cap B bat dong hoac tranh chap vo hieu.
 - Dieu phoi vien khong cham, khong dao nguoc ket qua cua nguoi cham. Chi chu so huu dao nguoc duoc, va chi khi tranh chap quy trinh.
-- Ten va session ID cua nguoi cham 1 va nguoi cham 2 da dien day du truoc task 1 (Worker 1, 2026-11-23 22:00 +07). Nguoi cham 3 dien khi goi.
+- Danh sach ngoai le live-re-read: rung3-run-log/r3-l3-exception-list.txt (5 task Class L: R3-001, R3-055, R3-074, R3-075, R3-089; 50 task Class S).
 
 Cam doc tai lieu thu nghiem (trial contamination):
 - Nguoi chay, nguoi cham 1 va nguoi cham 2 deu CAM doc ~/workspace/rung3-preflight-trial.md va ~/workspace/rung3-preflight-REPORT.md truoc va trong luc chay va cham.
