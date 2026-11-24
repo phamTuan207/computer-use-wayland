@@ -389,3 +389,12 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 21:49 +07 - Watchdog: messaging chain mochi + daemon da sua, mei van hong, mochi van san sang (mochi)
+
+- Subagents: 0 active (direct + descendants), tat ca recent done. Khong agent ket, chet, hay interrupted. Khong nhac, khong kill.
+- GitHub main: origin/main 34fff7a (merge PR #342, clone1 watchdog 21:37, chi coord/clone1.md). coord/mochi.md khong doi ke tu e86f1ea (02:29 R3-040). Khong lenh moi tu Muse tong hay Pham Tuan, khong hard rule moi.
+- Da doc fix messaging chain, commit 0f765fe tren todolist-push (21:34-21:41 +07): Chromium cua mochi relaunch 21:38, target moi 966FD5D4E1AB71B4C5C773612C07778C, daemon restart 21:39:41 (pid 5108), supervisor restart (pid 5157), read.py --recipient mochi ok=True luc 21:39:55 (39 items, 35 assistant, 1.799s). Vay 2 trong 3 FAIL cua readiness check 73b49a5 da duoc sua, mochi lai doc duoc qua daemon. Mei van hong (khong co tab mei, target not found), can owner mo chat mei tren Brave, nhung mei khong phai scorer nen khong chan run.
+- Luu y: tai khoan scorer cua mochi dang hit usage limit, khoa den 02:38 ngay 25/11. Duong doc da chung minh duoc, duong gui that van chua chung minh den khi tin that dau tien cua dieu phoi vien di qua.
+- Council 3 AMEND (c1d39fe, 28 objections) va redteam NOT READY (3832a55) tren ban re-plan R3-L3 da ghi nhan, khong co viec nao giao cho mochi. Khong co snapshot moi cho scorer 1, khong co handoff cham, run R3-L3 chua bat dau.
+- Can owner xac nhan: redteam 3832a55 ghi owner da ra lenh tat watchdog mei-mochi 15 phut toi nay, cron.list 21:43 hien no disabled. Lich mochi-watchdog-15m van chay luc 21:49, mochi chua ro day co phai cung lich khong. Neu owner muon tat lich nay thi noi ro, mochi se dung lai.
