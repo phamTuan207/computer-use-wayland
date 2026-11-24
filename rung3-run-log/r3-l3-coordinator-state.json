@@ -1,1 +1,110 @@
-{"backups_used":[],"checklist_22":{"done":14,"in_progress":4,"not_done":4,"note":"see r3-l3-phase0-checklist-status.md for per-item status"},"class_l":["R3-001","R3-055","R3-074","R3-075","R3-089","R3-096","R3-078","R3-079","R3-088"],"class_l_count":9,"class_s_count":46,"completed_positions":0,"coordinator":"68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)","current_position":0,"current_task":null,"deputy":"028399b1-634c-4b37-84d1-6c8689c87ab8 (declaration at ~/workspace/r3-l3-deputy-declaration.md, read plan+state 2026-11-24 17:24:46 +07, on STANDBY)","fail_count":0,"freeze":{"h1":"9b9d900","h2":"5fac0eb","key_json_sha256":"5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8","keys_md_sha256":"21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60","list_sha256":"c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec","todolist_push_tip":"d58d3da"},"invalid_by_group":{"de":0,"kho":0,"rat_kho":0,"trung_binh":0},"invalid_count":0,"last_updated":"2026-11-24T17:45:00+07:00","ledger":{"file":"rung3-run-log/R3-L3-grades.jsonl","note":"1 trial row only, validated PASS","rows":1},"notes":["Phase 0 coordinator. Run NOT started. No task has run.","R3-029/R3-075 KEY GATE PASSES. R3-075 verified CORRECT (fixture sha256s match key). R3-029 verified CORRECT by Mochi (run 134/135, 17:11-17:19 +07): all 5 product names confirmed (iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, all In Stock). Test account rung3-029-test@example.com created, wishlist works (iPhone saved, My Wishlist shows it). No blocker. Do NOT stop.","R3-009 WAVE re-check (Mochi, all 5 numbers): Fox News Errors 2, Alerts 311, Features 145, Structural 382, Contrast 16. Wikipedia Main Page Errors 7, Alerts 80, Features 451, Structural 75, Contrast 0. Fox News still Errors 2. R3-009 runs normally.","timeanddate.com confirmed loads normally (Mochi, 17:19 +07, Hanoi 17:19:49, Sunny, Mild, 21C).","FCC fresh session r3-fcc-runner-L3 (pane PID 203375, fcc-claude 2.1.331) verified responsive (processed test prompt, returned to prompt).","Codex interactive TUI STALLS in tmux for new sessions (both 0.172.0 and 0.171.0 tested, no response after 25-60s, 0.0-0.2% CPU). The OLD Codex session (r3-codex-runner, PID 1235041, 0.171.0) is also stalled (did not respond to the 6-step prep task or a test prompt). PLAN ADAPTATION: Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session. PROVEN: codex exec -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check 'Reply READY' replied READY, tokens 7376, EXIT=0 (log /tmp/codex-exec-test.log on laptop, session 01a20d16). The run coordinator invokes codex exec per task from /home/james. The old tmux Codex session is NOT used for the run.","Daemon speed-daemon died and was restarted 2026-11-24 17:16:43 +07 (PID 2423). Watchdog cron should keep it alive. Fallback channel documented (r3-l3-daemon-fallback.md).","Calibration 1B (4e2f52d4) 4/4 expected. 2B (2e3ae678) 4/4 expected. TB-A (97290681) 4/4 expected. TB-B (9d613f19) 3/4 expected (R3-041 FAIL vs recorded PASS; reason: font count unverified, no fonts-page screenshot). Independent verifier (032952f7) checking all 4 files now. TB-B approval pending verifier. If TB-B fails, a replacement tiebreaker B must be calibrated before task 1.","/tmp worktree was cleaned by the system (2026-11-24 ~17:14). All work moved to persistent worktree ~/workspace/r3l3-run-wt (detached HEAD d58d3da). Lesson: never use /tmp for persistent work. The calibration PNG was recreated at ~/workspace/r3-067-calibration.png and /tmp/r3-067-calibration.png.","Snapshot dirs created: ~/workspace/rung3-snapshots/ with 60 empty R3-xxx-L3 / DP-xx-L3 dirs. snapshot.py --name option added (fixed dir name). Pre-existing R3-040-retry-s1 (R3-L2, fuller than repo copy) left untouched.","R3-089 fixture fresh (find -mtime -7 returns 6, expiry 2026-11-29 19:20). Refresh owner = run coordinator, refresh the day before R3-089 runs.","R3-075 key verified CORRECT. R3-029 key verified CORRECT. No key blocker."],"pass_count":0,"plan_adaptations":[{"change":"Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session","reason":"New Codex sessions stall in tmux (TUI does not respond to input; both 0.172.0 and 0.171.0 tested). The old session is also stalled. codex exec is proven (replied READY, EXIT=0). The interactive session cannot be fixed as written, so the plan is adapted to the proven non-interactive route.","when":"2026-11-24 17:44 +07"},{"change":"Worktree moved from /tmp/r3l3-run-wt to ~/workspace/r3l3-run-wt (persistent)","reason":"/tmp was cleaned by the system, deleting the worktree and all uncommitted work. The persistent worktree at ~/workspace/ survives. All files were rewritten and re-proven there.","when":"2026-11-24 17:14 +07"},{"change":"Snapshot dirs use ~/workspace/rung3-snapshots/R3-xxx-L3/ (VM) with snapshot.py --name option","reason":"The plan requires fixed R3-xxx-L3 names. snapshot.py only made timestamped names. Added a --name option (additive, does not break existing behavior) so the coordinator can snapshot into the fixed R3-xxx-L3 dir.","when":"2026-11-24 17:22 +07"}],"run_code":"R3-L3","runners":{"codex":{"method":"codex exec (non-interactive, one invocation per task, from /home/james, --skip-git-repo-check, -m gpt-6-luna --sandbox danger-full-access)","positions":"29-55 (R3-040 to R3-100)","session":"NO interactive session (TUI stalls in tmux); use codex exec per task","status":"READY via codex exec (proven READY, EXIT=0)","version":"0.172.0"},"fcc":{"pane_pid":203375,"positions":"1-28 (R3-001 to R3-037)","session":"r3-fcc-runner-L3","status":"fresh, verified responsive","version":"2.1.331"}},"scorers":{"pair_a_1":"mochi (session 70cd99d1)","pair_a_2":"dc7e0d0d-24b2-4d94-9729-f106d21eff16","pair_b_1":"4e2f52d4-f3f7-41ad-a302-78f0aee91895 (calibrated, 4/4 expected)","pair_b_2":"2e3ae678-2a82-496e-b301-7ac090356fb3 (calibrated, 4/4 expected)","tiebreaker_a":"97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)","tiebreaker_b":"9d613f19-d712-4fb8-af33-4ee494d1c13c (calibration 3/4, R3-041 FAIL vs PASS; approval pending independent verifier 032952f7)"},"status":"PHASE 0 - PREPARATION, RUN NOT STARTED"}
+{
+ "backups_used": [],
+ "checklist_22": {
+  "done": 15,
+  "in_progress": 3,
+  "not_done": 4,
+  "note": "see r3-l3-phase0-checklist-status.md for per-item status"
+ },
+ "class_l": [
+  "R3-001",
+  "R3-055",
+  "R3-074",
+  "R3-075",
+  "R3-089",
+  "R3-096",
+  "R3-078",
+  "R3-079",
+  "R3-088"
+ ],
+ "class_l_count": 9,
+ "class_s_count": 46,
+ "completed_positions": 0,
+ "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
+ "current_position": 0,
+ "current_task": null,
+ "deputy": "028399b1-634c-4b37-84d1-6c8689c87ab8 (declaration at ~/workspace/r3-l3-deputy-declaration.md, read plan+state 2026-11-24 17:24:46 +07, on STANDBY)",
+ "fail_count": 0,
+ "freeze": {
+  "h1": "9b9d900",
+  "h2": "5fac0eb",
+  "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
+  "todolist_push_tip": "d58d3da"
+ },
+ "invalid_by_group": {
+  "de": 0,
+  "kho": 0,
+  "rat_kho": 0,
+  "trung_binh": 0
+ },
+ "invalid_count": 0,
+ "last_updated": "2026-11-24T18:02:00+07:00",
+ "ledger": {
+  "file": "rung3-run-log/R3-L3-grades.jsonl",
+  "note": "1 trial row only, validated PASS",
+  "rows": 1
+ },
+ "notes": [
+  "Phase 0 coordinator. Run NOT started. No task has run.",
+  "R3-029/R3-075 KEY GATE PASSES. R3-075 verified CORRECT (fixture sha256s match key). R3-029 verified CORRECT by Mochi (run 134/135, 17:11-17:19 +07): all 5 product names confirmed (iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, all In Stock). Test account rung3-029-test@example.com created, wishlist works (iPhone saved, My Wishlist shows it). No blocker. Do NOT stop.",
+  "R3-009 WAVE re-check (Mochi, all 5 numbers): Fox News Errors 2, Alerts 311, Features 145, Structural 382, Contrast 16. Wikipedia Main Page Errors 7, Alerts 80, Features 451, Structural 75, Contrast 0. Fox News still Errors 2. R3-009 runs normally.",
+  "timeanddate.com confirmed loads normally (Mochi, 17:19 +07, Hanoi 17:19:49, Sunny, Mild, 21C).",
+  "FCC fresh session r3-fcc-runner-L3 (pane PID 203375, fcc-claude 2.1.331) verified responsive (processed test prompt, returned to prompt).",
+  "Codex interactive TUI STALLS in tmux for new sessions (both 0.172.0 and 0.171.0 tested, no response after 25-60s, 0.0-0.2% CPU). The OLD Codex session (r3-codex-runner, PID 1235041, 0.171.0) is also stalled (did not respond to the 6-step prep task or a test prompt). PLAN ADAPTATION: Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session. PROVEN: codex exec -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check 'Reply READY' replied READY, tokens 7376, EXIT=0 (log /tmp/codex-exec-test.log on laptop, session 01a20d16). The run coordinator invokes codex exec per task from /home/james. The old tmux Codex session is NOT used for the run.",
+  "Daemon speed-daemon died and was restarted 2026-11-24 17:16:43 +07 (PID 2423). Watchdog cron should keep it alive. Fallback channel documented (r3-l3-daemon-fallback.md).",
+  "Calibration 1B (4e2f52d4) 4/4 expected, APPROVED (independent verifier). 2B (2e3ae678) 4/4 expected, APPROVED. TB-A (97290681) 4/4 expected, APPROVED. TB-B (9d613f19) 3/4, NOT APPROVED (independent verifier 032952f7, report ~/workspace/r3-l3-calibration-VERIFICATION.md: R3-041 FAIL is a misapplication, invented a fonts-page screenshot requirement the key never states). Replacement tiebreaker B candidate (df4defcc) spawned for re-calibration. TB-B approval pending its result.",
+  "/tmp worktree was cleaned by the system (2026-11-24 ~17:14). All work moved to persistent worktree ~/workspace/r3l3-run-wt (detached HEAD d58d3da). Lesson: never use /tmp for persistent work. The calibration PNG was recreated at ~/workspace/r3-067-calibration.png and /tmp/r3-067-calibration.png.",
+  "Snapshot dirs created: ~/workspace/rung3-snapshots/ with 60 empty R3-xxx-L3 / DP-xx-L3 dirs. snapshot.py --name option added (fixed dir name). Pre-existing R3-040-retry-s1 (R3-L2, fuller than repo copy) left untouched.",
+  "R3-089 fixture fresh (find -mtime -7 returns 6, expiry 2026-11-29 19:20). Refresh owner = run coordinator, refresh the day before R3-089 runs.",
+  "R3-075 key verified CORRECT. R3-029 key verified CORRECT. No key blocker.",
+  "Liveness report R3-L3 (2026-11-24 17:28, rung3-ci/liveness-report-20261124-175000.md): 40 OK, 9 FAIL, 3 PENDING, 2 SKIP. Triaged: 6 FAILs are urllib 403 false positives (bot check, browser tasks; timeanddate.com browser-verified by Mochi). 1 is Wayback 429 (transient, has policy). 2 (bbc.com DNS, gutenberg.org 503) pending Mochi browser verification (run 136). Liveness signed off with triage (coordinator, 2026-11-24 17:52 +07), conditional on bbc/gutenberg browser verification before task 1.",
+  "Phase 0 commit 28e2ce0 pushed to todolist-push (verified via ls-remote). todolist-push tip is now 28e2ce0.",
+  "R3-047 is a 5th pre-run INVALID CANDIDATE (added 2026-11-24 18:02 +07): Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 35; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive."
+ ],
+ "pass_count": 0,
+ "plan_adaptations": [
+  {
+   "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
+   "reason": "New Codex sessions stall in tmux (TUI does not respond to input; both 0.172.0 and 0.171.0 tested). The old session is also stalled. codex exec is proven (replied READY, EXIT=0). The interactive session cannot be fixed as written, so the plan is adapted to the proven non-interactive route.",
+   "when": "2026-11-24 17:44 +07"
+  },
+  {
+   "change": "Worktree moved from /tmp/r3l3-run-wt to ~/workspace/r3l3-run-wt (persistent)",
+   "reason": "/tmp was cleaned by the system, deleting the worktree and all uncommitted work. The persistent worktree at ~/workspace/ survives. All files were rewritten and re-proven there.",
+   "when": "2026-11-24 17:14 +07"
+  },
+  {
+   "change": "Snapshot dirs use ~/workspace/rung3-snapshots/R3-xxx-L3/ (VM) with snapshot.py --name option",
+   "reason": "The plan requires fixed R3-xxx-L3 names. snapshot.py only made timestamped names. Added a --name option (additive, does not break existing behavior) so the coordinator can snapshot into the fixed R3-xxx-L3 dir.",
+   "when": "2026-11-24 17:22 +07"
+  }
+ ],
+ "run_code": "R3-L3",
+ "runners": {
+  "codex": {
+   "method": "codex exec (non-interactive, one invocation per task, from /home/james, --skip-git-repo-check, -m gpt-6-luna --sandbox danger-full-access)",
+   "positions": "29-55 (R3-040 to R3-100)",
+   "session": "NO interactive session (TUI stalls in tmux); use codex exec per task",
+   "status": "READY via codex exec (proven READY, EXIT=0)",
+   "version": "0.172.0"
+  },
+  "fcc": {
+   "pane_pid": 203375,
+   "positions": "1-28 (R3-001 to R3-037)",
+   "session": "r3-fcc-runner-L3",
+   "status": "fresh, verified responsive",
+   "version": "2.1.331"
+  }
+ },
+ "scorers": {
+  "pair_a_1": "mochi (session 70cd99d1)",
+  "pair_a_2": "dc7e0d0d-24b2-4d94-9729-f106d21eff16",
+  "pair_b_1": "4e2f52d4-f3f7-41ad-a302-78f0aee91895 (calibrated, 4/4 expected)",
+  "pair_b_2": "2e3ae678-2a82-496e-b301-7ac090356fb3 (calibrated, 4/4 expected)",
+  "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
+  "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (replacement candidate, calibration running; previous 9d613f19 NOT APPROVED 3/4)"
+ },
+ "status": "PHASE 0 - PREPARATION, RUN NOT STARTED"
+}

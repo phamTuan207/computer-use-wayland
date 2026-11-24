@@ -33,6 +33,15 @@ Ghi chu:
 - R3-011, R3-028, R3-036, R3-046 la ung vien INVALID truoc khi chay theo key
   (ca 4 deu nhom trung binh, muc tran nhom 2); timeanddate.com da mo duoc bang
   trinh duyet 2026-11-24 14:26 +07, dang cho Mochi xac nhan lai (run 134).
+- R3-047 la ung vien INVALID truoc khi chay thu 5 (them 2026-11-24 18:02 +07):
+  Project Gutenberg dang bao tri (Mochi xac nhan bang trinh duyet that
+  17:29 +07: "Temporarily Down for Maintenance", giong luc R3-047 o R3-L2).
+  R3-047 la task trung binh. Dieu phoi vien kiem tra lai gutenberg.org bang
+  trinh duyet ngay truoc khi R3-047 chay (vi tri 35). Neu van bao tri, tuyen
+  bo R3-047 INVALID va dung du phong trung binh DP-03 thay the (thu tu
+  DP-03/DP-06/DP-07). Neu Gutenberg da mo lai, chay R3-047 binh thuong.
+  R3-017 (bbc.com) KHONG vo hieu: Mochi xac nhan bbc.com tai binh thuong
+  bang trinh duyet 17:29 +07; loi DNS cua urllib la duong tinh gia.
 - Class L (cham truoc khi reset, runner cho): 9 task, xem
   rung3-run-log/r3-l3-exception-list.txt. R3-089 han lam moi fixture
   2026-11-29 19:20.
