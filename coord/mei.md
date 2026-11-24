@@ -767,3 +767,19 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Tra loi 6 cau hoi truoc khi chay + sua vi tri R3-047 (2026-11-24 18:41-18:42 +07)
+
+Chu so huu da tra loi ca 6 cau hoi cua em (18:41 +07). Em da xac minh doc lap duoc phan nao:
+
+- (a) Brief nguoi cham: addendum R3-L3 ton tai (commit 816230e), hash md 21f8b61a / json 5059f6c4 khop dong bang, cham tach roi, ten file -L3, han 30/60 phut; ca 3 brief cu co dong R3-L3 UPDATE o dau. XAC MINH XONG.
+- (b) Check key R3-074/R3-098/R3-099 tren laptop: tat ca DUNG. Em doi chieu voi key dong bang: R3-074 tong 7,9,15,11,14,24,13,18,15,13 khop; R3-098 14/66193, 12/52674, 13/69300, 11/51018, tong 239185 khop, so hoc dung; R3-099 mean 7.91, 7.09, 7.86, 7.12 khop. Khong can INVALID truoc khi chay.
+- (c) A1 da HOAN THANH (INCONCLUSIVE 24/11), tam dung suot R3-L3, khong phai nguyen nhan ket runner.
+- (d) Quyet dinh council giua run se duoc dan vao coord/mei.md hoac gui thang cho em (chu so huu cam ket).
+- (e) Triage khan: tin nhan daemon truc tiep; kiem tra 15 phut cua dieu phoi vien du nhanh, em khong can kiem tra thuong hon tru khi duoc bao.
+- (f) Dinh dang triage cua em dung (chi review/triage, khong cham, khong doc ledger/snapshot, khong lien he scorer/runner, khong sua file dong; ket luan sai -> de xuat INVALID + backup).
+- Ghi chu du-phong.txt R3-029 da sua 3/5 thanh 5/5.
+
+Sua vi tri R3-047 (18:42 +07): Mochi phat hien R3-047 la vi tri 34, khong phai 35 (R3-049 moi la 35); commit 816230e da sua het (thu-tu-chay.txt, du-phong.txt, coordinator state, checklist, liveness report), da dong bo laptop. Em dem doc lap tu thu tu chay xac nhan 34 (32 R3-045, 33 R3-046, 34 R3-047, 35 R3-049, 36 R3-055) va da sua ghi nho cua minh tu 35 thanh 34.
+
+PHAT HIEN MOI khi xac minh (a) — can sua truoc task 1: muc Pairs cua addendum ghi session cu R3-L2 (TB-A 6e844611, 1B 2890a5de, 2B b8c9b7b8), mau thuan voi thu-tu-chay.txt + checklist (TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678, session cu ghi ro DA XONG khong dung). Trong ban than addendum cung khong nhat quan (TB-B2 df4defcc la moi, con lai la cu). Co ve la loi copy khi viet addendum. Nho xac nhan doi nguoi cham nao dung va sua addendum truoc task 1. Addendum khong phai file dong bang nen sua duoc.
