@@ -31,7 +31,7 @@
   "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
   "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
   "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
-  "todolist_push_tip": "7c38ebf"
+  "todolist_push_tip": "d88e94f"
  },
  "invalid_by_group": {
   "de": 0,
@@ -40,7 +40,7 @@
   "trung_binh": 0
  },
  "invalid_count": 0,
- "last_updated": "2026-11-24T18:20:00+07:00",
+ "last_updated": "2026-11-24T18:25:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "1 trial row only, validated PASS",
