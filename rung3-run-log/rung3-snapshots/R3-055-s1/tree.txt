@@ -1,0 +1,32 @@
+== find (sorted) ==
+/home/james/rung3/d06-du-an-moi
+/home/james/rung3/d06-du-an-moi/.gitignore
+/home/james/rung3/d06-du-an-moi/Cong-cu
+/home/james/rung3/d06-du-an-moi/Du-lieu
+/home/james/rung3/d06-du-an-moi/Kiem-thu
+/home/james/rung3/d06-du-an-moi/Kiem-thu/kiem-thu-don-vi
+/home/james/rung3/d06-du-an-moi/Ma-nguon
+/home/james/rung3/d06-du-an-moi/Ma-nguon/thu-vien
+/home/james/rung3/d06-du-an-moi/Ma-nguon/ung-dung
+/home/james/rung3/d06-du-an-moi/README.md
+/home/james/rung3/d06-du-an-moi/Tai-lieu
+
+== permissions (ls -ld) ==
+drwxr-xr-x 1 james james 114 Nov 24 13:54 /home/james/rung3/d06-du-an-moi
+drwxr-xr-x 1 james james   0 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Cong-cu/
+drwxr-xr-x 1 james james   0 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Du-lieu/
+drwxr-xr-x 1 james james  30 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Kiem-thu/
+drwxr-xr-x 1 james james   0 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Kiem-thu/kiem-thu-don-vi/
+drwxr-xr-x 1 james james  32 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Ma-nguon/
+drwxr-xr-x 1 james james   0 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Ma-nguon/thu-vien/
+drwxr-xr-x 1 james james   0 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Ma-nguon/ung-dung/
+dr-xr-xr-x 1 james james   0 Nov 24 13:54 /home/james/rung3/d06-du-an-moi/Tai-lieu/
+
+== stat Tai-lieu ==
+555 /home/james/rung3/d06-du-an-moi/Tai-lieu
+
+== stat other level-1 dirs ==
+755 /home/james/rung3/d06-du-an-moi/Ma-nguon
+755 /home/james/rung3/d06-du-an-moi/Kiem-thu
+755 /home/james/rung3/d06-du-an-moi/Du-lieu
+755 /home/james/rung3/d06-du-an-moi/Cong-cu
