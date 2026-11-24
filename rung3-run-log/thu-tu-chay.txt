@@ -24,12 +24,12 @@ Nguoi cham (2 cap, theo quyet dinh tang toc 2026-11-24, da hieu chinh Phase 0):
 - Cap A (vi tri 1-28, fcc, R3-001 den R3-037):
   - Nguoi cham 1A: mochi (Chromium tren laptop port 9223, target A67A718D5E236F894F9863F48834743C, session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85). Mochi CHI cham Cap A. Mochi khong cham Cap B.
   - Nguoi cham 2A: scorer-2 (ten: scorer-2, session ID: dc7e0d0d-24b2-4d94-9729-f106d21eff16, ban khai khong lien quan truoc: da nhan 2026-11-23).
-  - Hoa giai Cap A: session ID: 97290681-d2ce-4230-9869-13c1c68df5d1 (TB-A, calibration 4/4, APPROVED, independent verifier xac nhan). Chi goi khi Cap A bat dong hoac tranh chap vo hieu. Hoa giai cu 6e844611 (R3-L2) DA XONG, khong dung.
+  - Hoa giai Cap A: session ID: 97290681-d2ce-4230-9869-13c1c68df5d1 (TB-A, calibration 4/4, APPROVED, independent verifier xac nhan). Chi goi khi Cap A bat dong hoac tranh chap vo hieu. Hoa giai cu (R3-L2) DA XONG, khong dung.
 - Cap B (vi tri 29-55, codex, R3-040 den R3-100):
   - Nguoi cham 1B: session ID: 4e2f52d4-f3f7-41ad-a302-78f0aee91895, calibration 4/4, APPROVED (independent verifier xac nhan). Grade file: ~/workspace/r3-l3-calibration-1B.md.
   - Nguoi cham 2B: session ID: 2e3ae678-2a82-496e-b301-7ac090356fb3, calibration 4/4, APPROVED (independent verifier xac nhan). Grade file: ~/workspace/r3-l3-calibration-2B.md.
   - Hoa giai Cap B: session ID: df4defcc-050b-47c0-8609-cb2932e36207 (TB-B2, replacement, calibration 4/4 2026-11-24 17:31 +07, APPROVED). Chi goi khi Cap B bat dong hoac tranh chap vo hieu. Hoa giai cu 3f3aca86 (R3-L2) DA XONG, khong dung. Ung vien truoc 9d613f19 KHONG DUOC DUYET (calibration 3/4, R3-041 sai), khong dung.
-  - Nguoi cham 1B va 2B cu (2890a5de, b8c9b7b8, R3-L2) DA XONG, khong dung.
+  - Nguoi cham 1B va 2B cu (R3-L2) DA XONG, khong dung.
 - Dieu phoi vien khong cham, khong dao nguoc ket qua cua nguoi cham. Chi chu so huu dao nguoc duoc, va chi khi tranh chap quy trinh.
 - Danh sach ngoai le live-re-read: rung3-run-log/r3-l3-exception-list.txt (9 task Class L: R3-001, R3-055, R3-074, R3-075, R3-089, R3-096, R3-078, R3-079, R3-088; 46 task Class S). Ban cu 5 task Class L da thay bang ban 9 task.
 

@@ -25,7 +25,7 @@ import re
 import sys
 
 VERDICTS = ("PASS", "FAIL", "INVALID")
-TASK_RE = re.compile(r"^(R3-[0-9]{3}|DP-0[1235]|R3-TEST)$")
+TASK_RE = re.compile(r"^(R3-[0-9]{3}|DP-0[123567]|R3-TEST)$")
 RUN_RE = re.compile(r"^R3-L[0-9]+$")
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 

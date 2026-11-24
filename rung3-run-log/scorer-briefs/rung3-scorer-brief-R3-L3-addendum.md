@@ -6,8 +6,8 @@
 
 ## Pairs (lane-aligned)
 
-- Pair A (positions 1-28, FCC lane, R3-001 to R3-037): scorer 1 Mochi (70cd99d1), scorer 2 dc7e0d0d, tiebreaker 6e844611 (TB-A, calibration 4/4 APPROVED).
-- Pair B (positions 29-55, Codex lane, R3-040 to R3-100): scorer 1B 2890a5de, scorer 2B b8c9b7b8, tiebreaker df4defcc (TB-B2, calibration 4/4 APPROVED). Original TB-B (3f3aca86) is NOT used.
+- Pair A (positions 1-28, FCC lane, R3-001 to R3-037): scorer 1 Mochi (70cd99d1), scorer 2 dc7e0d0d, tiebreaker 97290681 (TB-A, calibration 4/4 APPROVED).
+- Pair B (positions 29-55, Codex lane, R3-040 to R3-100): scorer 1B 4e2f52d4, scorer 2B 2e3ae678, tiebreaker df4defcc (TB-B2, calibration 4/4 APPROVED). Original TB-B (3f3aca86) is NOT used.
 - A backup inherits the pair of the task it replaces. DP-01 is retired and is never assigned. Medium backups in order: DP-03, DP-06, DP-07. Hard: DP-02 only (Class L). Very hard: DP-05 only.
 - Mei is disqualified as a scorer (authored the list and keys). She does review/analysis only.
 
