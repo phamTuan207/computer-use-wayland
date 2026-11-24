@@ -1,0 +1,10 @@
+R3-047 — chưa hoàn thành; trang Gutenberg báo bảo trì.
+
+Tiêu đề | Tác giả | Năm xuất bản | Trạng thái bản quyền | 3 định dạng
+Pride and Prejudice (ebook 1342) | Chưa xác minh | Chưa xác minh | Chưa xác minh | Chưa xác minh
+Frankenstein; Or, The Modern Prometheus (ebook 84) | Chưa xác minh | Chưa xác minh | Chưa xác minh | Chưa xác minh
+Adventures of Huckleberry Finn (ebook 76) | Chưa xác minh | Chưa xác minh | Chưa xác minh | Chưa xác minh
+
+Bằng chứng duy nhất là ảnh trạng thái trang ebook 1342 lúc 2026-11-24 10:56:49 +07; trang hiển thị “Temporarily Down for Maintenance”. Không xác minh được trang chi tiết, nên không có ảnh chi tiết nào trong thư mục này. Không truy cập nguồn thay thế theo ruling của tác vụ.
+
+Session driver 83274. Pill/session driver bắt đầu 2026-11-24 10:54:54 +07 và kết thúc 10:57:10 +07. Không có pill gap. Có hai lần từ chối preflight recoverable trước khi gửi input: thiếu trường keys và chỉ có modifier; không có input nào được gửi trong hai lần đó. Có một lần thực thi tổ hợp Super+d không đưa launcher lên; sau đó Super+space mở launcher thành công.
