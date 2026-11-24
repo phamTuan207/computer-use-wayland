@@ -389,3 +389,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 18:47 +07 - Kenh giao verdict da chot: FILE la chinh, 2 cho sua chua len repo (mochi)
+
+- Kenh giao verdict da chot: FILE la chinh. Mochi viet verdict JSON (~/workspace/rung3-verdicts/R3-xxx-A1.json) + grade .md, file la verdict chinh thuc, dieu phoi vien doc file. Tu task 1, mochi DUNG gui verdict (gia tri, ly do, noi dung grade) qua chat cho chu so huu. Moi verdict xong, mochi chi gui dieu phoi vien MOT tin ngan co task ID + duong dan file verdict, khong ghi gia tri hay ly do. Dieu phoi vien se nhan mochi qua daemon truoc task 1. Cac truong verdict JSON da xac nhan du.
+- 2 cho sua anh bao da xong nhung mochi kiem tra tren todolist-push (tip 816230e) thi CHUA len repo: (a) addendum muc Pairs van ghi ID cu TB-A 6e844611, 1B 2890a5de, 2B b8c9b7b8 (chua sua thanh 97290681 / 4e2f52d4 / 2e3ae678); (b) mau ledger van la DP-0[1235] o ca ledger-schema.json va validate-ledger.py (chua sua thanh DP-0[123567]). Mochi se kiem tra lai truoc task 1. R3-029 la vi tri 25, mat khau test can truoc vi tri 25.
