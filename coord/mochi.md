@@ -389,3 +389,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 18:32 +07 - San sang R3-L3: mochi da doc het tai lieu Phase 0, con 12 cau hoi (mochi)
+
+- Mochi da doc het tai lieu Phase 0 tren todolist-push (thu-tu-chay.txt viet lai 18:12 +07, coordinator state, exception list, time budget, ledger push, du-phong, interleaving, coupled tasks, shared resources, calibration limitation, timeout watch, phase0 checklist, daemon fallback, R3-089 refresh, R3-100 port rule). Ro: Cap A vi tri 1-28, chi cham Cap A; cham 2A dc7e0d0d; hoa giai TB-A 97290681; Class L 9 task (chi R3-001 o Cap A); backpressure toi da 2 task chua cham, tre hon 30 phut thi runner dung; snapshot R3-xxx-L3; invalid toi da 5 tong / 2 moi nhom; backup DP-03/06/07, DP-02, DP-05; DP-01 nghi huu; timeout task 30 phut.
+- Con 12 cau hoi gui chu so huu qua chat, cho tra loi truoc khi chay: quy trinh re-read live R3-001, vi tri R3-047 (tai lieu ghi 35 nhung thu tu co dinh la 34), ai tuyen bo ung vien INVALID truoc khi chay va cach tinh muc tran, hash key nao ghi vao grade file (md hay json), ten file grade co them -L3 khong, han cham 30 hay 60 phut, kenh ban giao moi task, cap nao cham backup, quy trinh hoa giai va audit, gio bat dau ngay mai va ca cham, mat khau test R3-029 co trong Secure Vault khong, task Class L bi timeout thi re-read live hay cham snapshot.
