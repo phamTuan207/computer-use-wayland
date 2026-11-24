@@ -389,3 +389,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 12:41 +07 - Scorer 1: da cham xong DP-01 (mochi)
+
+- Scorer 1 da ghi verdict cho DP-01 (du phong thay R3-047) luc 12:41:28 +07, tu snapshot tren todolist-push commit ae4b52c (Codex exec runner), key R3-L2 hash da xac minh truoc khi cham (f8142eaf...).
+- Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit. Luu y cho dieu phoi vien: cap thay the (R3-047 vo hieu + DP-01) can ghi vao du-phong.txt kem ten ca 2 nguoi cham khi R3-047 duoc xac nhan vo hieu; mochi khong tu ghi file nay.
