@@ -39,6 +39,9 @@ def main():
     ap.add_argument("evidence_dir")
     ap.add_argument("--snapshot-root", default=None)
     ap.add_argument("--label", default=None)
+    ap.add_argument("--name", default=None,
+                    help="fixed snapshot dir name, overrides the "
+                    "timestamped name (use R3-xxx-L3 for R3-L3)")
     args = ap.parse_args()
     src = os.path.abspath(args.evidence_dir)
     if not os.path.isdir(src):
@@ -47,9 +50,12 @@ def main():
     task = os.path.basename(src.rstrip("/"))
     tz = datetime.timezone(datetime.timedelta(hours=7))
     stamp = datetime.datetime.now(tz).strftime("%Y%m%d-%H%M%S")
-    name = "%s-%s" % (task, stamp)
-    if args.label:
-        name += "-%s" % args.label
+    if args.name:
+        name = args.name
+    else:
+        name = "%s-%s" % (task, stamp)
+        if args.label:
+            name += "-%s" % args.label
     root = args.snapshot_root or os.path.expanduser("~/rung3-snapshots")
     dest = os.path.join(root, name)
     if os.path.exists(dest):

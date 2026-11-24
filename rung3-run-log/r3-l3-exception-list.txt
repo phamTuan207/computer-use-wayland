@@ -1,6 +1,8 @@
-R3-L3 live-re-read exception list (Decision B, speedup council 2026-11-24)
-Published before task 1. Read all 55 "Vat chung cham" lines in the frozen key
-(docs/rung3-answer-keys.md, sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8).
+R3-L3 live-re-read exception list, REPUBLISHED (Decision B, speedup council 2026-11-24;
+republished 2026-11-24 17:12 +07 by the Phase 0 coordinator, per planning council redteam
+objection 32). Read all 55 "Vat chung cham" lines in the frozen key
+(docs/rung3-answer-keys.md, sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8)
+plus the list steps in docs/rung3-list-100-tasks.md.
 
 RULE: A task is Class L (exception) ONLY if the scorer must verify state that is
 BOTH created/modified by the runner AND destroyed by the reset AND not preserved
@@ -8,35 +10,54 @@ in the sealed snapshot. If verification can be done from the sealed snapshot fil
 alone (screenshot, ket-qua.txt, saved CSV/PNG/MP3/GIF, online doc that persists),
 it is Class S (snapshot-sufficient, decoupled scoring is OK).
 
-CLASS L (exception, score-before-reset, runner waits): 5 tasks
-- R3-001: scorer re-opens TodoMVC live and compares. Todos live in browser storage;
+CLASS L (exception, score-before-reset, runner waits): 9 tasks
+- R3-001 (position 1, FCC): scorer re-opens TodoMVC live and compares. Todos live in browser storage;
   reset wipes them. Screenshot alone is not what the key asks the scorer to verify.
-- R3-055: scorer opens each directory and checks permissions. Live filesystem tree;
+- R3-055 (position 36, Codex): scorer opens each directory and checks permissions. Live filesystem tree;
   reset wipes it. A screenshot cannot substitute for a live permission check.
-- R3-074: scorer re-runs a read-only script and compares 10 lines. The script reads
+- R3-074 (position 39, Codex): scorer re-runs a read-only script and compares 10 lines. The script reads
   live files the reset restores, so a post-reset re-run gives fixture output.
-- R3-075: scorer checks the venv exists and packages are installed. Live filesystem;
+- R3-075 (position 40, Codex): scorer checks the venv exists and packages are installed. Live filesystem;
   reset wipes the runner's venv.
-- R3-089: scorer re-runs find (read-only) on the live log files in ~/rung3/nd09-logs.
+- R3-089 (position 49, Codex): scorer re-runs find (read-only) on the live log files in ~/rung3/nd09-logs.
   Reset restores those files to fixture state, so a post-reset re-run is wrong.
+- R3-096 (position 52, Codex): scorer re-runs diff (read-only) on live ~/rung3/nd16-cu.conf and
+  ~/rung3/nd16-moi.conf. PROVEN Class L: the key's own words plus a live check (diff shows exactly
+  4 differing lines: cong, che_do, ngon_ngu, bo_nho). Reset restores cu.conf to fixture state,
+  so a post-reset diff shows 4, not the merged 3. The merged file is not named as snapshot evidence.
+- R3-078 (position 42, Codex): scorer checks the backup file count and compares checksums of 3 fixed
+  backup files (d45-file-01, d45-file-05, d45-file-10). The backup files live in ~/rung3/d45-backup
+  (live, reset wipes them). The key names only the backup list plus report as evidence, not the
+  backup files, and the list does not instruct the runner to copy the backup files into the
+  evidence folder. Moved to Class L (coordinator decision, redteam objection 32).
+- R3-079 (position 43, Codex): scorer opens the restored file ~/rung3/d46-restored/bao-cao-tuan.txt
+  and compares with manifest.txt. The restored file is live (reset wipes d46-restored). The list
+  does not instruct the runner to copy it into the evidence folder. Moved to Class L.
+- R3-088 (position 48, Codex): scorer lists files in the tar.gz archive and counts (11 entries,
+  10 files). The tar.gz is ~/rung3/nd28-luu-tru.tar.gz (live, reset removes it). The list does
+  not instruct the runner to copy it into the evidence folder. Moved to Class L.
 
-CLASS S (snapshot-sufficient, decoupled scoring OK): the other 50 run tasks.
+CLASS S (snapshot-sufficient, decoupled scoring OK): the other 46 run tasks.
 - Screenshot/file comparison tasks (R3-002, R3-007, R3-009, R3-011, R3-013, R3-014,
   R3-017, R3-018, R3-021, R3-022, R3-024, R3-025, R3-026, R3-027, R3-028, R3-029,
   R3-037, R3-041, R3-046, R3-047, R3-049, R3-072, R3-076, R3-082): scorer compares
   against the sealed screenshot / ket-qua.txt / checker output.
 - Saved-file tasks (R3-005 QR images, R3-008 MP3, R3-010 PNG, R3-016 CSV, R3-045 GIF,
-  R3-067 PNG, R3-083 PNG, R3-085 frame, R3-086 command outputs, R3-088 tar.gz,
-  R3-093 files, R3-094 files): scorer opens the saved file in the snapshot.
+  R3-067 PNG, R3-083 PNG, R3-085 frame, R3-086 command outputs, R3-093 files, R3-094 files):
+  scorer opens the saved file in the snapshot.
 - Online-doc tasks (R3-003, R3-004, R3-036, R3-040, R3-042): the doc is saved online
   (Google Doc / archive.org) and persists after a local reset; re-opening gives the
   same content.
 - Wikipedia diff (R3-006): revisions are permanent; re-opening gives the same diff.
 - Saved online doc + screenshot (R3-019, R3-035): same as above.
-- Re-run on snapshot copies (R3-096 diff, R3-098 awk, R3-099 script on a copy,
-  R3-079 restored file vs manifest): the files are in the sealed snapshot.
-- R3-100: port-closed check plus titles vs saved HTML file. The runner stops the
-  server, the port stays closed (reset does not restart it); titles are in the file.
+- Re-run on snapshot copies or unmodified fixtures (R3-098 awk on fixture CSV, R3-099 script on
+  a copy, R3-100 port state recorded at run time plus saved HTML): the files are in the sealed
+  snapshot, or the re-run reads a fixture the task does not modify.
+- R3-093 (position 50, Codex) stays Class S: the key explicitly names the report
+  (~/rung3-chung-cu/R3-093/nd13-bao-cao.txt) plus the 3 split files plus the merged file as
+  evidence, and the R3-L3 amendment explicitly says to copy the evidence into the R3-093 folder.
+  The manifest gate checks for nd13-bao-cao.txt, phan-01, phan-02, phan-03, nd13-ghep-lai.bin
+  by name. If any is missing, the task is treated as Class L for that run (score-before-reset).
 
 BACKUPS (if used as replacements):
 - DP-02 is Class L: scorer re-runs grep -r -o -F on the live dp02 fixture files;
@@ -44,12 +65,16 @@ BACKUPS (if used as replacements):
   it keeps score-before-reset.
 - DP-03, DP-05, DP-06, DP-07 are Class S (saved files / screenshot comparison).
 
-COUNT: 5 of 55 run tasks are Class L (9 percent). This is the minority the council
-expected (Members 1 and 2), not Member 3's conservative 33. The decoupling saving
-is therefore on the larger side. If the exception list cannot be produced, the
-serial pipeline stands (fail-safe). This list IS produced, so decoupling applies
-to the 50 Class S tasks.
+COUNT: 9 of 55 run tasks are Class L (16 percent). The previous version of this list
+had 5 Class L (R3-001, R3-055, R3-074, R3-075, R3-089). This republication adds R3-096
+(proven by the key's own words plus a live diff check), R3-078, R3-079, R3-088
+(coordinator decision: the scorer needs live files the list does not require the runner
+to copy into the evidence folder). The Class L count is 9, inside the planning council's
+expected range of 6 to 10. The decoupling saving is therefore smaller than the 5-task
+estimate but still on the majority of tasks (46 of 55).
 
 FAIL-SAFE: if a task is found at run time to need a live re-read that this list
 missed, the coordinator moves it to score-before-reset for that task and records
-the correction here. No task is decoupled on a guess.
+the correction here. No task is decoupled on a guess. The pre-reset content check
+(manifest gate) enforces this: before resetting a Class S task, the coordinator
+confirms the snapshot contains every file the key's "Vat chung cham" line names.
