@@ -389,3 +389,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 16:27 +07 - Scorer 1 R3-L3: chu xac nhan mochi giu vai (mochi)
+
+- Chu so huu quyet dinh 16:27 +07: mochi GIU vai scorer 1 cho R3-L3, du da soat PR #253 va biet truoc noi dung key. Ly do: mochi khong doc verdict scorer 2, khong biet truoc ket qua runner; scorer 2 doc lap + scorer 3 tiebreaker van la lop kiem tra. Mochi cham nhu moi lan, theo dung brief scorer 1. Viec kiem tra WAVE truoc task 1 (Fox News va BBC /news) van giu, cho anh giao sau merge.
+- PR #253 da merge (fast-forward), todolist-push o 6c95c51. Mochi tu kiem tra lai trang thai sau merge: verify-list.py 62 pass 0 fail, check-key-hash.py PASS, hash key khong doi.
