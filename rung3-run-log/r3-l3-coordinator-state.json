@@ -1,10 +1,10 @@
 {
  "backups_used": [],
  "checklist_22": {
-  "done": 16,
-  "in_progress": 2,
-  "not_done": 4,
-  "note": "see r3-l3-phase0-checklist-status.md for per-item status"
+  "done": 22,
+  "in_progress": 0,
+  "not_done": 0,
+  "note": "see r3-l3-phase0-checklist-status.md for per-item status; all 22 DONE and file-verified"
  },
  "class_l": [
   "R3-001",
@@ -31,7 +31,7 @@
   "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
   "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
   "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
-  "todolist_push_tip": "d58d3da"
+  "todolist_push_tip": "7c38ebf"
  },
  "invalid_by_group": {
   "de": 0,
@@ -40,7 +40,7 @@
   "trung_binh": 0
  },
  "invalid_count": 0,
- "last_updated": "2026-11-24T18:10:00+07:00",
+ "last_updated": "2026-11-24T18:20:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "1 trial row only, validated PASS",
@@ -62,7 +62,8 @@
   "Liveness report R3-L3 (2026-11-24 17:28, rung3-ci/liveness-report-20261124-175000.md): 40 OK, 9 FAIL, 3 PENDING, 2 SKIP. Triaged: 6 FAILs are urllib 403 false positives (bot check, browser tasks; timeanddate.com browser-verified by Mochi). 1 is Wayback 429 (transient, has policy). 2 (bbc.com DNS, gutenberg.org 503) pending Mochi browser verification (run 136). Liveness signed off with triage (coordinator, 2026-11-24 17:52 +07), conditional on bbc/gutenberg browser verification before task 1.",
   "Phase 0 commit 28e2ce0 pushed to todolist-push (verified via ls-remote). todolist-push tip is now 28e2ce0.",
   "R3-047 is a 5th pre-run INVALID CANDIDATE (added 2026-11-24 18:02 +07): Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 35; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive.",
-  "TB-B2 (df4defcc) calibrated 4/4 expected (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), APPROVED as tiebreaker B. Grade file ~/workspace/r3-l3-calibration-TBB2.md (0 em/en dashes). Item 10 (Pair B calibration) is DONE: 1B, 2B, TB-A, TB-B2 all approved by independent verifier / calibration."
+  "TB-B2 (df4defcc) calibrated 4/4 expected (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), APPROVED as tiebreaker B. Grade file ~/workspace/r3-l3-calibration-TBB2.md (0 em/en dashes). Item 10 (Pair B calibration) is DONE: 1B, 2B, TB-A, TB-B2 all approved by independent verifier / calibration.",
+  "All 22 precondition checklist items DONE and file-verified (2026-11-24 18:20 +07). thu-tu-chay.txt rewritten (sha256 b2b8c985) and synced to laptop byte-identical. du-phong.txt synced to laptop byte-identical (sha256 3648a7d5). todolist-push tip 7c38ebf."
  ],
  "pass_count": 0,
  "plan_adaptations": [
