@@ -767,3 +767,59 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Bao cao R3-L3 build (2026-11-24 15:05 +07, PR repo #253)
+
+Lenh chu so huu 14:21 +07 24/11: hoi dong quyet dinh HUY R3-L2 (3/3, redteam dong y), ledger R3-L2 dong o 11 dong (8 FAIL, 2 PASS, 1 INVALID). Nhiem vu: xay R3-L3 tu 18 fix triage (PR #225), them it nhat 2 du phong trung binh moi, viet luat 429, lam qua PR. Xong, da dong bang, cho soat doc lap roi re-freeze.
+
+### Luu y dau tien: bien ban council khong tim thay + 3 gia dinh
+
+- Bien ban council anh chi duong ~/workspace/r3-decision-20261124.md KHONG TON TAI: da tim ca ~/workspace (find) va repo (todolist-push + main, khong co file r3-decision, khong co commit message council/void). Em lam theo lenh trong tin nhan cua anh, voi 3 gia dinh chua duoc anh xac nhan: (1) lam tren branch moi r3-l3 tu origin/todolist-push, PR ve todolist-push, merge = re-freeze; (2) DP-01 nghi huu o R3-L3 (anh: chi con DP-03, vi DP-01 da FAIL va R3-047 da INVALID); (3) R3-040 giu trang bbc.com/news va chuyen sang VM-fetch.
+- Neu 1 trong 3 gia dinh sai, anh noi em truoc khi merge PR #253.
+
+### Ket qua check pre-freeze (bang chung)
+
+- timeanddate.com: MO DUOC bang trinh duyet that, 14:26 +07 24/11, day du noi dung, khong bi chan. Ca 4 task R3-011/028/036/046 chay binh thuong, khong can tuyen bo vo hieu; cau hoi cap tam thoi vo nghia. Ruling dem theo su kien van ghi vao key de phong.
+- WAVE R3-009: BBC 0 loi (Alerts 27, Features 63, Structure 167, Contrast 0) — phai doi URL. Wikipedia 7 loi (1 Missing form label, 5 Language missing or invalid, 1 Empty link) — giu nguyen.
+- Vong 1 ung vien (14:27-14:30 +07): CNN WAVE khong tai duoc (2 lan); Guardian Errors 2 nhung WAVE chi danh gia trang Forbidden (UNTITLED); Al Jazeera Errors 2 nhung WAVE chi danh gia trang 404. Ca 3 khong dung duoc.
+- Vong 2 (14:30-14:34 +07): BBC News 0 loi; Reuters bi chan DataDome (2 lan); AP bi chan Cloudflare "Just a moment..." (2 lan); Fox News Errors 2 (1 Missing form label, 1 Empty heading; Contrast 17, Alerts 312, Features 142, Structure 383) tren trang that — ung vien sach DUY NHAT trong 7 URL. URL 1 doi sang https://www.foxnews.com/.
+- Mockaroo: TAI CSV KHONG CAN TAI KHOAN (trinh duyet that 14:26-14:28 +07, GENERATE DATA 2 lan, khong man hinh dang nhap, Preview dung CSV 10 dong). Khong can cap phat tai khoan, khong buoc dang nhap. Dong key cu doi tao/cap phat tai khoan la sai, da sua.
+- CDX R3-040 (VM, 14:24-14:27 +07): VM khong bi gioi han toc do; snapshot cu nhat doc duoc 2008-07-08 18:11:57 (HTTP 200, 53.438 byte, tieu de "BBC - Homepage"); snapshot 2011-01-28 van doc duoc nhung khong phai cu nhat. Vi du trong key doi sang 2008-07-08. Tieu de 2 ban khac nhau theo thoi dai nen bo yeu cau tieu de phai giong nhau (ca list Pass va key).
+- R3-027 (namechk, 14:48-14:53 +07): ca 3 ten moi rung3alpha01/rung3bravo02/rung3charlie03 (12/12/14 ky tu) DEU DA CO NGUOI DUNG tren X. Key khong chot ket luan ky vong nen khong can sua; da ghi ket qua vao ghi chu R3-027 trong key.
+- R3-029 (15:01 +07): ca 5 ten san pham (iPhone, MacBook, Canon EOS 5D, HP LP3065, HTC Touch HD) deu co that tren cua hang demo, dung ten. Khong can sua key.
+
+### 18 fix triage — da ap dung het
+
+- 2 required: R3-029 (3 anh chup 3 trang thai + ket-qua.txt, evidence 1->3), R3-075 (3 anh chup terminal + duong xu ly loi thu lai 1 lan roi vo hieu, evidence 1->3; gia tri dong bang Python 3.14.10, requests==2.32.3 khong doi).
+- 11 polish: R3-010 (Shift giu hinh tron, ellipse keo tu do = sai loai hinh), R3-093 (split day du flag, bao cao ~/rung3/nd13-bao-cao.txt), R3-027 (ten moi + ghi chu check X), R3-086 (ping -c 4), R3-017 (chi tinh tab), R3-003 (ngay cong bo giai 9 October 2026), R3-022 ("bộ mạch chủ", ca md va JSON), DP-02 (20-60 dong), DP-05 (sqlite3 tren laptop, 4 cho), R3-072 (d72-ket-qua.txt), tier table (60 muc, them R3-074/075/076).
+- 2 exception: R3-074 — exception van ban o R3-L2 duoc thay the o R3-L3 bang polish hoan lai (list step 1 + note doi anh chup, evidence 0->1); LibreOffice muc 4 dormant, khong doi (0 task LibreOffice).
+- 3 operational: R3-009 (doi URL, xem tren), R3-011 (1 check gat 4 task, ruling dem theo su kien), R3-016 (khong can tai khoan + pin cot Age).
+- Luat 429 o muc 1 list: doi 5 phut, thu lai toi da 2 lan, neu van 429 thi vo hieu theo muc 1.
+
+### Du phong moi: DP-06, DP-07 (DP-01 nghi huu)
+
+- DP-06 (trinh duyet, trung binh, tra-cuu): dan so 3 thanh pho tu infobox Wikipedia (Paris 2,047,602 Jan 2026; Berlin 3,596,999 2022 census, khong lay Estimate 3,700,577; Rome 2,745,062 2026, khong lay Metropolitan city 4,224,901). So lieu live, anh chup la chuan. Verify bang API Wikipedia 2026-11-24 07:28 UTC.
+- DP-07 (desktop, trung binh, lenh-terminal): 3 file printf (moi file 69 byte, tong 207), sha256 dong bang (f830f594..., 26030358..., 07c80615...), bang kiem + xac minh sha256sum -c (3 OK). Verify bang dung lenh task 2026-11-24 07:28 UTC.
+- Pool R3-L3: trung binh DP-03 roi DP-06 roi DP-07; kho DP-02; rat kho DP-05; tong 5 du phong. Tier table 60 muc (55 task + 5 du phong).
+
+### Review: council 3 + redteam + verify doc lap
+
+- Council 3 reviewer + redteam: NEEDS CHANGE / BROKEN, 4 finding xac nhan — (1) list Pass R3-040 van doi tieu de khop; (2) 3 dong Mockaroo o list van doi cap phat tai khoan; (3) liveness-config.json (URL R3-009 van BBC, service DP-01) + README cu; (4) keys.md header o H2 chua co trong ke hoach. Da sua het, kem 3 sua nho cua em (L34 list, xoa DP-01 khoi evidence-requirements, khoi phuc cum "3 muc noi dung chinh" o R3-040).
+- Verify doc lap tu dau (agent moi, khong viet gi): NEEDS CHANGE 1 muc duy nhat — thu-tu-chay.txt L59 van ghi BBC cho R3-009 (muc H2, khong phai loi content). Da sua o commit dong bang. Ket luan verify: 18 thay doi day du va chinh xac, gia tri dong bang tai suy dien dung (DP-07 hash, DP-06 dan so, CDX 2008, R3-027), nhat quan xuyen file (tier table = JSON tiers, evidence = 60 ID), script chi fail o hash pre-freeze.
+- 2 sua MOI ngoai triage (do bang chung pre-freeze): L243 R3-016 (khong can tai khoan) va L379 R3-040 (bo yeu cau tieu de giong nhau) — da ghi ro trong PR de nguoi soat doc lap chu y. Reviewer 2 phat hien them: tieu de trang hien tai khong phai "BBC News - Home" (do la tieu de snapshot 2011; trang hien tai fetch tu VM co title "News") — da bo vi du do khoi key va khoi note o list.
+
+### Dong bang (2 commit, PR #253)
+
+- H1 9b9d900b3bab21074958a3d372a0780b856cb065: content (8 file: list, keys.md, keys.json, evidence-requirements.json, verify-list.py, liveness-config.json, README.md, roadmap-plan.md).
+- H2 5fac0ebb6db1367f321e7e10dc883e064bd36869: metadata, ghi H1 that (khac R3-L2: commit d88df6a7 khong ton tai). Tag R3-L3-FREEZE -> H2. Branch + tag da push, verify bang git ls-remote.
+- Hash cuoi: list c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec, keys.md 21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60, keys.json 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8.
+- verify-list.py: 62 pass, 0 fail. check-key-hash.py: PASS. Khong tao R3-L3-grades.jsonl o luc dong bang (tien le R3-L2: commit cham dau tien tao).
+- du-phong.txt la file laptop-side, dieu phoi vien viet truoc task 1 theo dung thu tu dong bang (ghi trong commit message H1/H2), khong phai file repo.
+- PR repo: https://github.com/phamTuan207/computer-use-wayland/pull/253 (r3-l3 -> todolist-push).
+
+### Con mo (coordinator, khong phai file)
+
+- Runner brief can mang: 3 ten R3-027 + ket qua X (ca 3 da co nguoi dung), thu tu du phong, ruling R3-011 dem theo su kien.
+- Tai khoan test R3-029 can dang ky truoc task 1 (email test-only, theo key).
+- Laptop check: R3-074/R3-098/099; refresh fixture R3-089 truoc 2026-11-29.
+- Em khong cham diem rung 3, khong doc ledger/snapshot trong build nay.
