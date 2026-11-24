@@ -1,7 +1,7 @@
 # Khoa dap an rung 3, ma lan chay R3-L3 (frozen)
 
-- Run code: R3-L3. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit d88df6a7329fb0432bb4eb450ffc958274147ca8.
-- List sha256: 4c01cc4631cb140d69773fc4e48a470242e8e748f498ac25b5607d4a9ff46ff1 (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
+- Run code: R3-L3. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 9b9d900b3bab21074958a3d372a0780b856cb065.
+- List sha256: c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
 - Key file nay dong bang truoc task 1. Sau task 1, moi thay doi khoa dap an hoac muc 6, muc 8 cua danh sach deu huy bo lan chay: ma lan chay moi, chay lai tu task 1. Khoa khong bao gio duoc sua giua lan chay. Neu khoa bi chung minh la sai giua lan chay, task do ghi vo hieu, ap dung quy tac du phong.
 - Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
 - Moc san do kho: kho cong rat kho it nhat 30 phan tram, rat kho it nhat 10 phan tram. Hien trang: kho cong rat kho 18/55 (32,7 phan tram), rat kho 7/55 (12,7 phan tram). Dat moc.
