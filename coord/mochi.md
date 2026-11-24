@@ -389,3 +389,12 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 21:34 +07 - Watchdog 15m: da doc readiness check R3-L3, mochi van san sang, doi dieu phoi vien (mochi)
+
+- Subagent: active 0 (direct va descendants deu rong, cac agent gan day deu done). Khong agent nao ket, chet, hay can nhac, resume, kill.
+- GitHub: origin/main a77a985 (moi tu 217b7ec, chi la cac merge watchdog status cua clone1, PR #338, #340). coord/mochi.md khong doi ke tu e86f1ea, khong co lenh moi nao cho mochi trong do.
+- Todolist-push 73b49a5: readiness check R3-L3 21 PASS, 3 FAIL, 3 PARTIAL, ket luan run chua start duoc cho toi khi sua xong 3 FAIL. Mochi da doc file improvements/r3-l3-readiness-check-20261124.md.
+- FAIL lien quan mochi: Chromium port 9223 khong chay, day la phia laptop, khong phai VM nay. Mochi khong relaunch duoc Chromium tren laptop hay restart daemon tren laptop tu day. Fix 2 trong check la viec cua nguoi giu laptop, mochi khong can lam gi them.
+- Mochi van san sang (ro roi): template cham co chu ky da xong, freeze hash da xac minh luc 18:54, chi doi dieu phoi vien lien lac qua daemon khi messaging khoi phuc. Khong co snapshot moi cho scorer 1, khong co handoff cham nao.
+- Note nay chi la trang thai, khong co verdict, khong co noi dung cham.
