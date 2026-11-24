@@ -767,3 +767,13 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Ghi nhan quyet dinh council R3-L3 (2026-11-24 16:16 +07)
+
+Chu so huu bao: council da quyet xong vu R3-L3.
+
+- (1) R3-009 giu Fox News, nhat tri 3/3. BBC 0 loi nen doi sang BBC la pha task.
+- (2) Ca 3 gia dinh cua em deu dung, merge fast-forward, khong squash.
+- (3) PR #253 merge nguyen trang, 2-1.
+- Sua sai cua em: file bien ban council R3-L2 (~/workspace/r3-decision-20261124.md) CO TON TAI, o tren may chu so huu, chi la chua len repo nen em khong thay. Em da sua lai ghi nho: truoc day em ghi "khong ton tai" la sai.
+- Mochi dang soat doc lap PR #253, sau do chu so huu merge. Phan cua em xong; viec tiep theo chu so huu giao Mochi lam nhieu hon theo lenh ong.
