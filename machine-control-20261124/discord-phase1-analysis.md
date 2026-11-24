@@ -1,6 +1,6 @@
 # Discord message-control CLI: Phase 1 Codebase Analysis
 
-- Date: 2026-11-24, work window 20:26:59 to 20:33 Asia/Ho_Chi_Minh (see work log at the end)
+- Date: 2026-11-24, work window 20:26:59 to 20:31 Asia/Ho_Chi_Minh (see work log at the end)
 - Analyst: Worker 1 (Phase 1 only, analysis, no building)
 - Pipeline: CLI-Anything 7-phase, HARNESS.md Phase 1
 - Scope: Discord desktop message read/send control. ZCode is OUT of scope. No OpenRouter.
@@ -252,7 +252,7 @@ Following HARNESS.md Phase 2 (subcommand CLI + REPL, `--json` on every command,
 - 20:29 (T+3m): DOM probe 2 in the test DM: 13 visible messages, message/composer
   selectors recorded (section 6.3). IPC probe handshake READY confirmed the logged-in
   user (identity withheld from this file, see section 6.2).
-- 20:30-20:33 (T+4-7m): official RPC docs page fetched and cited; this analysis
+- 20:30-20:31 (T+4-5m): official RPC docs page fetched and cited; this analysis
   written and committed.
 - Test traffic sent in this phase: none. Messages sent: 0. Text typed: none.
   Only read-only CDP evaluation, one read-only navigation, and one IPC handshake.
