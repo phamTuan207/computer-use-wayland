@@ -1,6 +1,6 @@
 R3-L3 Phase 0 precondition checklist status (section 11 of the execution plan).
 Updated 2026-11-24 17:46 +07 by the Phase 0 coordinator (agent 68a84d25).
-Status counts: DONE 15, IN PROGRESS 3, NOT DONE 4. The run is ON HOLD until all 22 are DONE.
+Status counts: DONE 16, IN PROGRESS 2, NOT DONE 4. The run is ON HOLD until all 22 are DONE.
 Evidence for each item is the file named. "DONE" means verified with a file, not merely asserted.
 
 1. DP-01 removed from both du-phong files; byte-identical; laptop canonical.
@@ -22,7 +22,7 @@ Evidence for each item is the file named. "DONE" means verified with a file, not
 9. Deputy coordinator named with declaration; coordinator state file defined.
    DONE. Deputy 028399b1 (declaration ~/workspace/r3-l3-deputy-declaration.md, read plan+state 2026-11-24 17:24:46 +07, on STANDBY). State file rung3-run-log/r3-l3-coordinator-state.json (updated after every task; currently 2026-11-24T17:45:00+07:00).
 10. Pair B declarations + calibration verified by someone other than coordinator, with signed grades incl. Tier C + B-hybrid.
-    IN PROGRESS (verifier done, replacement TB-B calibrating). 4 calibration subagents done: 1B (4e2f52d4) 4/4, 2B (2e3ae678) 4/4, TB-A (97290681) 4/4, TB-B (9d613f19) 3/4 (R3-041 FAIL vs PASS). Independent verifier (032952f7) confirmed: report ~/workspace/r3-l3-calibration-VERIFICATION.md. APPROVED: 1B, 2B, TB-A. NOT APPROVED: TB-B (R3-041 FAIL is a misapplication, invented a fonts-page screenshot requirement the key never states). Replacement tiebreaker B candidate (df4defcc) spawned for re-calibration (4-task, R3-041 evidence rule clarified as method). TB-B approval pending its result. Grade files at ~/workspace/r3-l3-calibration-1B.md, -2B.md, -TBA.md, -TBB.md, -VERIFICATION.md.
+    DONE. 1B (4e2f52d4) 4/4, 2B (2e3ae678) 4/4, TB-A (97290681) 4/4, all APPROVED by the independent verifier (032952f7, report ~/workspace/r3-l3-calibration-VERIFICATION.md). Original TB-B (9d613f19) 3/4, NOT APPROVED (R3-041 misapplication). Replacement TB-B2 (df4defcc) calibrated 4/4 (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS, 2026-11-24 17:31 +07), APPROVED. Grade files: ~/workspace/r3-l3-calibration-1B.md, -2B.md, -TBA.md, -TBB.md (failed), -TBB2.md (approved), -VERIFICATION.md. All include Tier C (R3-067) + B-hybrid (R3-003) + declarations + key hash verification.
 11. Ledger file created with schema, trial row validated + committed; append/push protocol written.
     DONE (file + validation + protocol; commit pending). rung3-run-log/R3-L3-grades.jsonl (1 trial row, test_row true, validated PASS by validate-ledger.py 2026-11-24 17:20). Append/push protocol in rung3-run-log/r3-l3-ledger-push.md. Commit pending (Phase 0 commit).
 12. Liveness report signed off.

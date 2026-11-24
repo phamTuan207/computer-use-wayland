@@ -1,8 +1,8 @@
 {
  "backups_used": [],
  "checklist_22": {
-  "done": 15,
-  "in_progress": 3,
+  "done": 16,
+  "in_progress": 2,
   "not_done": 4,
   "note": "see r3-l3-phase0-checklist-status.md for per-item status"
  },
@@ -40,7 +40,7 @@
   "trung_binh": 0
  },
  "invalid_count": 0,
- "last_updated": "2026-11-24T18:02:00+07:00",
+ "last_updated": "2026-11-24T18:10:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "1 trial row only, validated PASS",
@@ -61,7 +61,8 @@
   "R3-075 key verified CORRECT. R3-029 key verified CORRECT. No key blocker.",
   "Liveness report R3-L3 (2026-11-24 17:28, rung3-ci/liveness-report-20261124-175000.md): 40 OK, 9 FAIL, 3 PENDING, 2 SKIP. Triaged: 6 FAILs are urllib 403 false positives (bot check, browser tasks; timeanddate.com browser-verified by Mochi). 1 is Wayback 429 (transient, has policy). 2 (bbc.com DNS, gutenberg.org 503) pending Mochi browser verification (run 136). Liveness signed off with triage (coordinator, 2026-11-24 17:52 +07), conditional on bbc/gutenberg browser verification before task 1.",
   "Phase 0 commit 28e2ce0 pushed to todolist-push (verified via ls-remote). todolist-push tip is now 28e2ce0.",
-  "R3-047 is a 5th pre-run INVALID CANDIDATE (added 2026-11-24 18:02 +07): Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 35; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive."
+  "R3-047 is a 5th pre-run INVALID CANDIDATE (added 2026-11-24 18:02 +07): Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 35; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive.",
+  "TB-B2 (df4defcc) calibrated 4/4 expected (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), APPROVED as tiebreaker B. Grade file ~/workspace/r3-l3-calibration-TBB2.md (0 em/en dashes). Item 10 (Pair B calibration) is DONE: 1B, 2B, TB-A, TB-B2 all approved by independent verifier / calibration."
  ],
  "pass_count": 0,
  "plan_adaptations": [
@@ -104,7 +105,7 @@
   "pair_b_1": "4e2f52d4-f3f7-41ad-a302-78f0aee91895 (calibrated, 4/4 expected)",
   "pair_b_2": "2e3ae678-2a82-496e-b301-7ac090356fb3 (calibrated, 4/4 expected)",
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
-  "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (replacement candidate, calibration running; previous 9d613f19 NOT APPROVED 3/4)"
+  "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
  "status": "PHASE 0 - PREPARATION, RUN NOT STARTED"
 }
