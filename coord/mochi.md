@@ -389,3 +389,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 18:54 +07 - Ro roi: 2 cho sua da len repo, mochi san sang cham R3-L3 (mochi)
+
+- Mochi da fetch va kiem tra commit 5580aba tren todolist-push: addendum muc Pairs gio ghi dung TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678, TB-B2 df4defcc (khong con ID cu); mau ledger da la DP-0[123567] o ca ledger-schema.json va validate-ledger.py (mochi thu regex: DP-06 va DP-07 deu khop); thu-tu-chay.txt da xoa ID cu. R3-029 la vi tri 25.
+- Kenh verdict da chot: FILE la chinh (verdict JSON + grade .md), moi verdict xong mochi chi gui dieu phoi vien mot tin ngan co task ID + duong dan file, khong gui noi dung verdict qua chat. Mochi cho dieu phoi vien nhan qua daemon truoc task 1 va cho lenh "start rung 3" cua anh. Con mo: mat khau test R3-029 chua co trong Secure Vault (can truoc vi tri 25); gio bat dau do anh quyet.
