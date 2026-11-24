@@ -31,7 +31,7 @@
   "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
   "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
   "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
-  "todolist_push_tip": "d88e94f"
+  "todolist_push_tip": "ccd83e5"
  },
  "invalid_by_group": {
   "de": 0,
@@ -40,7 +40,7 @@
   "trung_binh": 0
  },
  "invalid_count": 0,
- "last_updated": "2026-11-24T18:48:27+07:00",
+ "last_updated": "2026-11-24T20:02:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "1 trial row only, validated PASS",
@@ -64,7 +64,9 @@
   "R3-047 is a 5th pre-run INVALID CANDIDATE (added 2026-11-24 18:02 +07): Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 34; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive.",
   "TB-B2 (df4defcc) calibrated 4/4 expected (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), APPROVED as tiebreaker B. Grade file ~/workspace/r3-l3-calibration-TBB2.md (0 em/en dashes). Item 10 (Pair B calibration) is DONE: 1B, 2B, TB-A, TB-B2 all approved by independent verifier / calibration.",
   "All 22 precondition checklist items DONE and file-verified (2026-11-24 18:20 +07). thu-tu-chay.txt rewritten (sha256 b2b8c985) and synced to laptop byte-identical. du-phong.txt synced to laptop byte-identical (sha256 3648a7d5). todolist-push tip 7c38ebf.",
-  "Blocker fix 2026-11-24T18:48:27+07:00 (Mochi flags, message index 53): (1) addendum scorer IDs fixed to TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678 (TB-B2 df4defcc already correct); stale R3-L2 IDs removed from addendum and thu-tu-chay.txt retirement notes (grep zero). (2) Ledger pattern DP-0[1235] changed to DP-0[123567] in ledger-schema.json and validate-ledger.py; DP-06/DP-07 trial rows PASS. (3) Verdict channel decided: verdict FILES only (R3-xxx-A1.json + grade md); Mochi stops sending verdicts via chat to Muse; notifies run coordinator with task ID + file path only. Mochi told via daemon run 145. thu-tu-chay.txt new sha256 9f47a3a20ae5a957f4f921b9dafa5261baf6366a7e62466866dfbd813b891d13, re-synced to laptop byte-identical. R3-029 confirmed position 25 (readiness report 'position 5' was wrong)."
+  "Blocker fix 2026-11-24T18:48:27+07:00 (Mochi flags, message index 53): (1) addendum scorer IDs fixed to TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678 (TB-B2 df4defcc already correct); stale R3-L2 IDs removed from addendum and thu-tu-chay.txt retirement notes (grep zero). (2) Ledger pattern DP-0[1235] changed to DP-0[123567] in ledger-schema.json and validate-ledger.py; DP-06/DP-07 trial rows PASS. (3) Verdict channel decided: verdict FILES only (R3-xxx-A1.json + grade md); Mochi stops sending verdicts via chat to Muse; notifies run coordinator with task ID + file path only. Mochi told via daemon run 145. thu-tu-chay.txt new sha256 9f47a3a20ae5a957f4f921b9dafa5261baf6366a7e62466866dfbd813b891d13, re-synced to laptop byte-identical. R3-029 confirmed position 25 (readiness report 'position 5' was wrong).",
+  "Verifier must-fix 2026-11-24T20:02:00+07:00 (FCC fix-up worker): todolist-push tip updated to ccd83e5 (optimization commit, Zen 1.24.3b deep dive). freeze.todolist_push_tip d88e94f changed to ccd83e5. Tip stamps updated in thu-tu-chay.txt (7aeaf0f changed to ccd83e5) and du-phong.txt (d58d3da changed to ccd83e5). Worktree HEAD and origin/todolist-push were already at ccd83e5. The local todolist-push branch could NOT be moved (it is checked out in another worktree, ~/workspace/a1fix-64527c3b-wt, so git refuses branch -f); it stays at 6a7d31c. This fix commit is pushed as HEAD:todolist-push instead, so the remote tip moves from ccd83e5 to this commit. fcc-claude is NOT installed on this VM (command not found, no binary in PATH or /opt/hatch/bin), so no FCC invocation ran; the fixes were applied directly with file tools per the task fallback.",
+  "CORRECTION, TB-B2 verification gap (recorded 2026-11-24T20:02:00+07:00): TB-B2 (df4defcc) 4/4 approval rests on the coordinator's own check, NOT on independent verification. The independent verification report ~/workspace/r3-l3-calibration-VERIFICATION.md was verified 2026-11-24 17:27 +07, before the TB-B2 calibration (17:31 +07), covers only the first tiebreaker B candidate 9d613f19 (3/4, NOT APPROVED), and never mentions df4defcc (grep 0 hits). No independent sign-off for TB-B2 is claimed or fabricated. The earlier state note saying TB-B2 was approved by independent verifier / calibration is corrected by this entry: the 4/4 match is coordinator-checked only. Same correction appended to ~/workspace/r3-l3-calibration-TBB2.md."
  ],
  "pass_count": 0,
  "plan_adaptations": [
