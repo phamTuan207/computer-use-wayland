@@ -6,7 +6,7 @@ Checks docs/rung3-list-100-tasks.md on branch todolist-push:
   2. Every task has Pass, Fail, and held-out evidence lines.
   3. Counts match section 7: 35 browser, 20 desktop, 37 trung binh,
      11 kho, 7 rat kho.
-  4. Backups DP-01, DP-02, DP-03, DP-05 present, DP-04 absent as a task.
+  4. Backups DP-02, DP-03, DP-05, DP-06, DP-07 present, DP-01 retired, DP-04 absent as a task.
   5. Answer keys present in section 8 for the tasks named in the
      grading decision section 2.
   6. Section 1 pass table: 55 valid needs 53 pass; invalid caps
@@ -72,7 +72,7 @@ KEY_CHECKS = [
     ("R3-082 calculations", 8, "(14 + 6) * 4 - 9 = 71"),
     ("R3-082 calculations (5th)", 8, "(11 + 9) * 5 / 4 = 25"),
     ("R3-014 RGB values", 6, "#FF0000 la RGB(255, 0, 0)"),
-    ("R3-009 URLs", 8, "https://www.bbc.com/"),
+    ("R3-009 URLs", 8, "https://www.foxnews.com/"),
     ("R3-009 URLs (2nd)", 8, "https://en.wikipedia.org/wiki/Main_Page"),
     ("R3-019 flight dates rule", 8, "ngay chay cong 30 ngay"),
     ("DP-05 tables", 8, "SP01 Ban 150"),
@@ -230,9 +230,13 @@ def main():
           "missing: %s" % missing)
 
     # Backups.
-    for dp in ("DP-01", "DP-02", "DP-03", "DP-05"):
+    for dp in ("DP-02", "DP-03", "DP-05", "DP-06", "DP-07"):
         check("backup %s present in section 8" % dp,
               ("  - %s," % dp) in sec8 or ("- %s," % dp) in sec8)
+    check("DP-01 retired: no task definition in section 8",
+          "  - DP-01," not in sec8)
+    check("DP-01 retirement is recorded",
+          "DP-01" in text and "nghi huu" in text)
     check("DP-04 has no task definition",
           "### DP-04" not in text and "- DP-04," not in sec8)
     check("DP-04 removal is recorded",
@@ -351,6 +355,17 @@ def main():
         missing = [n for n in R3085_NEEDLES if n not in key_md]
         check("frozen key: R3-085 reference frame in key file",
               not missing, "missing: %s" % missing)
+        dp06_sec = md_section(key_md, "DP-06")
+        check("frozen key: DP-06 cities in key file",
+              all(c in dp06_sec for c in ("Paris", "Berlin", "Rome")),
+              "DP-06 section has Paris, Berlin, Rome")
+        dp07_sec = md_section(key_md, "DP-07")
+        check("frozen key: DP-07 sha256 values in key file",
+              all(h in dp07_sec for h in (
+                  "f830f594f7cd7a442b93fda84fe76aa02e62156fd60dcb1c42315424f8b7ede7",
+                  "26030358212becda0e3e1395761db3f3d0e9620ae67047a0e1ab12e605c25b0c",
+                  "07c80615e134615320fa0b196b978c329375046a4aff622e013ad86602be9e1a")),
+              "DP-07 section has all 3 sha256")
 
     for name in passes:
         print("PASS: %s" % name)

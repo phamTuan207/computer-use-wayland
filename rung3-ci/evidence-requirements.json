@@ -1,11 +1,4 @@
 {
- "DP-01": {
-  "files": [
-   "ket-qua.txt"
-  ],
-  "patterns": [],
-  "screenshots_min": 3
- },
  "DP-02": {
   "files": [
    "bao-cao.txt"
@@ -32,6 +25,21 @@
   ],
   "patterns": [],
   "screenshots_min": 3
+ },
+ "DP-06": {
+  "files": [
+   "ket-qua.txt"
+  ],
+  "patterns": [],
+  "screenshots_min": 3
+ },
+ "DP-07": {
+  "files": [
+   "bao-cao.txt",
+   "bang-kiem.txt"
+  ],
+  "patterns": [],
+  "screenshots_min": 1
  },
  "R3-001": {
   "files": [
@@ -208,7 +216,7 @@
  "R3-029": {
   "files": [],
   "patterns": [],
-  "screenshots_min": 1
+  "screenshots_min": 3
  },
  "R3-035": {
   "files": [],
@@ -300,12 +308,12 @@
    "d40-ket-qua.txt"
   ],
   "patterns": [],
-  "screenshots_min": 0
+  "screenshots_min": 1
  },
  "R3-075": {
   "files": [],
   "patterns": [],
-  "screenshots_min": 1
+  "screenshots_min": 3
  },
  "R3-076": {
   "files": [

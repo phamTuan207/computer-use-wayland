@@ -1,5 +1,6 @@
 # A1 and Rung 3 Roadmap Plan
 
+- Ghi chu 2026-11-24 (R3-L3): R3-L2 da bi huy theo quyet dinh hoi dong ngay 2026-11-24; cac muc ve backup va ruling R3-011 trong file nay mo ta trang thai R3-L1/R3-L2, khong ap dung cho R3-L3. Pool du phong R3-L3: kho DP-02; trung binh DP-03 roi DP-06 roi DP-07; rat kho DP-05. DP-01 da nghi huu. Ruling R3-011: dem theo su kien neu chung minh duoc nguyen nhan chung; kiem tra trinh duyet 2026-11-24 14:26 +07: timeanddate.com mo duoc, 4 task chay binh thuong.
 - Compiled: 2026-11-23 22:27 Asia/Ho_Chi_Minh, by the drafting worker.
 - Repaired: 2026-11-23 22:52 Asia/Ho_Chi_Minh, by the repair worker. Council required changes RC1-RC7 and redteam required repairs R1-R18 applied in place. Status: DRAFT, repaired, pending parent re-review, then owner approval. No execution resumes until the plan is approved.
 - Repaired round 2: 2026-11-23 22:59 Asia/Ho_Chi_Minh, by the round-2 repair worker. Council re-review changes RR1-RR6 and redteam re-review repairs RR1-RR19 applied in place. Status: DRAFT, repaired round 2, pending parent verification, then owner approval. No execution resumes until the plan is approved.

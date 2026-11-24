@@ -1,6 +1,6 @@
-# Khoa dap an rung 3, ma lan chay R3-L2 (frozen)
+# Khoa dap an rung 3, ma lan chay R3-L3 (frozen)
 
-- Run code: R3-L2. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit d88df6a7329fb0432bb4eb450ffc958274147ca8.
+- Run code: R3-L3. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit d88df6a7329fb0432bb4eb450ffc958274147ca8.
 - List sha256: 4c01cc4631cb140d69773fc4e48a470242e8e748f498ac25b5607d4a9ff46ff1 (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
 - Key file nay dong bang truoc task 1. Sau task 1, moi thay doi khoa dap an hoac muc 6, muc 8 cua danh sach deu huy bo lan chay: ma lan chay moi, chay lai tu task 1. Khoa khong bao gio duoc sua giua lan chay. Neu khoa bi chung minh la sai giua lan chay, task do ghi vo hieu, ap dung quy tac du phong.
 - Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
@@ -17,9 +17,11 @@
 - R3-013: mau 3 dang escaped duoc dong bang trong key file: \d{2}\/\d{2}\/\d{4}. Dau / la delimiter o regex101 JS flavor nen dang khong escaped bao loi. Checker chap nhan ca 2 dang (\/ duoc chuan hoa thanh / khi so sanh), nhung dang escaped la dang chuan trong key.
 - DP-05: chuyen sang sqlite3 (co san tren laptop tai /usr/bin/sqlite3). Cung bang, cung du lieu, cung truy van nhu muc 8. R3-021 van dung sqliteonline.com. Quyet dinh cua dieu phoi vien truoc task 1, ngay 2026-11-23. Viec chuyen nay boi ro rui ro dich vu chung: neu sqliteonline.com sap, R3-021 vo hieu nhung DP-05 van chay duoc tren sqlite3.
 - DP-03: N = 5. Lay 5 cong dau co ten tien trinh hien du theo thu tu cong tang dan, do ngay 2026-11-23 19:20, luc do co 9 cong. N toi thieu 3. Nguoi cham doi chieu bao cao voi file ss-output.txt da luu luc chay, khong doi chieu voi danh sach cong o day.
-- R3-009: 2 URL https://www.bbc.com/ va https://en.wikipedia.org/wiki/Main_Page, moi trang it nhat 1 loi. Ngay kiem tra URL: 2026-11-23 (chi kiem tra wave.webaim.org tra ve bao cao; so loi WAVE day du cua tung URL van can kiem tra bang trinh duyet truoc task 1. Neu URL nao co 0 loi thi thay URL truoc khi chay va ghi vao day truoc task 1).
+- R3-009: 2 URL https://www.foxnews.com/ va https://en.wikipedia.org/wiki/Main_Page, moi trang it nhat 1 loi. Ngay kiem tra URL: 2026-11-24 (kiem tra bang trinh duyet 14:26-14:34 +07 24/11: URL 1 Fox News Errors 2, Contrast Errors 17, Alerts 312, Features 142, Structural Elements 383; URL 2 Wikipedia Errors 7, Alerts 80, Features 451, Structural Elements 75, Contrast Errors 0). BBC bi thay vi ca trang chu (Errors 0, kiem tra 14:26-14:27 +07) va trang /news (Errors 0, kiem tra 14:30-14:34 +07) deu 0 loi; Reuters va AP khong dung duoc vi WAVE bi chan bot-check (Reuters: trang chan DataDome; AP: trang Cloudflare).
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo kiem chung trinh duyet truoc dong bang): doi URL 1 tu BBC sang Fox News vi BBC 0 loi (ca trang chu va /news); Fox News la ung vien duy nhat sach trong 7 URL da kiem tra (vong 1: CNN khong tai duoc, Guardian 403, Al Jazeera 404; vong 2: BBC News 0 loi, Reuters chan, AP chan).
 - R3-019: tuyen Ha Noi den Ho Chi Minh. Ngay 1 = ngay chay + 30 ngay, ngay 2 = ngay chay + 37 ngay. Ngay cu the chi chot khi ngay chay duoc dat.
-- R3-011: ung vien vo hieu truoc khi chay. timeanddate.com van bi chan o muc curl (HTTP 403, trang Cloudflare "Just a moment...", kiem tra 2026-11-23 19:23). Can xac nhan bang trinh duyet that truoc task 1. Neu tuyen bo vo hieu truoc task 1, du phong ap dung: du phong trung binh dau tien chua dung la DP-01.
+- R3-011, R3-028, R3-036, R3-046: cung dung timeanddate.com. timeanddate.com van bi chan o muc curl (HTTP 403, trang Cloudflare "Just a moment...", kiem tra 2026-11-23 19:23); curl ngay 2026-11-24 06:10 tra ve HTTP 200, chan co the tuy IP/thoi diem, chi kiem tra trinh duyet moi quyet dinh. Neu luc chay trang bi chan o muc trinh duyet thi ca 4 task la ung vien vo hieu theo muc 1. Neu kiem tra trinh duyet chung minh timeanddate.com bi chan (nguyen nhan chung cho ca 4 task), 4 task tinh la 1 su kien vo hieu doi voi ca 2 muc tran (tong 5, moi nhom 2). Moi task vo hieu van can 1 du phong cung do kho de thay the; du phong trung binh con lai la DP-03, DP-06, DP-07 (3 du phong cho 4 task), task thu 4 khong co du phong thi loai khoi mau khong thay the theo muc 8.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM da xac minh doc lap): mo rong ruling R3-011 sang R3-028, R3-036, R3-046 (cung ten mien, truoc day khong co ruling); sua tro backup DP-01 (da het vi R3-047 INVALID) sang DP-03, DP-06, DP-07; them ruling moi dem theo su kien neu chung minh duoc nguyen nhan chung. Kiem tra trinh duyet truoc dong bang R3-L3 (2026-11-24 14:26 +07): timeanddate.com mo duoc binh thuong, khong bi chan; 4 task chay binh thuong. Cau hoi cap (dem theo task hay su kien) tam thoi vo nghia vi trang mo duoc.
 - R3-073: khong ap dung cho ban 55 task (task da loai ngay 2026-11-23). Khong can guard timer.
 - R3-085: khung tham chieu ~/rung3/r3-085-khung-tham-chieu.png, sha256 de410f94b2192e553f4a78ff42df8bcfd84e29e5908c3f02775125cfa4c759c2, trich bang ffmpeg -ss 00:10 tu ~/rung3/nd26-video.mp4 (640x360, 30 fps, 15 giay, sha256 2e9d8103ffe6d1a1052d42cfd6ecb67a49d82c2f4b359c6ff4cf3fccaff5ea40). Mau trung binh vung giua khung tham chieu (x 25-75 phan tram, y 25-75 phan tram): RGB (118.2, 139.7, 121.3).
 
@@ -32,7 +34,7 @@
 3. Khoa dap an dong bang o day khong lay gia tri tu trial: R3-007 dung 5 gia tri dau vao moi, chon rieng cho lan dong bang nay, khac gia tri trial; R3-011 dung 3 ngay moi (2026-01-01, 2026-07-04, 2000-02-29); 2 ngay (2024-02-29, 2026-12-31) trung voi trial; R3-082 va R3-013 dung gia tri moi hoan toan, chon rieng cho FREEZE-2, khac gia tri trial va khac gia tri muc 8 cu; R3-076 dung gia tri he thong live luc chay, cham bang cach doi chieu bao cao voi file lenh da luu, khong phai voi gia tri trial.
 4. Voi 3 lop cach ly tren (bao cao khong toi duoc nguoi chay va nguoi cham, bang chung trial da xoa khoi laptop, khoa dung gia tri moi hoac gia tri danh sach), tinh held-out duoc giu o muc thuc hanh doi voi 3 task giu. Doi voi 2 task thay, tinh held-out duoc khoi phuc bang su loe thoi: dap an cu trong git history khong con dung cho noi dung moi. Quyet dinh thay do council wave 3 chot theo uy quyen full-autonomy 23/11 20:05, thay cho phuong an thay 5 task moi o grading decision pitfall H2.
 
-## Ban tier (59 muc: 55 task + 4 du phong)
+## Ban tier (60 muc: 55 task + 5 du phong)
 
 - Tier A (script kiem tra xac dinh theo key JSON, nguoi cham van xac nhan file bang chung ton tai va anh chup doc duoc): R3-002, R3-007, R3-013, R3-014, R3-021, R3-072, R3-082, DP-02, DP-05.
 - Tier C (cham bang mat theo rubric viet san o day, ca 2 nguoi cham dung chung 1 rubric): R3-010, R3-067, R3-083, R3-085.
@@ -56,11 +58,13 @@
 | R3-013 | A | R3-042 | B hybrid | R3-098 | B |
 | R3-014 | A | R3-045 | B | R3-099 | B |
 | R3-016 | B | R3-046 | B | R3-100 | B |
-| R3-017 | B | R3-047 | B | DP-01 | B |
+| R3-017 | B | R3-047 | B | DP-06 | B |
 | R3-018 | B | R3-049 | B | DP-02 | A |
 | R3-019 | B | R3-055 | B | DP-03 | B |
 | R3-021 | A | R3-067 | C | DP-05 | A |
-| R3-022 | B hybrid | R3-072 | A | | |
+| R3-022 | B hybrid | R3-072 | A | R3-074 | B |
+| R3-075 | B | R3-076 | B | DP-07 | B |
+- Ghi chu sua doi (R3-L3, 2026-11-24): bang cu thieu R3-074, R3-075, R3-076 (ca 3 la Tier B, da co o tieu de muc rieng va trong JSON tiers); them du 60 muc (ca DP-06, DP-07).
 
 ## Rubric Tier C
 
@@ -68,7 +72,7 @@
 
 - Thu tuc do: nguoi cham mo file PNG da xuat, do truc tiep tren anh. Tam moi hinh = diem giua cua hinh do. Chieu rong anh xuat la W pixel.
 - Hinh chu nhat: tam co x trong [0, 33 phan tram W], sai so 50 pixel. Chu trong hinh phai doc duoc la "Bat dau".
-- Hinh tron: tam co x trong [33, 66 phan tram W], sai so 50 pixel. Chu trong hinh phai doc duoc la "Xu ly".
+- Hinh tron: tam co x trong [33, 66 phan tram W], sai so 50 pixel. Chu trong hinh phai doc duoc la "Xu ly". Hinh tron ve bang phim O giu Shift khi keo; hinh ellipse keo tu do (khong giu Shift) tinh la sai loai hinh.
 - Hinh thoi: tam co x trong [66, 100 phan tram W], sai so 50 pixel. Chu trong hinh phai doc duoc la "Ket thuc".
 - Mui ten 1: noi tu hinh chu nhat sang hinh tron, huong tong the tu trai sang phai, sai so huong 30 do. Mui ten 2: noi tu hinh tron sang hinh thoi, huong tong the tu trai sang phai, sai so huong 30 do.
 - Nguoi cham ghi lai x do duoc cua ca 3 tam (pixel va phan tram W), huong do duoc cua ca 2 mui ten (do), vao ban cham.
@@ -130,13 +134,14 @@
 - Bao 2: Channel News Asia (CNA), "South African judge Navi Pillay wins Nobel Peace Prize", 9 Oct 2026. https://www.channelnewsasia.com/world/nobel-peace-prize-navi-pillay-south-africa-6445566
 - Bao 3: NPR, "South African human rights lawyer Navi Pillay wins the Nobel Peace Prize", 9 Oct 2026 (cap nhat 10 Oct 2026). Ban NPR doc qua WCBE: https://www.wcbe.org/npr-news/2026-10-09/south-african-human-rights-lawyer-navi-pillay-wins-the-nobel-peace-prize
 - Bang dap an (3 hang):
-  - Ngay: 9 October 2026. Ca 3 bao: Al Jazeera dang ngay 2026-10-09, thu Sau; CNA "Friday (Oct 9)"; NPR "on Friday", dang ngay 2026-10-09.
+  - Ngay cong bo giai: 9 October 2026 (khong phai ngay le trao 10 December; le trao o Oslo ngay 10 December chi xuat hien trong hang dia diem). Ca 3 bao: Al Jazeera dang ngay 2026-10-09, thu Sau; CNA "Friday (Oct 9)"; NPR "on Friday", dang ngay 2026-10-09.
   - Dia diem: Oslo, Norway. Ca 3 bao: Al Jazeera "made on Friday in Oslo", le trao o Oslo ngay 10 December; CNA "OSLO", le o Oslo ngay 10 December; NPR "At a ceremony in Oslo".
   - Nhan vat chinh: Navanethem (Navi) Pillay. Ca 3 bao goi ten ba la nguoi doat giai (Al Jazeera, CNA, NPR).
 - Ghi chu ho tro: tien thuong 12 trieu crown Thuy Dien, khoang 1,2 trieu USD. Ca 3 bao: Al Jazeera "12 million Swedish crowns ($1.2m)"; CNA "prize sum of US$1.2 million"; NPR "12 million Swedish kronor, approximately $1.2 million".
 - Ket luan: KHONG co mau thuan. Ca 3 muc (ngay, dia diem, nhan vat chinh) khop nhau o ca 3 bao. Doan ket luan 3 dong phai viet ro khong co mau thuan va ca 3 muc khop nhau.
 - Phan cham theo key: bang du 9 o, gia tri khop bang dap an tren. Phan cham bang nguoi: doan ket luan 3 dong, neu ro khong co mau thuan.
 - Vat chung cham: tai lieu online da luu (bang + doan ket luan), mo lai de kiem tra.
+- Ghi chu sua doi (R3-L3, 2026-11-24): chot "ngay" la ngay cong bo giai 9 October 2026; ngay le trao 10 December khong phai dap an cho hang ngay.
 
 ## R3-004 (Tier B hybrid)
 
@@ -190,18 +195,20 @@
 
 ## R3-009 (Tier B)
 
-- URL 1: https://www.bbc.com/
+- URL 1: https://www.foxnews.com/
 - URL 2: https://en.wikipedia.org/wiki/Main_Page
-- Moi trang it nhat 1 loi (Errors) theo kiem tra truoc khi chay. Ngay kiem tra URL: 2026-11-23 (xem ruling o dau file: so lieu WAVE day du van can kiem tra bang trinh duyet).
+- Moi trang it nhat 1 loi (Errors) theo kiem tra truoc khi chay. Ngay kiem tra URL: 2026-11-24 (URL 1 Fox News: Errors 2, Contrast Errors 17, Alerts 312, Features 142, Structural Elements 383; URL 2 Wikipedia: Errors 7, Alerts 80, Features 451, Structural Elements 75, Contrast Errors 0; kiem tra bang trinh duyet 14:26-14:34 +07 24/11). Neu luc chay trang thu nhat co 0 loi thi task vo hieu theo muc 1 (ghi ro vao ket-qua.txt), khong tinh la fail; trang thu hai co 0 loi van ghi du 5 so lieu binh thuong.
 - 5 so lieu moi trang: Errors, Alerts, Features, Structural Elements, Contrast Errors. Cac so lieu la gia tri live tai thoi diem chay; chan ly la bang tom tat trong anh chup, khong phai gia tri hien tai cua trang.
 - Ket luan: trang nao co tong loi va canh bao lon hon; neu tong bang nhau thi ghi ro 2 trang bang nhau.
 - Vat chung cham: 2 anh chup bang tom tat + ket-qua.txt. Nguoi cham doi chieu so lieu voi anh chup.
+- Ghi chu sua doi (R3-L3, 2026-11-24): them duong vo hieu luc chay khi trang thu nhat co 0 loi; muc loi chi lay tu trang thu nhat, trang thu hai chi can du 5 so lieu.
 
 ## R3-010 (Tier C)
 
 - Xem rubric Tier C o dau file (thu tuc do, vung tam, sai so 50 pixel, sai so huong mui ten 30 do).
-- 3 hinh: chu nhat "Bat dau" (tam phan trai), tron "Xu ly" (tam phan giua), thoi "Ket thuc" (tam phan phai). 2 mui ten: chu nhat sang tron, tron sang thoi.
-- Vat chung cham: file so-do.png + ket-qua.txt + anh chup bang ve. Nguoi cham do truc tiep tren file PNG da xuat.
+- 3 hinh: chu nhat "Bat dau" (tam phan trai), tron "Xu ly" (tam phan giua, ve bang phim O giu Shift khi keo), thoi "Ket thuc" (tam phan phai). 2 mui ten: chu nhat sang tron, tron sang thoi.
+- Vat chung cham: file so-do.png + ket-qua.txt + anh chup bang ve. Nguoi cham do truc tiep tren file PNG da xuat (xuat qua hop thoai Ctrl Shift E, chon PNG).
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM-HIGH da xac minh doc lap): phim O la cong cu Ellipse, khong phai tron; Ctrl Shift E chi mo hop thoai xuat. Doi buoc 3 sang ve ellipse giu Shift de giu hinh tron, buoc 6 sang mo hop thoai, chon PNG roi xuat.
 
 ## R3-011 (Tier B)
 
@@ -238,18 +245,20 @@
 
 ## R3-016 (Tier B)
 
-- Luoc do 4 truong: First Name (First Name), Last Name (Last Name), Email Address (Email Address), Number voi gia tri nho nhat 18 va lon nhat 90.
+- Luoc do 4 truong: First Name (First Name), Last Name (Last Name), Email Address (Email Address), Age (Number) voi gia tri nho nhat 18 va lon nhat 90.
 - So dong: 10. Dinh dang: CSV. File: du-lieu.csv.
 - Kiem tra: 10 dong du lieu, 4 cot, ten cot dung 4 truong, moi dong du 4 gia tri, email deu co ky tu @, tuoi deu la so nguyen tu 18 den 90.
-- Tai khoan test: chua co. Can browser task tao hoac cap phat tai khoan Mockaroo truoc task 1; nguoi chay chi dang nhap, khong tao tai khoan moi. Neu tai khoan khong tai duoc CSV thi task vo hieu theo muc 1.
+- Tai khoan test: khong can. Da kiem chung bang trinh duyet truoc dong bang R3-L3 (2026-11-24 14:26-14:28 +07): Mockaroo cho tai CSV khong can tai khoan (tao du lieu 2 lan, khong co man hinh dang nhap; Preview hien dung CSV 10 dong). Nguoi chay dung trang khong can dang nhap. Neu luc chay trang doi dang nhap moi cho tai thi task vo hieu theo muc 1.
 - Vat chung cham: du-lieu.csv + ket-qua.txt + anh chup ban xem truoc. Nguoi cham mo file CSV va dem.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo kiem chung trinh duyet truoc dong bang): khong can tai khoan Mockaroo; dong cu doi tao/cap phat tai khoan la sai.
 
 ## R3-017 (Tier B)
 
 - 5 tab mo tren trinh duyet Brave (dung thu tu mo nay): 1. https://example.com 2. https://en.wikipedia.org/wiki/Main_Page 3. https://www.bbc.com/ 4. https://github.com 5. https://www.python.org
 - Mo trinh quan ly tien trinh bang Shift Esc. Neu trinh duyet test khong co phim tat nay thi dung lai, ghi ro vao ket-qua.txt, task vo hieu theo muc 1.
-- Bang 5 tab co muc dung bo nho cao nhat, kem bo nho va CPU, sap xep giam dan theo bo nho. Gia tri bo nho va CPU la live tai thoi diem chay; chan ly la anh chup trinh quan ly tien trinh, khong phai lenh chay lai.
+- Bang 5 tab co muc dung bo nho cao nhat trong so cac dong la tab (chi tinh dong co tieu de tab; bo qua dong Browser, GPU Process, tien ich mo rong va dich vu tien ich), kem bo nho va CPU, sap xep giam dan theo bo nho. Gia tri bo nho va CPU la live tai thoi diem chay; chan ly la anh chup trinh quan ly tien trinh, khong phai lenh chay lai.
 - Vat chung cham: anh chup trinh quan ly tien trinh + ket-qua.txt. Nguoi cham doi chieu bang voi anh chup.
+- Ghi chu sua doi (R3-L3, 2026-11-24): dinh nghia 5 tab nhu muc 6 cua danh sach; gia tri trong file phai khop anh chup.
 
 ## R3-018 (Tier B)
 
@@ -281,7 +290,7 @@
 - 5 thuat ngu va ban dich tieng Viet (ban dich viet co dau, la chuoi ky vong dung; nguoi cham chap nhan ban dich khop nghia):
   1. central processing unit -> "bộ xử lý trung tâm"
   2. random-access memory -> "bộ nhớ truy cập ngẫu nhiên"
-  3. motherboard -> "bo mạch chủ"
+  3. motherboard -> "bộ mạch chủ"
   4. operating system -> "hệ điều hành"
   5. hard disk drive -> "ổ đĩa cứng"
 - Dich nguoc 2 trong 5 thuat ngu (nguoi chay chon 2 bat ky), chap nhan neu khop nghia voi ban goc. Tu dong nghia chap nhan khi dich nguoc:
@@ -293,6 +302,7 @@
 - Tieu de trang sau khi dich phai dung (tieu de bai "Computer" da dich).
 - Phan cham theo key: du 5 cap thuat ngu, ban dich khop nghia, 2 ket qua dich nguoc khop nghia voi ban goc (chap nhan tu dong nghia o tren). Phan cham bang nguoi: anh chup hien trang da dich.
 - Vat chung cham: anh chup trang da dich + ket-qua.txt.
+- Ghi chu sua doi (R3-L3, 2026-11-24): sua loi chinh ta "bo" thanh "bộ" o thuat ngu motherboard (md va JSON).
 
 ## R3-024 (Tier B)
 
@@ -321,7 +331,9 @@
 
 ## R3-027 (Tier B)
 
-- 3 ten nguoi dung test (khong dung ten that, dung thu tu nay): 1. rung3testalpha01 2. rung3testbravo02 3. rung3testcharlie03
+- 3 ten nguoi dung test (khong dung ten that, dung thu tu nay): 1. rung3alpha01 2. rung3bravo02 3. rung3charlie03
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM-HIGH da xac minh doc lap): 3 ten cu dai 16/16/18 ky tu, vuot gioi han 15 ky tu cua X, cot X khong bao gio co ket qua y nghia; doi sang 3 ten moi dai 12/12/14 ky tu, van trong gioi han cua ca 5 nen tang (GitHub 39, Instagram 30, YouTube 30, Reddit 20, X 15).
+- Ghi chu kiem tra truoc dong bang (R3-L3, 2026-11-24, namechk.com 14:48-14:53 +07): ca 3 ten rung3alpha01, rung3bravo02, rung3charlie03 deu da co nguoi dung tren X; ket qua tren 4 nen tang con lai do nguoi chay kiem tra luc chay.
 - 5 nen tang ghi ket qua cho moi ten: GitHub, X (Twitter), Instagram, YouTube, Reddit.
 - Moi nen tang ghi ro: con trong, da co nguoi dung, hoac 'khong xac dinh' (neu nen tang tra ve ket qua khong xac dinh thi ghi ro, van tinh pass).
 - Ket luan: ten nao con trong tren ca 5 nen tang neu co, hoac ghi ro khong co ten nao con trong ca 5.
@@ -337,6 +349,7 @@
   - 2026-12-02 00:00 UTC: Ha Noi 2026-12-02 07:00, London 2026-12-02 00:00, New York 2026-12-01 19:00.
 - Chenh lech gio so voi UTC tai thoi diem doi: Ha Noi +7, London +0, New York -5.
 - Vat chung cham: 3 anh chup ket qua + ket-qua.txt. Nguoi cham doi chieu gio dia phuong va chenh lech voi anh chup.
+- Xem ruling R3-011 o dau file: timeanddate.com da xac nhan bang trinh duyet truoc dong bang R3-L3 (mo duoc binh thuong, 2026-11-24 14:26 +07); neu luc chay trang bi chan o muc trinh duyet thi task nay la ung vien vo hieu theo muc 1.
 
 ## R3-029 (Tier B)
 
@@ -344,7 +357,8 @@
 - 5 san pham (ten hien tren cua hang demo, dung thu tu nay): 1. iPhone 2. MacBook 3. Canon EOS 5D 4. HP LP3065 5. HTC Touch HD
 - Luu yeu thich ca 5, kiem tra danh sach du 5. Bo luu 1 san pham ("Canon EOS 5D"), kiem tra danh sach con 4. Luu lai san pham do, kiem tra danh sach lai du 5.
 - Luu y kiem tra truoc khi chay: ten 5 san pham tren phai duoc xac nhan co that tren cua hang demo o buoc kiem tra tai khoan truoc task 1; neu ten nao khac, dieu phoi vien sua key truoc task 1 (sua truoc khi dong bang, commit moi + ghi lai hash).
-- Vat chung cham: anh chup trang danh sach yeu thich o cac buoc (du 5, con 4, lai du 5) + ket-qua.txt neu task yeu cau. Nguoi cham doi chieu ten san pham va so luong voi anh chup. Khong dung tai khoan that.
+- Vat chung cham: 3 anh chup trang danh sach yeu thich o cac buoc (du 5, con 4, lai du 5) + ket-qua.txt. Nguoi cham doi chieu ten san pham va so luong voi anh chup. Khong dung tai khoan that.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM-HIGH da xac minh doc lap): key doi anh chup o 3 trang thai nhung list cu khong bao chup, quy tac chung chi doi 1 anh trang thai cuoi; trang thai trung gian (con 4) khong chung minh duoc tu trang thai cuoi. Doi buoc 4, 5, 6 sang luu anh chup o moi trang thai va viet ket-qua.txt.
 
 ## R3-035 (Tier B)
 
@@ -364,6 +378,7 @@
 - Gio hop chon (60 phut): 03:00 UTC, tuc Ha Noi 10:00, Tokyo 12:00, Sydney 14:00 ngay 2026-12-02. Ca 3 gio deu trong 09:00-17:00 gio dia phuong.
 - Bang 3 hang gio hop theo tung thanh pho + 1 dong giai thich vi sao gio do phu hop (nam trong gio lam viec cua ca 3 ben, trong khoang chung 02:00-06:00 UTC).
 - Vat chung cham: tai lieu online (bang + dong giai thich), mo lai de kiem tra. Nguoi cham doi chieu gio hop qua chenh lech mui gio va kiem tra nam trong gio lam viec cua ca 3 ben.
+- Xem ruling R3-011 o dau file: timeanddate.com da xac nhan bang trinh duyet truoc dong bang R3-L3 (mo duoc binh thuong, 2026-11-24 14:26 +07); neu luc chay trang bi chan o muc trinh duyet thi task nay la ung vien vo hieu theo muc 1.
 
 ## R3-037 (Tier B)
 
@@ -375,9 +390,11 @@
 ## R3-040 (Tier B)
 
 - Trang web cong khai: https://www.bbc.com/news . Kho luu tru: web.archive.org.
-- Ban luu tru: ban luu tru cu nhat con doc duoc cua cung trang (da kiem chung: Wayback co snapshot cua bbc.com/news, vi du snapshot 2011-01-28 07:34:58). Neu ban cu nhat co duoi 3 thay doi ro rang thi dung ban ke tiep co du 3 thay doi, ghi ro ngay cua ban da dung.
-- Ghi tieu de va 3 muc noi dung chinh o ban hien tai, 3 muc noi dung chinh o ban cu, 3 thay doi ro rang (moi thay doi co cu va moi). Tieu de trang khop ca 2 ban ("BBC News").
+- Ban luu tru: ban luu tru cu nhat con doc duoc cua cung trang (da kiem chung tu VM bang CDX ngay 2026-11-24: snapshot cu nhat doc duoc la 2008-07-08 18:11:57, tra ve HTTP 200, tieu de "BBC - Homepage"). Lay ban luu tru bang lenh curl/CDX tu VM, KHONG lay bang trinh duyet laptop (IP laptop bi gioi han toc do boi web.archive.org; xem luat 429 o muc 1 cua danh sach). Neu ban cu nhat co duoi 3 thay doi ro rang thi dung ban ke tiep co du 3 thay doi, ghi ro ngay cua ban da dung.
+- Ghi tieu de va 3 muc noi dung chinh o ban hien tai, 3 muc noi dung chinh o ban cu, 3 thay doi ro rang (moi thay doi co cu va moi). Ghi tieu de cua moi ban (tieu de hai ban co the khac nhau theo thoi dai; vi du ban 2008 la "BBC - Homepage"); 3 thay doi so sanh noi dung, khong doi tieu de phai giong nhau.
 - Vat chung cham: tai lieu online (bang 4 hang: muc, ban cu, ban moi, thay doi), mo lai de kiem tra. Nguoi cham mo lai ca 2 ban (hien tai va ban luu tru co ngay da ghi) va doi chieu 3 thay doi.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo kiem chung CDX tu VM): bo yeu cau tieu de 2 ban phai giong nhau vi snapshot cu nhat (2008) co tieu de "BBC - Homepage", khac ban hien tai; ghi ro ca 2 tieu de, so sanh noi dung.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM da xac minh doc lap): doi vi du snapshot cu nhat tu 2011-01-28 07:34:58 sang 2008-07-08 18:11:57 theo CDX do tu VM ngay 2026-11-24 (snapshot 2011-01-28 van doc duoc nhung khong phai cu nhat); them phuong thuc lay bang curl/CDX tu VM thay vi trinh duyet laptop (IP laptop bi gioi han 429 lau dai; lan thu lai R3-L2 da chung minh VM-fetch chay duoc) va tro den luat 429 o muc 1.
 
 ## R3-041 (Tier B)
 
@@ -412,6 +429,7 @@
 - Moi lan tra ghi: gio mat troi moc, gio mat troi lan, do dai ngay. Tong 6 hang (3 thanh pho x 2 ngay). Chenh lech do dai ngay giua 2 ngay cua moi thanh pho tinh dung.
 - Gio moc, gio lan, do dai ngay la live tai thoi diem chay tren timeanddate.com; chan ly la anh chup ket qua cua ca 6 lan tra.
 - Vat chung cham: 6 anh chup ket qua + ket-qua.txt. Nguoi cham doi chieu voi anh chup.
+- Xem ruling R3-011 o dau file: timeanddate.com da xac nhan bang trinh duyet truoc dong bang R3-L3 (mo duoc binh thuong, 2026-11-24 14:26 +07); neu luc chay trang bi chan o muc trinh duyet thi task nay la ung vien vo hieu theo muc 1.
 
 ## R3-047 (Tier B)
 
@@ -477,7 +495,8 @@
 - d41-app.py: import requests, in "Xin chao rung 3" roi in phien ban requests. sha256: 9f368adac0c3e4b2112679198a4f4df8ea9492f5b0db27ba5a08b28e4a85cc3b
 - Dong chao ky vong: "Xin chao rung 3". Ung dung chay trong venv in dung dong chao, exit 0.
 - Python tren laptop: 3.14.10. Venv tai ~/rung3/d41-venv. Sau khi tat venv, thu muc venv con nguyen.
-- Vat chung cham: anh chup terminal (phien ban Python, duong dan python trong venv, output ung dung). Nguoi cham kiem tra venv ton tai va goi da cai.
+- Vat chung cham: 3 anh chup terminal (phien ban Python, duong dan python trong venv, output ung dung). Nguoi cham kiem tra venv ton tai va goi da cai. Duong xu ly loi: neu tao venv loi hoac pip cai loi sau 1 lan thu lai, task vo hieu theo muc 1 (ghi loi vao ket-qua.txt).
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM-HIGH da xac minh doc lap): key doi 3 anh chup terminal nhung list cu khong bao chup; quy tac muc 1 chi bao dich vu khong truy cap duoc, khong co duong xu ly neu tao venv loi hoac pip cai loi. Doi buoc 1, 3, 5 sang luu anh chup, buoc 4 them duong xu ly loi (thu lai 1 lan roi vo hieu).
 
 ## R3-076 (Tier B, kem script kiem tra nhat quan bao cao)
 
@@ -529,9 +548,10 @@
 ## R3-086 (Tier B)
 
 - 2 ten mien (dung thu tu nay): 1. example.com 2. en.wikipedia.org. Ca 2 tra ve HTTP 200 qua curl ngay 2026-11-23 19:23.
-- Moi ten mien: ping (so goi gui, so goi nhan, ti le mat goi), DNS (dia chi IP tra ve), curl -L (ma trang thai HTTP). Ma trang thai 200 cho ca 2.
+- Moi ten mien: ping -c 4 (so goi gui, so goi nhan, ti le mat goi), DNS (dia chi IP tra ve), curl -L (ma trang thai HTTP). Ma trang thai 200 cho ca 2. So goi gui ky vong la 4 moi ten mien.
 - Dia chi IP phai nam trong danh sach dia chi DNS tra ve cua tung ten mien tai thoi diem chay. Ti le mat goi dung nhu ket qua lenh tai thoi diem chay.
 - Vat chung cham: 6 file ket qua lenh co timestamp (ping, dns, curl cho moi ten mien) + bao cao nd06-bao-cao.txt. Nguoi cham doi chieu bao cao voi file lenh da luu.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM-HIGH da xac minh doc lap): ping tran khong -c chay den khi SIGINT, runner khong co cach dung theo huong dan de ghi so goi; doi ca 2 lenh ping sang ping -c 4.
 
 ## R3-088 (Tier B)
 
@@ -553,10 +573,11 @@
 ## R3-093 (Tier B)
 
 - File goc: ~/rung3/nd13-file-lon.bin, 3000000 bytes (tu /dev/urandom).
-- Cat thanh 3 phan bang lenh split, ten phan-01, phan-02, phan-03. Du 3 phan, tong dung luong 3 phan bang dung luong file goc (3000000 bytes).
+- Cat thanh 3 phan bang lenh split -n 3 -d --numeric-suffixes=1 -a 2, ten phan-01, phan-02, phan-03 (moi phan 1000000 byte). Du 3 phan, tong dung luong 3 phan bang dung luong file goc (3000000 bytes).
 - Ghep lai thanh ~/rung3/nd13-ghep-lai.bin bang lenh cat. Checksum file moi khop checksum file goc (checksum la gia tri live cua file, ghi trong bao cao; nguoi cham tinh lai checksum cua ca 2 file).
 - Bao cao gom kich thuoc file goc, kich thuoc tung phan, checksum goc, checksum moi.
-- Vat chung cham: bao cao + 3 file phan + file ghep lai. Nguoi cham tinh checksum va doi chieu.
+- Vat chung cham: bao cao ~/rung3-chung-cu/R3-093/nd13-bao-cao.txt + 3 file phan + file ghep lai. Nguoi cham tinh checksum va doi chieu.
+- Ghi chu sua doi (R3-L3, 2026-11-24, theo phat hien MEDIUM-HIGH da xac minh doc lap): split mac dinh cat theo 1000 dong (do duoc 12 phan), split -n 3 -d cho phan-00/01/02; chi --numeric-suffixes=1 moi cho phan-01/02/03. Doi buoc 2 sang lenh split day du co flag, buoc 6 ghi ro duong dan bao cao va sao chep bang chung vao thu muc R3-093.
 
 ## R3-094 (Tier B)
 
@@ -595,14 +616,6 @@
 - May chu: python3 -m http.server 8899 tai thu muc nd20-web. Ca 3 trang tra ve ma 200 qua curl. Sau khi xong, cong 8899 da dong (curl khong ket noi duoc).
 - Vat chung cham: bao cao gom cong, ma trang thai 3 trang, tieu de 3 trang. Nguoi cham kiem tra cong da dong va doi chieu tieu de voi file HTML.
 
-## DP-01 (Tier B, du phong trung binh)
-
-- 3 loai tien dien tu tren coingecko.com: Bitcoin, Ethereum, Solana.
-- Moi loai ghi: gia USD, thay doi 24 gio. Gia la live tai thoi diem chay; chan ly la anh chup trang coin ngay khi gia hien ra, khong phai gia hien tai.
-- Thu tu du phong trung binh: DP-01 truoc, DP-03 sau. Khi 1 task trung binh vo hieu, lay DP-01 neu chua dung.
-- Vat chung cham: 3 anh chup trang coin + ket-qua.txt. Nguoi cham doi chieu gia va thay doi 24 gio voi anh chup.
-- Ghi chu liveness 2026-11-23 19:23: API coingecko tra ve gia live (bitcoin 61255 USD, ethereum 1719.19 USD, solana 72.32 USD); trang chu coingecko.com tra ve HTTP 403 qua curl (bot protection), can kiem tra bang trinh duyet truoc task 1.
-
 ## DP-02 (Tier A, du phong kho)
 
 - Fixture: ~/rung3/dp02-code, 12 file van ban (dp02-01.txt den dp02-12.txt), moi file 20-60 dong. Ten file khong chua dau hai cham.
@@ -637,7 +650,7 @@
 - N = 5. Ghi 5 cong co ten tien trinh hien du dau tien theo thu tu cong tang dan. Moi cong ghi: cong, giao thuc, ten tien trinh.
 - N toi thieu 3. Neu it hon 5 cong co ten tien trinh thi ghi so cong thuc te va Pass doi theo so do (ghi ro truoc khi chay). Neu it hon 3 cong thi du phong nay tuyen bo vo hieu truoc khi chay.
 - Vat chung cham: ss-output.txt + bao-cao.txt + anh chup terminal. Nguoi cham doi chieu bao cao voi file output va anh chup.
-- Thu tu du phong trung binh: DP-01 truoc, DP-03 sau.
+- Thu tu du phong trung binh: DP-03 truoc, DP-06 sau, DP-07 sau cung.
 
 ## DP-05 (Tier A, du phong rat kho)
 
@@ -651,10 +664,35 @@
 - Du phong rat kho duy nhat. Khi 1 task rat kho vo hieu, lay DP-05 neu chua dung; task rat kho vo hieu thu hai loai khoi mau khong thay the.
 - Vat chung cham: ket-qua.txt + anh chup ket qua 3 truy van. Nguoi cham doi chieu file ket qua voi anh chup man hinh. Checker so sanh cac cap ten va gia tri trong ket-qua.txt.
 
+## DP-06 (Tier B, du phong trung binh)
+
+- 3 thanh pho tren en.wikipedia.org (dung thu tu nay): 1. Paris 2. Berlin 3. Rome.
+- Moi thanh pho ghi: dan so thanh pho (dong dau tien cua hang Population trong infobox), ngay thang kem theo so lieu. Dan so la live tai thoi diem chay (Wikipedia co the sua); chan ly la anh chup infobox ngay khi so lieu hien ra, khong phai gia tri hien tai.
+- Gia tri kiem chung ngay 2026-11-24 (API Wikipedia + doc trang hien thi): Paris 2,047,602 (Jan 2026); Berlin 3,596,999 (2022 census, dong City/State; khong lay dong Estimate December 2025: 3,700,577); Rome 2,745,062 (2026, dong Municipality; khong lay dong Metropolitan city: 4,224,901).
+- Thu tu du phong trung binh: DP-03 truoc, DP-06 sau, DP-07 sau cung. Khi 1 task trung binh vo hieu, lay du phong dau tien chua dung theo thu tu nay.
+- Vat chung cham: 3 anh chup infobox + ket-qua.txt. Nguoi cham doi chieu dan so va ngay thang voi anh chup.
+- Ghi chu liveness 2026-11-24 07:28 UTC: API Wikipedia tra ve population_total Paris 2047602, Berlin 3,596,999, Rome 2745062; trang hien thi khop: Paris 2,047,602 (Jan 2026), Berlin 3,596,999 (City/State, 2022 census), Rome 2,745,062 (Municipality, 2026).
+
+## DP-07 (Tier B, du phong trung binh)
+
+- Noi dung 3 file (dung tung byte, moi file ket thuc bang newline):
+  - dp07-01.txt (69 byte): "Rung 3 du phong DP-07, tap 1.\nDong kiem tra thu hai.\nKet thuc tap 1.\n"
+  - dp07-02.txt (69 byte): "Rung 3 du phong DP-07, tap 2.\nDong kiem tra thu hai.\nKet thuc tap 2.\n"
+  - dp07-03.txt (69 byte): "Rung 3 du phong DP-07, tap 3.\nDong kiem tra thu hai.\nKet thuc tap 3.\n"
+- sha256 (tinh ngay 2026-11-24 07:28 UTC bang dung lenh printf trong task, tren VM):
+  - dp07-01.txt: f830f594f7cd7a442b93fda84fe76aa02e62156fd60dcb1c42315424f8b7ede7
+  - dp07-02.txt: 26030358212becda0e3e1395761db3f3d0e9620ae67047a0e1ab12e605c25b0c
+  - dp07-03.txt: 07c80615e134615320fa0b196b978c329375046a4aff622e013ad86602be9e1a
+- Tong dung luong 3 file: 207 byte.
+- Bang kiem ~/rung3/dp07-bang-kiem.txt: 3 dong dang "<sha256>  <ten file>" (dinh dang mac dinh cua sha256sum); xac minh bang sha256sum -c cho 3 dong ket thuc bang ": OK".
+- Thu tu du phong trung binh: DP-03 truoc, DP-06 sau, DP-07 sau cung. Khi 1 task trung binh vo hieu, lay du phong dau tien chua dung theo thu tu nay.
+- Vat chung cham: bao-cao.txt + bang-kiem.txt + anh chup terminal (ket qua xac minh 3 dong OK). Nguoi cham chay lai sha256sum tren 3 file (chi doc) va doi chieu tung ma, chay lai sha256sum -c tren bang kiem.
+- Ghi chu: gia tri dong bang khong phu thuoc laptop; runner tao file tu lenh printf trong task, nen ma hash tinh lai duoc bat cu luc nao. Neu noi dung file sai 1 byte thi sha256 khac hoan toan, do la tieu chi pass/fail co y (do chinh xac noi dung).
+
 ## Ghi chu cuoi
 
-- Thu tu du phong co dinh trong file du-phong.txt truoc task 1: trung binh DP-01 roi DP-03; kho DP-02; rat kho DP-05. Khi 1 task vo hieu, lay du phong DAU TIEN CHUA DUOC DUNG cung do kho. Nguoi cham ghi cap thay the (task vo hieu va du phong thay the) vao du-phong.txt luc quyet dinh, kem ten ca 2 nguoi cham.
+- Thu tu du phong co dinh trong file du-phong.txt truoc task 1: trung binh DP-03 roi DP-06 roi DP-07; kho DP-02; rat kho DP-05. Khi 1 task vo hieu, lay du phong DAU TIEN CHUA DUOC DUNG cung do kho. Nguoi cham ghi cap thay the (task vo hieu va du phong thay the) vao du-phong.txt luc quyet dinh, kem ten ca 2 nguoi cham.
 - Mot su co dich vu lam vo hieu nhieu task tinh la 1 su kien vo hieu doi voi muc tran 5, nhung moi task bi anh huong van roi khoi mau va van dung quy tac du phong.
 - Cham tung task TRUOC khi dat lai (reset) task do. Moc thoi gian ket qua cham phai truoc muc reset-log cua task do. Voi task ma trang thai khong ton tai den luc cham, vat chung cham duoc la file da luu trong ~/rung3-chung-cu/R3-xxx/ nhu ghi o tung muc tren.
 - Vat chung cham cua moi task nam trong ~/rung3-chung-cu/R3-xxx/ (hoac DP-xx). Khong co anh chup hoac file ket qua thi task do khong duoc cham pass, tru khi task ghi ro bang chung la trang thai tren dich vu.
-- Viec con mo truoc task 1 (khong phai loi cua key file, ghi de dieu phoi vien theo doi): tai khoan test R3-029 va R3-016 chua co (can browser task); kiem tra WAVE day du cho R3-009 chua xong (can browser); xac nhan trinh duyet that cho R3-011 (timeanddate.com) chua xong; xac nhan 5 ten san pham R3-029 tren cua hang demo chua xong.
+- Viec con mo truoc task 1 (khong phai loi cua key file, ghi de dieu phoi vien theo doi): tai khoan test R3-029 chua co (can browser task); R3-016 khong can tai khoan (da kiem chung bang trinh duyet 2026-11-24 14:26-14:28 +07: Mockaroo cho tai CSV khong can tai khoan); kiem tra WAVE day du cho R3-009 da xong 2026-11-24 14:26-14:34 +07 (BBC 0 loi nen doi URL 1 sang Fox News; Fox News Errors 2, Wikipedia Errors 7); xac nhan trinh duyet that cho R3-011 (timeanddate.com) da xong 2026-11-24 14:26 +07 (mo duoc binh thuong, 4 task R3-011/028/036/046 chay binh thuong); xac nhan 5 ten san pham R3-029 tren cua hang demo da xong 2026-11-24 15:01 +07 (ca 5 ten iPhone, MacBook, Canon EOS 5D, HP LP3065, HTC Touch HD deu co that, dung ten).
