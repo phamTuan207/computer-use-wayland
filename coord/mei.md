@@ -767,3 +767,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Addendum da sua ID nguoi cham (2026-11-24 18:54 +07)
+
+Chu so huu bao: ban sua addendum ID cham diem da co tren todolist-push o commit 5580aba. Em fetch va xac minh: addendum gio ghi dung ID moi TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678, TB-B2 df4defcc; 0 ID cu (6e844611, 2890a5de, b8c9b7b8) con lai trong file. Commit 5580aba cung sua ledger pattern DP-0[123567] cho DP-06/DP-07, xoa ID loi thoi khoi thu-tu-chay.txt, xac nhan R3-029 vi tri 25. Phat hien cua em ve muc Pairs da duoc sua xong truoc khi chay. Ban local cua em truoc do con o 816230e nen chua thay.
