@@ -49,5 +49,5 @@ Declaration covers all five points: no list authorship, no answer key authorship
 - 19:15:35 +07: speed daemon was down (socket refused); restarted via `daemon.sh start`, supervisor restarted too.
 - 19:15:51 +07: send attempt run 100 FAILED before any laptop contact: `CU_LAPTOP_SSH` unset in the restarted daemon's environment. No message was sent. Fixed by adding a default `CU_LAPTOP_SSH=james@100.70.92.52` to `~/workspace/speed-daemon/daemon.sh` so future watchdog restarts keep working, then `daemon.sh restart` (master_ok true).
 - 19:16:19 +07: message sent to mochi, warm daemon run 101, outcome sent, V12 verified, pill acquired and released.
-- 19:17 +07: mochi reply read from the mochi tab via read-only CDP (`/tmp/rung3-scorer-read.mjs`, last 6 bubbles, total 42). Reply confirms availability and declaration.
+- 19:17 +07: mochi reply read from the mochi tab via read-only CDP on Brave port 9224 (the mochi tab lives in the Brave-based Muse PWA, which speaks Chromium CDP; this is NOT Zen, whose port 9222 serves BiDi only) (`/tmp/rung3-scorer-read.mjs`, last 6 bubbles, total 42). Reply confirms availability and declaration.
 - No second message was sent. No repo push was made. No contact with mei about scoring.

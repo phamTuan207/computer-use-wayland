@@ -3,7 +3,7 @@
 - Date: 2026-11-24, evening, before task 1 on 25/11.
 - Author: R3-L3 optimization deep-diver (subagent).
 - Scope: Zen 1.24.3b on the laptop only. Run is 55 tasks, 19-31 hours, driven via BiDi on 9222 plus Marionette on 2828.
-- Constraints honored: user.js NOT touched (parallel update worker owns it), Zen NOT restarted, CDP/Marionette NOT driven, pill NOT acquired. All laptop reads below are read-only (ps, ss, profile files, sessionstore parse).
+- Constraints honored: user.js NOT touched (parallel update worker owns it), Zen NOT restarted, BiDi/Marionette NOT driven, pill NOT acquired. All laptop reads below are read-only (ps, ss, profile files, sessionstore parse).
 - No em dash or en dash in this file. Commas, periods, short hyphens only.
 
 ## 1. Laptop ground truth measured 2026-11-24 about 19:50-20:05 +07
@@ -14,7 +14,7 @@
 - `user.js` at probe time holds only 2 prefs: `browser.shell.checkDefaultBrowser=false` and `toolkit.legacyUserProfileCustomizations.stylesheets=true`. `remote.prefs.recommended=false` was NOT yet pinned when probed (parallel update worker pending). `prefs.js` holds NO override for `browser.tabs.unloadOnLowMemory`, `browser.sessionstore.*`, `media.suspend-bkgnd-video.*`, `remote.prefs.*`, or `dom.ipc.processCount`. All defaults therefore apply.
 - Session: 1 window, 72 tabs, 49 pinned, from `sessionstore-backups/recovery.jsonlz4` (2.9 MB compressed, 3,690,637 bytes decompressed, parsed read-only with the system liblz4). Top domains: github.com 11, youtube.com 2, huggingface.co 2, lms.neu.edu.vn 2, claude.ai 2, plus Gmail, Calendar, Todoist, ChatGPT, Gemini, Perplexity, DeepSeek, Codeforces, research PDFs, and leftover test tabs (`https://example.com/`, several `about:blank`, `file:///tmp/pill-video/fixture.html`).
 - Memory: 30 GB RAM total, 13 GB used, 17 GB available. Swap 5.3 GB used of 35 GB. Disk 228 GB free of 385 GB. Zen total RSS about 2.5 GB (main 608 MB, 7 tab processes 110-165 MB each, rdd 164 MB).
-- CPU anomaly (flagged, not acted on): one tab content process (PID 381659) runs at about 49 percent CPU sustained, and the main process at about 37 percent lifetime average. The tab behind PID 381659 cannot be identified without driving CDP, so it is NOT named here and NOT closed. See D3.
+- CPU anomaly (flagged, not acted on): one tab content process (PID 381659) runs at about 49 percent CPU sustained, and the main process at about 37 percent lifetime average. The tab behind PID 381659 cannot be identified without driving BiDi, so it is NOT named here and NOT closed. See D3.
 - Sessionstore backups: `previous.jsonlz4` 5.1 MB, `recovery.jsonlz4` 2.9 MB, `recovery.baklz4` 2.9 MB. A restore fallback exists.
 
 ## 2. Bottleneck analysis: what Zen can and cannot move
@@ -92,7 +92,7 @@
 - V2. Firefox 160 BiDi perf (bug 2075175): network events no longer compute unused security details, "could have visible impacts on performance, e.g. during a page load". Already in 1.24.3b (Firefox 160.0.1). No change. Source: MDN Firefox 160 release notes for developers (developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/160).
 - V3. gh-16587 (closed windows freed from memory) and gh-16624 (visible split-view and glance tabs not unloaded under memory pressure) are both in 1.24.3b. Verified against the official release notes (zen-browser.app/release-notes/) and the GitHub pulse record (gh-16624 merged 14 Nov 2026 as PR 16622; gh-16618 is the follow-up window-freeing fix). No change.
 - V4. Pill optics blur 0.30 / refraction 0.75 and the light terminal icon in profile chrome/ are already in place (commit 58c419f). No change.
-- V5. Launch line is already correct (`--remote-debugging-port=9222 --marionette` in the zen-ai wrapper, used by all zen.desktop Exec lines). No flag to add or remove. No 1.24.x release note touches CDP, Marionette, the remote port, profile format, or tab behavior in a breaking way.
+- V5. Launch line is already correct (`--remote-debugging-port=9222 --marionette` in the zen-ai wrapper, used by all zen.desktop Exec lines). No flag to add or remove. No 1.24.x release note touches BiDi, Marionette, the remote port, profile format, or tab behavior in a breaking way. Note: port 9222 serves WebDriver BiDi only; Firefox removed CDP in 141, so there is no CDP on this stack.
 - V6. Session restore defaults favor the restart point: `browser.sessionstore.resume_from_crash` defaults to true, and pinning `remote.prefs.recommended=false` keeps crash session restore enabled (recommended prefs would disable it, per zenpilot). No change.
 - V7. Disk and RAM headroom are ample (228 GB free, 17 GB RAM available). Sessionstore writes (3.7 MB every interval) are negligible. No change.
 
@@ -119,6 +119,16 @@
 ## 8. Appendix Z text (added to the execution plan, VM-local copy)
 
 - A1 tab hygiene, A2 BiDi end-on-handover, and the D1 restart point are added as Appendix Z to the execution plan. The full evidence lives in this file.
+
+## 9. Update-off lock verification (2026-11-24 evening, clone1-report applicator)
+
+- `user.js` in the run profile holds both D2 pins: `remote.prefs.recommended=false` and `app.update.enabled=false` (with the D2 comment explaining the pin re-enables auto-update).
+- `prefs.js` (live, flushed after the 19:59 restart) holds both pins as effective prefs: `app.update.enabled=false` and `remote.prefs.recommended=false`. No `app.update.auto` or `app.update.channel` override is present. The `app.update.lastUpdateTime.*` timers show the last background check at 2026-11-24 18:11 +07, before the pin took effect at the restart.
+- No staged update: no `/opt/zen-browser-bin/updates/` dir, no profile `updates/` dir, no `updates.xml`, no `active-update.xml` in the profile (checked 2026-11-24 about 20:10 +07).
+- Running Zen is 1.24.3b: PID 404548, started 2026-11-24 19:59:31, exe is `/opt/zen-browser-bin/zen-bin`, install `application.ini` Version=1.24.3b BuildID=20261118023529. Ports 9222 (BiDi ws) and 2828 (Marionette) listen on 127.0.0.1, owned by PID 404548. `WebDriverBiDiServer.json` shows ws_port 9222, `MarionetteActivePort` shows 2828.
+- Firefox 161.0 released 2026-11-24 (confirmed via endoflife.date and release coverage the same day), so a Zen rebase to Firefox 161 is coming. The freeze holds: with `app.update.enabled=false` effective and no staged update, no update can be fetched or applied during the run, including at the D1 mid-run restart (the restart procedure still re-checks the version and stops if it is not 1.24.3b).
+- Install note: the install DOES ship an `updater` binary and `update-settings.ini` (ACCEPTED_MAR_CHANNEL_IDS=release), so the pref is the operative guard, not the absence of an updater. The updater has no staged payload to apply.
+- NOT verified live: `about:config` was not read in the running Zen (that needs a BiDi or Marionette session, and Firefox allows exactly one BiDi session at a time, so opening one risks wedging the runner slot). The file evidence above (pins in user.js and flushed prefs.js after a restart, plus no staged payload) is the verification. A live about:config read is not required before task 1.
 
 ## Sources (all accessed 2026-11-24)
 
