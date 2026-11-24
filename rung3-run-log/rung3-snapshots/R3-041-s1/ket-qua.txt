@@ -1,0 +1,36 @@
+Task: R3-041
+Browser fingerprint check on browserleaks.com
+Timestamp: 2026-11-24
+
+=== 8 INITIAL PIECES OF INFO (from browserleaks.com/javascript) ===
+1. User Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36
+2. Language: en-US
+3. Timezone: Asia/Saigon
+4. Screen Size: 1920×1200 16:10 24-bit TrueColor
+5. Color Depth: 24-bit TrueColor
+6. Cookies Enabled: true
+7. JavaScript Enabled: True
+8. Number of fonts detected: 327 fonts and 113 unique metrics found (from browserleaks.com/fonts)
+
+=== SCREEN SIZE (UNCHANGED AFTER DRAG) ===
+Screen Resolution: 1920×1200 16:10 24-bit TrueColor (unchanged, physical screen resolution)
+
+=== WINDOW SIZE AFTER DRAGGING RIGHT EDGE INWARD 200 PIXELS ===
+Before drag: innerWidth=858, innerHeight=1069, outerWidth=878, outerHeight=1176
+After drag:  window.innerWidth = 658 x window.innerHeight = 1069
+             window.outerWidth = 678 x window.outerHeight = 1176
+
+=== SCREENSHOT ===
+Saved to: ~/rung3-chung-cu/R3-041/bl-screenshot-1.png (timestamped)
+
+=== RE-OPEN VERIFICATION ===
+Reopened https://browserleaks.com/javascript and verified all 8 pieces of info are the same as first time:
+- User Agent: same
+- Language: same
+- Timezone: same
+- Screen Size: same (unchanged)
+- Color Depth: same (24-bit)
+- Cookies Enabled: same (true)
+- JavaScript Enabled: same (True)
+- Font count: same (327 fonts and 113 unique metrics found)
+Only window size changed (innerWidth 658, outerWidth 678 after drag).
