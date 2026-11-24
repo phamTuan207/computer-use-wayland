@@ -1,5 +1,7 @@
 # Scorer 1 brief: mochi (rung 3 safe-only 55-task run)
 
+**R3-L3 UPDATE (2026-11-24): For the R3-L3 run starting 2026-11-25, this brief is supplemented by rung3-scorer-brief-R3-L3-addendum.md in this directory, which states the R3-L3 run code, frozen key hashes (md 21f8b61a, json 5059f6c4), decoupled scoring (Class S async, Class L score-before-reset), -L3 file naming, and the 30/60-minute scoring deadline. The addendum supersedes any conflicting part of this brief.**
+
 - Run: rung 3 safe-only, 55 tasks. Run code and frozen key file path plus sha256 are filled in by the coordinator before task 1. Do not score until the coordinator hands you the snapshot path and the key file hash.
 - Your role: scorer 1. You score every task independently from the evidence snapshot plus the frozen key file. You never see scorer 2's verdict, and scorer 2 never sees yours, until both are recorded.
 - Availability confirmed: yes, 2026-11-23 19:16 +07 (reply read 19:17 +07).

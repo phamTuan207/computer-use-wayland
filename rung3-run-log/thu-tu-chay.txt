@@ -80,7 +80,7 @@ Cac rulings da chot truoc khi chay:
 - R3-075: requirements.txt chi co requests==2.32.3 (thuan Python). Dong chao ky vong: "Xin chao rung 3". Key DA XAC MINH DUNG (fixture sha256 khop key, Python 3.14.10, 2026-11-24 17:07).
 - R3-029: key DA XAC MINH DUNG (Mochi 2026-11-24 17:11-17:19: ca 5 ten san pham dung: iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, tat ca In Stock; tai khoan test rung3-029-test@example.com da tao, wishlist hoat dong). Mat khau tai khoan test trong Secure Vault, khong ghi o day.
 - DP-05: sqlite3 co san tren laptop (/usr/bin/sqlite3). DP-05 dung sqlite3 tren laptop (quyet dinh cua dieu phoi vien 2026-11-23, ghi trong key file). R3-021 van dung sqliteonline.com.
-- R3-047: ung vien INVALID truoc khi chay (Gutenberg bao tri, Mochi xac nhan bang trinh duyet 2026-11-24 17:29 +07, giong luc R3-L2). Kiem tra lai gutenberg.org bang trinh duyet ngay truoc khi R3-047 chay (vi tri 35). Neu van bao tri, tuyen bo INVALID va dung DP-03. Neu da mo lai, chay binh thuong. R3-017 (bbc.com) KHONG vo hieu (Mochi xac nhan tai binh thuong 17:29 +07).
+- R3-047: ung vien INVALID truoc khi chay (Gutenberg bao tri, Mochi xac nhan bang trinh duyet 2026-11-24 17:29 +07, giong luc R3-L2). Kiem tra lai gutenberg.org bang trinh duyet ngay truoc khi R3-047 chay (vi tri 34). Neu van bao tri, tuyen bo INVALID va dung DP-03. Neu da mo lai, chay binh thuong. R3-017 (bbc.com) KHONG vo hieu (Mochi xac nhan tai binh thuong 17:29 +07).
 - R3-011, R3-028, R3-036, R3-046: ung vien INVALID truoc khi chay theo key (ca 4 nhom trung binh).
 
 Ghi chu cong cu resume (Worker 1, 2026-11-23 22:00 +07):

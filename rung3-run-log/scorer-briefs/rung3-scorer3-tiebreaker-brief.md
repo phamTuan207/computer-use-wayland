@@ -1,5 +1,7 @@
 # Tiebreaker brief template: scorer 3 (rung 3 safe-only 55-task run)
 
+**R3-L3 UPDATE (2026-11-24): For the R3-L3 run starting 2026-11-25, this brief is supplemented by rung3-scorer-brief-R3-L3-addendum.md in this directory, which states the R3-L3 run code, frozen key hashes (md 21f8b61a, json 5059f6c4), decoupled scoring (Class S async, Class L score-before-reset), -L3 file naming, and the 30/60-minute scoring deadline. The addendum supersedes any conflicting part of this brief.**
+
 - Run: rung 3 safe-only, 55 tasks. Run code and frozen key file path plus sha256 are filled in by the coordinator before task 1.
 - Your role: tiebreaker scorer 3, a fresh session from the same pool as scorer 2. You are called ONLY on a disagreement between scorer 1 and scorer 2, or on a disputed invalid call. You must not be mei, must not be the runner, must not be mochi, and must not be scorer 2. The coordinator records your name and session ID in `thu-tu-chay.txt` and in `~/workspace/rung3-scorers.md` when you are called. You may be named at the same time as scorer 2, or spawned on demand by the coordinator.
 - You decide blind: you see only the evidence snapshot and the frozen key file, never either scorer's verdict or reasoning.

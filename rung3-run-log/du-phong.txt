@@ -26,10 +26,11 @@ Ghi chu:
   d41-requirements.txt sha256 4b818310... khop key, d41-app.py sha256 9f368ada...
   khop key, Python 3.14.10 khop key, list va key nhat quan (3 anh chup + duong
   xu ly loi). Ghi chu cu "R3-075 co key sai" la loi thoi (chi key cu truoc R3-L3).
-- R3-029 key: 3/5 ten san pham da xac nhan tren trang chu cua hang (iPhone,
-  Canon EOS 5D, HTC Touch HD); MacBook va HP LP3065 dang cho Mochi xac nhan
-  bang trinh duyet cung voi viec tao tai khoan test (run 134). Neu ten nao sai,
-  dieu phoi vien bao chu so huu truoc task 1.
+- R3-029 key DA XAC MINH DUNG (Mochi 2026-11-24 17:11-17:19 +07): ca 5 ten
+  san pham da xac nhan kem gia (iPhone $123.20, MacBook $602.00, Canon EOS 5D
+  $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, tat ca In Stock); tai
+  khoan test rung3-029-test@example.com da tao, wishlist hoat dong. Ghi chu
+  cu "3/5 ten" la loi thoi (truoc khi Mochi xac nhan xong).
 - R3-011, R3-028, R3-036, R3-046 la ung vien INVALID truoc khi chay theo key
   (ca 4 deu nhom trung binh, muc tran nhom 2); timeanddate.com da mo duoc bang
   trinh duyet 2026-11-24 14:26 +07, dang cho Mochi xac nhan lai (run 134).
@@ -37,7 +38,7 @@ Ghi chu:
   Project Gutenberg dang bao tri (Mochi xac nhan bang trinh duyet that
   17:29 +07: "Temporarily Down for Maintenance", giong luc R3-047 o R3-L2).
   R3-047 la task trung binh. Dieu phoi vien kiem tra lai gutenberg.org bang
-  trinh duyet ngay truoc khi R3-047 chay (vi tri 35). Neu van bao tri, tuyen
+  trinh duyet ngay truoc khi R3-047 chay (vi tri 34). Neu van bao tri, tuyen
   bo R3-047 INVALID va dung du phong trung binh DP-03 thay the (thu tu
   DP-03/DP-06/DP-07). Neu Gutenberg da mo lai, chay R3-047 binh thuong.
   R3-017 (bbc.com) KHONG vo hieu: Mochi xac nhan bbc.com tai binh thuong
