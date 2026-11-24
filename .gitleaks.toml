@@ -49,3 +49,14 @@ description = "Private or CGNAT IP address"
 regex = '''\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3})\b'''
 [[rules.allowlists]]
 regexes = ['''^192\.0\.2\.\d{1,3}$''', '''^198\.51\.100\.\d{1,3}$''', '''^203\.0\.113\.\d{1,3}$''']
+
+# R3-L3 false positives (2026-11-24, verified by hand before merge of PR #253):
+# the two 64-hex strings are sha256 file-integrity hashes recorded in
+# rung3-run-log/thu-tu-chay.txt (docs/rung3-answer-keys.md and
+# docs/rung3-answer-keys.json), not API keys; dung@test.org is the
+# placeholder email in the R3-013 regex-count sample text (the other two
+# sample emails are already covered by the @example.com allowlist).
+# Anchored to the full secret, same as the rule allowlists above.
+[allowlist]
+description = "R3-L3 false positives: file-integrity sha256 hashes and R3-013 fixture email"
+regexes = ['''^21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60$''', '''^5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8$''', '''^dung@test\.org$''']
