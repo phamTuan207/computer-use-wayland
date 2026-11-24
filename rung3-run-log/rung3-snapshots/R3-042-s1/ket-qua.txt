@@ -1,0 +1,18 @@
+Task: R3-042
+Comparison of 3 open-source licenses: MIT, Apache 2.0, GPL 3.0.
+
+Table:
+| item | MIT | Apache | GPL |
+|---|---|---|---|
+| commercial use right | Yes | Yes | Yes |
+| attribution requirement | Yes | Yes | Yes |
+| open-source requirement when distributing | No | No | Yes |
+
+Conclusion:
+GPL 3.0 is the most restrictive because it requires derivative works to be distributed under the same GPL license.
+
+Evidence:
+- ~/rung3-chung-cu/R3-042/mit-license.png
+- ~/rung3-chung-cu/R3-042/apache-license.png
+- ~/rung3-chung-cu/R3-042/gpl-license.png
+- ~/rung3-chung-cu/R3-042/docs-table-final.png (final screenshot)
