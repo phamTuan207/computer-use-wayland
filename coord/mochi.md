@@ -389,3 +389,9 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 17:19 +07 - Kiem tra truoc task 1 R3-L3: R3-029, WAVE, timeanddate.com (mochi)
+
+- R3-029: tai khoan test da tao xong tren ecommerce-playground.lambdatest.io (email rung3-029-test@example.com, mat khau Test1234), dung ngay khong can xac minh email. Ca 5 san pham co that, ten hien dung nhu yeu cau: iPhone, MacBook, Canon EOS 5D, HP LP3065, HTC Touch HD. Wishlist hoat dong (da luu iPhone, thay trong danh sach). Phien dang nhap het han 1 lan khi bam wishlist, mochi dang nhap lai truc tiep theo lenh cua chu 17:18 +07.
+- WAVE kiem tra lai: Fox News Errors 2, Alerts 311, Features 145, Structural 382, Contrast 16; Wikipedia Main Page Errors 7, Alerts 80, Features 451, Structural 75, Contrast 0.
+- timeanddate.com mo binh thuong, khong bi chan. Ket qua day du da bao chu so huu qua chat.
