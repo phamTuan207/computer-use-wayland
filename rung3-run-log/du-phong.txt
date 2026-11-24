@@ -1,0 +1,26 @@
+Du phong R3-L3 (ma lan chay R3-L3, 2026-11-24)
+Dong bang: H1 9b9d900 / H2 5fac0eb. Branch todolist-push tip 6c95c51.
+Pass bar 53/55. Invalid cap: toi da 5 toan bo, toi da 2 moi nhom do kho.
+R3-011 ruling: 1 su co chung duoc chung minh tinh la 1 invalid cho ca muc tran
+tong (5) va muc tran nhom (2). Curl 403 KHONG du lam bang chung browser-block.
+
+Bang du phong (slots, chua dung):
+- DP-01: Tier B (trung binh). Backup cho task trung binh.
+- DP-02: Tier A (kho). Backup cho task kho.
+- DP-03: Tier B (trung binh). Backup cho task trung binh. N = 5 (n_min 3).
+- DP-05: Tier A (rat kho). Backup cho task rat kho. Dung sqlite3 tren laptop.
+- DP-06: Tier B (trung binh). Backup moi R3-L3. Cities: Paris, Berlin, Rome.
+- DP-07: Tier B (trung binh). Backup moi R3-L3. 3 files dp07-01/02/03.txt, sha256 trong key.
+
+Ghi chu:
+- R3-009 chay binh thuong (WAVE gate truoc task 1 PASSED 16:31-16:32 +07 24/11:
+  Fox News Errors 2, BBC /news Errors 0). Khong dung DP-03 cho R3-009.
+- DP-01 da dung o R3-L2 cho R3-047 INVALID; o R3-L3 (vong moi, ledger rong)
+  tat ca backup co san lai tu dau.
+- R3-029 va R3-075 co key sai, luat dong bang cam sua trong vong nay;
+  neu fail theo key thi fail, khong sua key.
+- R3-011, R3-028, R3-036, R3-046 la ung vien INVALID truoc khi chay theo key;
+  kiem tra o preflight truoc khi chay.
+
+Cap da dung (ghi cap task INVALID + backup thay the vao day khi xay ra):
+- (chua co)
