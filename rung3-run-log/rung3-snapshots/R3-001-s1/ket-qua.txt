@@ -1,0 +1,26 @@
+KET QUA TASK R3-001 (TodoMVC - manage todo list)
+================================================
+Ngay thuc hien: 2026-11-23 (Asia/Ho_Chi_Minh)
+Trang thai: HOAN TAT (4 cuoi cung - 1 hoan thanh, 3 chua hoan thanh)
+
+--- BUOC 4: BO LOC (filter counts) ---
+- All: 4
+- Active: 3
+- Completed: 1
+
+--- BUOC CUOI: DANH SACH 4 TODO (final 4 todos) ---
+1. Buy milk              -> HOAN THANH (completed)
+2. Prepare presentation  -> CHUA HOAN THANH (inactive/incomplete) [duoc sua doi tu "Exercise"]
+3. Read book             -> CHUA HOAN THANH (inactive/incomplete)
+4. Buy groceries         -> CHUA HOAN THANH (inactive/incomplete)
+
+--- CHI TIET BUOC ---
+- Them 5 todo: Buy milk, Clean room, Exercise, Read book, Buy groceries
+- Danh dau 2 hoan thanh: Buy milk, Clean room (Active=3, Completed=2, All=5)
+- Chon bo loc Active/Completed/All va ghi lai so luong (All=5, Active=3, Completed=2)
+- Sua 1 todo chua hoan thanh: "Exercise" -> "Prepare presentation" (da xac thuc noi dung da thay doi)
+- Xoa 1 todo da hoan thanh: "Clean room" (bo qua nut destroy) -> con lai 4 todo
+
+--- THONG TIN BO SUNG (additional info) ---
+- Page title: "TodoMVC: JavaScript Es5"
+
