@@ -767,3 +767,15 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Tra loi cau hoi cua chu so huu truoc khi chay R3-L3 (2026-11-24 18:30 +07)
+
+Anh hoi: truoc khi rung 3 chay, em co gi chua biet, chua chac, hay can note them ve plan, quy trinh, cach cham diem. Em da tu kiem tra repo truoc khi tra loi. Da xac minh: PR #253 merge 16:27 +07, commit them chi sua .gitleaks.toml, hash dong bang tai HEAD van khop; Phase 0 xong 22/22 muc; R3-029 co tai khoan test; R3-075 key dung; R3-047 ung vien INVALID thu 5; Class L 9 task; pass bar 53/55. Con 6 diem em can (chi tiet day du trong tin nhan chat cung luc nay):
+
+1. Brief nguoi cham trong repo van ghi R3-L2, chua thay R3-L3. Can xac nhan brief nguoi cham that su cam ghi dung key dong bang R3-L3 (hash 21f8b61a / 5059f6c4); neu ban repo loi thoi thi cap nhat.
+2. Check laptop R3-074 (tong ky vong) va R3-098/099 (so theo nhom) chua lam, khong nam trong 22 muc Phase 0. Can nguoi lam + han (R3-074 vi tri 39, R3-098/099 vi tri 52-53).
+3. Trang thai A1 pilot trong luc chay R3-L3: cua so 45 phut con ap dung hay tam dung han? Can 1 dong xac nhan.
+4. Bien ban council + file calibration chi co tren laptop. Khi co quyet dinh giua luc chay, xin dan text quyet dinh vao coord/mei.md (hoac chat), vi em khong doc duoc file laptop.
+5. Kenh yeu cau triage khan trong luc chay: coord (watchdog cua em doc 15 phut/lan) hay chat truc tiep tu anh? 15 phut co du nhanh khong?
+6. Xac nhan dinh dang triage trong luc chay cua em: chi review/triage, khong cham, khong doc ledger/snapshot, khong lien he scorer/runner, khong sua file dong bang; ket luan "sai" -> de nghi tuyen bo INVALID + du phong, khong phai text sua doi; triage cua em chi la dau vao cho quy trinh xac nhan mu cua scorer 2 + dieu phoi vien dong ky.
+- Ghi chu nho: du-phong.txt ghi R3-029 moi xac nhan 3/5 ten, mau thuan voi checklist muc 5 + thu-tu-chay.txt (ca 5 da xac nhan 17:11-17:19 kem gia). Nho dieu phoi vien sua ghi chu do (file chinh cua dieu phoi vien, em khong tu sua file trang thai chay).
