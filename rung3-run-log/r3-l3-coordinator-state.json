@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-005: drive done, sealed + gate PASS, Pair A scoring next; R3-006 to release",
+  "current_task": "R3-005 GRADED PASS; R3-006 (position 6, Claude-run) drive done, awaiting runner report (tab-close rule follow-up sent)",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T21:26:04+07:00",
+  "last_updated": "2026-11-25T21:37:29+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -461,6 +461,31 @@
       "ts": "2026-11-25T21:26:04+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-005 DRIVE COMPLETE (runner bfca7236): start 2026-11-25T21:00:44+07:00, end 2026-11-25T21:16:13+07:00 (15m29s, inside timeout). Evidence: ket-qua.txt (252 B: 3 original/decoded pairs, all matching), qr-1.jpg/qr-2.jpg/qr-3.jpg, 20261125-211611-decode.png (590752 B), start/end times. Session clean after (no cursor.lock, pill released). Pulled 7 files sha256-verified. Sealed R3-005-L3 manifest f4f7fa95e08d6a63e2f6544d77cf73bbdac9272dd64a64f4b7003a0d155ae4ed, gate PASS. task_start cleared. Next: publish to repo for Mochi, Pair A scoring, release R3-006. Speed-lever council (ed4bf113) + redteam (78aad3d8) have reported; decision to be recorded after reading both full reports."
+    },
+    {
+      "ts": "2026-11-25T21:26:44+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-005 SCORING ASSIGNED (Pair A): snapshot published at todolist-push ac6820d7 (manifest f4f7fa95, ls-remote verified). Mochi scorer 1 assigned via daemon run 211 at 21:26:20 (verified=True; English message per the 21:20 language rule; verdict returns via branch mochi/verdict-R3-005-L3). Fresh scorer 2 (A2) 57c97333 spawned with VM-local snapshot; verdict to ~/workspace/rung3-verdicts/R3-005-A2.json. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30/60 min."
+    },
+    {
+      "ts": "2026-11-25T21:26:44+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-006 RELEASED (position 6, Tier B, Class S, Claude-run): locked article Albert Einstein (https://en.wikipedia.org/wiki/Albert_Einstein); runner picks 2 consecutive revisions from the history tab at run time (records revision IDs, edit times, editor names), opens the diff, records 3 content changes (old + new each), opens the newer revision to verify 1 of the 3 changes exists in the current article. Evidence requirements: files [ket-qua.txt], screenshots_min 1 (timestamped diff screenshot). Drive overlaps R3-005 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner)."
+    },
+    {
+      "ts": "2026-11-25T21:26:55+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-006 RUNNER SPAWNED: fresh Muse subagent d50ea310-b60c-405e-9c5c-6d6cf06d2eca (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns)."
+    },
+    {
+      "ts": "2026-11-25T21:31:23+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER STANDING RULE 21:31 (tab cleanup is general, not one-off): when a task is done and its tabs are confirmed no longer needed, close them right away; do not let stale tabs accumulate. Applied to every runner brief from now on: each runner closes its OWN task tabs when its drive ends (after evidence is captured, before reporting); the coordinator verifies at each task boundary that no stale task tabs remain. Same safety limits: never owner-opened tabs, never ws3 windows. The running R3-006 runner (d50ea310) is being sent this rule as a follow-up since its brief predates it."
+    },
+    {
+      "ts": "2026-11-25T21:37:29+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-005 GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 21:28:11 (branch mochi/verdict-R3-005-L3, copied to ~/workspace/rung3-verdicts/R3-005-A1.json; she independently decoded all 3 QR codes with OpenCV), A2 57c97333 PASS 21:27:29 (R3-005-A2.json). Key hashes verified by both (json 5059f6c4, md 21f8b61a); allowlist clean; manifest f4f7fa95. Original ledger row recorded (R3-L3-grades.jsonl now 9 rows). Run: 11 graded; under rule A banked count 8 PASS / 0 FAIL. Bar math: need 45/47 remaining (2 slack). R3-006 drive finished (start 21:30:44, end_time 21:36, ket-qua.txt + diff screenshot on laptop); runner d50ea310 still composing its report (tab-close follow-up sent 21:31, delivery pending its handoff)."
     }
   ],
   "pass_count": 3,
@@ -509,7 +534,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": null,
+  "task_start": "2026-11-25T21:26:44+07:00",
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
@@ -609,5 +634,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "bfca7236-9601-475b-8ffa-252ed4953e30"
+  "claude_runner_session": "d50ea310-b60c-405e-9c5c-6d6cf06d2eca"
 }
