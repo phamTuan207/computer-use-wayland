@@ -1,0 +1,44 @@
+{
+ "files": [
+  {
+   "mtime": 1795623367,
+   "name": "block-state.png",
+   "sha256": "9f1f9b997bd432e703b79e12ebd18b632ca7265861ce2efa8bb849f1cc709ba0",
+   "size": 562667
+  },
+  {
+   "mtime": 1795623323,
+   "name": "end_time.txt",
+   "sha256": "077a6438c74d0f32434516b302809aa523b1a21ab438ffda1cd9649d0deda7d6",
+   "size": 33
+  },
+  {
+   "mtime": 1795623336,
+   "name": "ket-qua.txt",
+   "sha256": "9cead0df5167aef96087296a452ea534cd6533c0bc450bde6ff6579c9848b0f4",
+   "size": 235
+  },
+  {
+   "mtime": 1795623388,
+   "name": "pill-gone.png",
+   "sha256": "9decc9e906d68f3e21064fdb96f70bfe18825ab6cc5cffbfb04123931fb00741",
+   "size": 2822188
+  },
+  {
+   "mtime": 1795623350,
+   "name": "result.json",
+   "sha256": "2a668bb80d74014d9aa02be044d8c7c6248e06e9e63995ed4c963626ce66cf7e",
+   "size": 662
+  },
+  {
+   "mtime": 1795623309,
+   "name": "start_time.txt",
+   "sha256": "8585c3c41b9a8040dc14caad80e3b29867f27781107e9cad4ea34d108cc222ed",
+   "size": 33
+  }
+ ],
+ "manifest_sha256": "df6d1163774df6c1719fd448b43bdb47257f5d2375e1c321fe0e8e4d9182aa1f",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-011-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-011",
+ "task": "R3-011"
+}

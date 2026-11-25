@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-010 GRADED PASS; R3-011 drive BLOCKED by Cloudflare on timeanddate (invalid procedure next)",
+  "current_task": "R3-011: block evidence sealed (gate FAIL expected), Pair A invalid decision next; DP-06 backup on standby",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T23:14:15+07:00",
+  "last_updated": "2026-11-25T23:16:38+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -626,6 +626,11 @@
       "ts": "2026-11-25T23:14:15+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-010 GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 23:05:52 (branch mochi/verdict-R3-010-L3, copied to ~/workspace/rung3-verdicts/R3-010-A1.json), A2 d90c7d52 PASS 23:03:53 (R3-010-A2.json). Key hashes verified by both; allowlist clean; manifest 7c0788a7. Both measured so-do.png directly (centers 8.2%/49.8%/91.4%, arrows ~0 deg). Original ledger row recorded (R3-L3-grades.jsonl now 14 rows). Run: 16 graded; under rule A banked count 13 PASS / 0 FAIL. Bar math: need 40/42 remaining (2 slack). Unscored queue back to 1 (R3-011). R3-011 DRIVE BLOCKED (runner a9ce3da8): timeanddate.com weekday page returned Cloudflare 'Just a moment...' challenge in Zen (Ray ID a601e73fd83ea29d), drive 23:06:52-23:08:27, no weekday results; block screenshot + ket-qua.txt recorded, tab closed (23 tabs before/after). This is the exact condition in the frozen key ruling for R3-011 (declare invalid if still blocked in browser). Invalid procedure next: seal block evidence, independent evidence check, blind confirm, countersign with backup per base plan."
+    },
+    {
+      "ts": "2026-11-25T23:16:38+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-011 BLOCK EVIDENCE SEALED: pulled 6 files sha256-verified (start/end times, ket-qua.txt with BLOCKED note, result.json, block-state.png, pill-gone.png). Snapshot R3-011-L3 manifest df6d1163774df6c1719fd448b43bdb47257f5d2375e1c321fe0e8e4d9182aa1f. Manifest gate FAIL (screenshots need 5, found 2) - EXPECTED: the drive was blocked by Cloudflare before any result existed; this is the invalid evidence, not a re-collect case. Independent evidence check (coordinator, 23:1x): VM-side curl of the same timeanddate weekday URL returned HTTP 200 with the real page, so the site is up; the block is a Cloudflare bot challenge served to the laptop Zen (title 'Just a moment...', Ray ID a601e73fd83ea29d in the sealed DOM record). Per list section 1, a bot-check page = invalid candidate; per du-phong.txt ruling, browser evidence is required (curl alone insufficient) and we have it. Pair A decides INVALID/PASS/FAIL from snapshot + key; scorer 2 confirms blind. Backup rule (du-phong.txt + list section 1): first unused same-difficulty backup in fixed order = DP-06 (medium order 1; DP-03 already consumed by R3-047). If INVALID: ledger row with backup_task DP-06, pair recorded in du-phong.txt (laptop canonical + repo mirror), DP-06 released next (Claude lane, Pair A), then R3-013. Shared-cause counting (G-46): R3-011/028/036/046 share the timeanddate cause; a proven shared cause counts as 1 invalid for both caps (5 total, 2 medium). R3-028/036/046 will hit the same block when their turn comes."
     }
   ],
   "pass_count": 3,

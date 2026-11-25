@@ -1,0 +1,22 @@
+{
+ "task": "R3-011",
+ "pill_acquire": "2026-11-25T23:06:53.293319+07:00",
+ "dates": [],
+ "closed_tabs": [
+  "https://www.timeanddate.com/date/weekday.html?year=2026&month=11&day=11"
+ ],
+ "tabs_before": 23,
+ "landing_url": "https://www.timeanddate.com/date/weekday.html?year=2026&month=11&day=11",
+ "blocked": {
+  "markers": [],
+  "state": {
+   "title": "Just a moment...",
+   "href": "https://www.timeanddate.com/date/weekday.html?year=2026&month=11&day=11",
+   "ready": "complete"
+  }
+ },
+ "tabs_after": 23,
+ "pill_release": "2026-11-25T23:08:25.702851+07:00",
+ "end_time": "2026-11-25T23:08:27.349114+07:00",
+ "start_time": "2026-11-25T23:06:52.982338+07:00"
+}
