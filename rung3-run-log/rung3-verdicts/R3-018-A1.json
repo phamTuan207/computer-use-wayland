@@ -1,0 +1,21 @@
+{
+  "scorer": "A1",
+  "task": "R3-018",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/20261126-012849-domain-1.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/20261126-012902-domain-2.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/20261126-012916-domain-3.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-018-L3-snapshot/rung3-run-log/rung3-snapshots/R3-018-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-018 key section lines 263-269, todolist-push 4f1b82cf)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-018 task text lines 410-412, todolist-push 4f1b82cf)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T01:35:53+07:00",
+  "reason": "All 3 domains were checked in the key's order on Namecheap, all 3 are available at $12.08/yr first year, and every status and price in ket-qua.txt matches the screenshots exactly, including the Retail $15.98/yr and the suggested extension prices. No domain was taken, so no alternative names were needed. Every key check passes."
+}
