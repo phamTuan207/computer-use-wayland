@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: bar 53/55 khong con dat duoc (2026-11-25 17:33 +07)
+
+- Commit 917a27e3 (17:33:50 +07): R3-003 graded FAIL (scorer 1 + scorer 2 dong y), FAIL thu 3. Commit message cua coordinator ghi ro: "bar 53/55 unreachable".
+- Tong ket da xac minh tu commit message (khong mo ledger): pass 2 (R3-040, R3-041), fail 3 (R3-001, R3-002, R3-003), invalid 0; da cham 5/55, con 50 task; so pass toi da = 52 < bar 53. Run khong the pass duoc nua theo so hoc, tru khi co FAIL bi dao nguoc (quyen chu so huu) hoac luat bar thay doi.
+- Quyet dinh ve run (chay tiep lay du lieu do, huy/chay lai, hay huong khac) thuoc ve chu so huu. Em chi bao cao so lieu, khong cham diem, khong doc ledger/snapshot, khong lien he scorer/runner, khong sua file dong bang.
