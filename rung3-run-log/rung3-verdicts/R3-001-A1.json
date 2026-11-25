@@ -1,0 +1,21 @@
+{
+  "scorer": "A1",
+  "task": "R3-001",
+  "verdict": "FAIL",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/live-state.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/live-state.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/final.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-001-L3-snapshot/rung3-run-log/rung3-snapshots/R3-001-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-001 section only, lines 109-117, todolist-push 0009ca87)",
+    "docs/rung3-answer-keys.json (task-keys structure only, todolist-push 0009ca87)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T13:51:40+07:00",
+  "reason": "ket-qua.txt claims the exact final list, but the live TodoMVC app state in the runner's browser contains zero todos in every tab, and both screenshots show an empty list. For a Class L task the live state is the ground truth, and it shows the work was not done. The 22-second attempt corroborates that the steps were not performed. Runner failure, not a key error or service block."
+}
