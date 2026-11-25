@@ -40,7 +40,9 @@ ORDER_FILE_DEFAULT = "rung3-run-log/thu-tu-chay.txt"
 # replacement here when it happens (position = the replaced task's
 # position). DP-03 is already in the order line (pre-run replacement for
 # the dropped R3-047 at position 34), so it needs no entry here.
-DP_REPLACEMENT_POSITION = {}
+# DP-06 replaced R3-011 (INVALID, Cloudflare block on timeanddate.com)
+# at position 11 on 2026-11-25 (coordinator epoch 8).
+DP_REPLACEMENT_POSITION = {"DP-06": 11}
 
 
 def load_order(order_path):
