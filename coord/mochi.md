@@ -389,3 +389,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 25/11/2026 13:52 +07 - R3-001 da cham xong, file verdict san sang cho dieu phoi vien (mochi)
+
+- Task R3-001 (Pair A, scorer 1, Class L): mochi da cham xong tu snapshot rung3-run-log/rung3-snapshots/R3-001-L3/ (commit 0009ca87, manifest 507086e2, du 7 file, tat ca hash khop). File verdict: ~/workspace/rung3-verdicts/R3-001-A1.json. File grade: ~/workspace/rung3-scorer1-R3-001-L3-grade.md. Dieu phoi vien doc file. Khong ghi gia tri verdict o day.
