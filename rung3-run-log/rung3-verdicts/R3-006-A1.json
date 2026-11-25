@@ -1,0 +1,21 @@
+{
+  "scorer": "A1",
+  "task": "R3-006",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-006-L3-snapshot/rung3-run-log/rung3-snapshots/R3-006-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-006-L3-snapshot/rung3-run-log/rung3-snapshots/R3-006-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-006-L3-snapshot/rung3-run-log/rung3-snapshots/R3-006-L3/20261125-213525-diff.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-006-L3-snapshot/rung3-run-log/rung3-snapshots/R3-006-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-006-L3-snapshot/rung3-run-log/rung3-snapshots/R3-006-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-006 section only, lines 165-171, todolist-push 777b5b8a)",
+    "docs/rung3-answer-keys.json (R3-006 entry only, todolist-push 777b5b8a)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-006 task text only, todolist-push 777b5b8a)",
+    "https://en.wikipedia.org/w/index.php?title=Albert_Einstein&diff=1383618653&oldid=1383609309 (live diff page, read-only browser verification 21:46-21:47 +07)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T21:47:37+07:00",
+  "reason": "All 3 changes are present in the diff with old and new matching, the editors' names and edit times are correct, and Change 1 is verified present in the newer revision, all confirmed by re-opening the live diff page as the key requires."
+}
