@@ -1,0 +1,44 @@
+{
+ "files": [
+  {
+   "mtime": 1795635987,
+   "name": "end_time.txt",
+   "sha256": "d5ce51ffda168166f925414508783c3609f810ac75e4077ebe8ac3c6d864d3f6",
+   "size": 33
+  },
+  {
+   "mtime": 1795636005,
+   "name": "ket-qua-truy-van.csv",
+   "sha256": "8be50e4caaafb8a7aa2ad34f040e04b762830a26a96506ca254f74e628aee29a",
+   "size": 54
+  },
+  {
+   "mtime": 1795635997,
+   "name": "ket-qua.txt",
+   "sha256": "5222081d27aad94ec4a44bff756f859c8e7d8417b834fe99d6154d6f8d7a7ca6",
+   "size": 400
+  },
+  {
+   "mtime": 1795636015,
+   "name": "query-results-20261126-022637.jpg",
+   "sha256": "3ce5b99f6870021e33babc0d02123139ad6e02106dc6114572ecd6e2a5fdc8d9",
+   "size": 56955
+  },
+  {
+   "mtime": 1795636024,
+   "name": "query-results-20261126-022929.jpg",
+   "sha256": "aa08b5e549c5526e5b451aca2a3fa318856f962fff68bb5f6efeeb56f077ef57",
+   "size": 57223
+  },
+  {
+   "mtime": 1795635979,
+   "name": "start_time.txt",
+   "sha256": "751c4c8cb038e9a37f356c1e4243cd917f63d1985bef2e70d3f0b31d87acf404",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "fe64cddd88a9f0c4b92185021ed566da5c207e96016c556e9b5766652a7c9a21",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-021-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-021",
+ "task": "R3-021"
+}

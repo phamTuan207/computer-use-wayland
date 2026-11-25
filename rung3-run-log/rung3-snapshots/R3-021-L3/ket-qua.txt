@@ -1,0 +1,14 @@
+Giuong 600
+Tu 400
+Ghe 250
+Ban 150
+6750
+CREATE TABLE san_pham (id INTEGER PRIMARY KEY, ten TEXT, gia INTEGER, so_luong INTEGER);
+Ban, 150, 10
+Ghe, 250, 5
+Den, 80, 20
+Tu, 400, 3
+Giuong, 600, 2
+ket-qua-truy-van.csv
+Page title: SQL Online IDE - Fast SQL Editor | SQL Compiler
+Create table success message: (no text message shown by the site; empty result grid, table san_pham appears in the schema tree)

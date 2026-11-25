@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-021 (position 19, Claude-run): FRESH runner 2f0073f3 spawned after coordinator interrupt of a0d7e026 for owner-ordered tab cleanup; R3-019 graded PASS",
+  "current_task": "R3-022 (position 20, Claude-run): released; R3-021 Pair A scoring in progress (unscored queue 2 = at backpressure cap)",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-26T02:23:01+07:00",
+  "last_updated": "2026-11-26T02:47:46+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -846,6 +846,16 @@
       "ts": "2026-11-26T02:23:01+07:00",
       "by": "coordinator-epoch-8",
       "text": "TASK 56 BRIEF FINALIZED with parent evidence (02:22): parent recovered pre-cleanup state from recovery.baklz4 (02:15); preserved copy on laptop ~/zen-sessionstore-pre-cleanup-20261126.jsonlz4 (mozLz40, runner decompresses). Counts: pre-cleanup 78 tabs / 49 pinned / 12 essentials; post-cleanup 54 / 41 / 7; closed 24 = 5 essentials + 3 pinned + 16 normal. Essentials before (order): YouTube, YouTube (2nd copy), Reddit, Todoist Today, Gmail, Google Calendar, GitHub phamTuan207, LeetCode 75, Qwen-Image-2.1-GGUF, NEU LMS Chapter 5, tinchi.neu.edu.vn, nguoihoc.neu.edu.vn. Essentials now: YouTube, GitHub, LeetCode, Qwen-Image, NEU LMS, tinchi, nguoihoc. Task 56 recreates as ESSENTIALS inserted after the first YouTube and before GitHub, in order: YouTube (2nd copy), Reddit, Todoist, Gmail, Google Calendar. Pinned closed (3, head of pinned section, in order): PCCV CF26 Sheet, Free Claude Code Admin, Welcome; recreate as PINNED at head of pinned section. 16 normal tabs NOT restored. Flags F1/F2 RESOLVED by parent evidence: F1 both YouTube essentials existed, first survived, recreate the 2nd copy; F2 Chat-Muse was a normal tab, NOT restored. F3 stands (workspace from sessionstore zenWorkspace per tab; runner restores in same workspace). Brief updated: improvements/r3-l3-task56-restore-tabs-20261126.md (steps, evidence: sidebar screenshot + tab list showing restored order, key = lists above). Owed 02:15/02:17 items (closure record + timestamps + method, why non-listed tabs closed, R3-021 runner health, 21:19-02:14 interrogation answer) are recorded in the 192-note state edit pushed as 1c3b88f5 (ls-remote verified); summary: 24 tabs closed 02:15:58-59 via pill + WebDriver DELETE; non-listed tabs closed because the 02:14 order said every tab except active R3-021 with none kept; runner a0d7e026 interrupted pre-drive (no tab/evidence lost), fresh runner 2f0073f3 driving; batch 1 executed 21:23-21:24 (27 tabs), batch 2 deferred by pipeline priority until 02:15."
+    },
+    {
+      "ts": "2026-11-26T02:47:46+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-021 DRIVE COMPLETE (fresh runner 2f0073f3, attempt 2 after coordinator interrupt of a0d7e026): start 2026-11-26T02:17:36+07:00, end 2026-11-26T02:40:12+07:00 (22m36s, inside timeout). Evidence: ket-qua.txt (query-1 lines first: Giuong 600, Tu 400, Ghe 250, Ban 150; total 6750; CREATE TABLE; comma-formatted inserts; CSV filename; page title; OpFS success message), ket-qua-truy-van.csv (4 data rows, no header), 2 query-result JPGs, start/end times. Session clean after (no cursor.lock, pill off). Tab check (02:46 list, 1 tab about:blank): 0 sqliteonline tabs remain (runner closed its own). Pulled 6 files sha256-verified. Sealed R3-021-L3 manifest fe64cddd88a9f0c4b92185021ed566da5c207e96016c556e9b5766652a7c9a21, gate PASS. Tier A checker (coordinator, once): FAIL, reason 'CSV has 3 data rows, expected 4' (checker counts lines-1 assuming a header; runner CSV is headerless with 4 rows). Order + total checks passed. Checker output handed verbatim and identically to both scorers; scorers decide (checker is an aid, R3-002 precedent). Next: publish to repo for Mochi, Pair A scoring, release R3-022."
+    },
+    {
+      "ts": "2026-11-26T02:47:46+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-022 RELEASED (position 20, Tier B hybrid, Class S, Claude-run): translate.google.com website translation of https://en.wikipedia.org/wiki/Computer to Vietnamese; record translated title; record Vietnamese translations of 5 locked English terms (central processing unit, random-access memory, motherboard, operating system, hard disk drive) with originals; back-translate any 2; timestamped screenshot of translated page; ket-qua.txt. Evidence requirements: files [ket-qua.txt], screenshots_min 1. Drive overlaps R3-021 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule."
     }
   ],
   "pass_count": 3,
@@ -894,7 +904,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": "2026-11-26T02:17:37+07:00",
+  "task_start": "2026-11-26T02:47:46+07:00",
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
