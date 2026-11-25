@@ -173,3 +173,45 @@ Results (PASS/FAIL per item):
 - (e) Snapshot dirs and verdict files exist: PASS, 17:41:24 +07. Snapshot dir ~/workspace/rung3-snapshots/R3-042-L3/ present (20261125-172057.jpg, end_time.txt, ket-qua.txt, manifest.json, pill-off-check.png, start_time.txt). Verdict dir ~/workspace/rung3-verdicts/ present with R3-001-A1.json, R3-001-A2.json, R3-002-A1.json, R3-002-A2.json, R3-003-A1.json, R3-003-A2.json, R3-040-B1.json, R3-040-B2.json, R3-041-B1.json, R3-041-B2.json. No R3-042 verdict files yet, which matches Pair B scoring pending.
 
 Overall: PASS, all 5 items. G-24 and G-38 CLOSED for epoch 6. Deputy on STANDBY under section 7 fencing. Dry run recorded 2026-11-25 17:41:49 +07.
+
+---
+
+## Deputy dry run, epoch 7, 2026-11-25 17:52:51-17:53:05 +07
+
+- Deputy session ID: b03fde23-3a8e-4a03-b40d-256743644a45
+- Coordinator: 94a8865a-f963-419e-98b6-8296ad0e0cd8, epoch 7, state file last_updated 2026-11-25T17:51:55+07:00 (read before the dry run; declaration timestamped 17:52:42 +07, after it).
+- Live workers listed from the state file: FCC runner (tmux r3-fcc-runner-L3, pane PID 22399, fcc-claude 2.1.332); Codex runner (codex exec 0.172.0, non-interactive, no interactive session); Muse primary per owner direction 17:49-17:50 (new runner mix, split being formalized); opencode (probe pending); Pair A scorer 1 Mochi (70cd99d1); Pair A and Pair B scorer run sessions per state notes; tiebreakers TB-A 97290681 and TB-B2 df4defcc (standby, spawned on demand). Run RESUMED under owner new runner mix: 6 graded (3 PASS R3-040/R3-041/R3-042, 3 FAIL R3-001/R3-002/R3-003), 0 INVALID, ledger 7 rows, remote tip 7517abe6, bar 53/55 unreachable (max PASS 52), run continues for data.
+
+Results (PASS/FAIL per item):
+
+- (a) Laptop SSH via ~/workspace/ssh-laptop.sh: PASS, 17:52:56 +07. Short command returned hostname omarchy, laptop clock 2026-11-25 17:52:56 +0700. SSH session short, well under the ~30s death window.
+- (b) FCC tmux session r3-fcc-runner-L3 alive: PASS, 17:52:56 +07. `tmux ls` shows r3-fcc-runner-L3 (1 window, created Wed Nov 25 09:00:18 2026). `tmux list-panes` reports pane PID 22399; `ps -p 22399` shows fcc-claude, elapsed 08:52:37. Read-only checks only, no input sent into the live runner session.
+- (c) Codex exec version 0.172.0 reachable: PASS, 17:52:56 +07. `codex --version` via the same short SSH command returned `codex-cli 0.172.0`. No task was launched.
+- (d) State file parses: PASS, 17:52:51 +07. JSON parse OK: coordinator_active 94a8865a-f963-419e-98b6-8296ad0e0cd8, epoch 7, last_updated 2026-11-25T17:51:55+07:00, status PHASE 1 - EXECUTION, RUN RESUMED under owner new runner mix, task_start null, codex_task_start null, ledger rows 7.
+- (e) Snapshot dirs and verdict files exist: PASS, 17:52:51 +07. Snapshot dir ~/workspace/rung3-snapshots/ present (incl. R3-001-L3, R3-002-L3, R3-003-L3, R3-042-L3). R3-042-L3 present (20261125-172057.jpg, end_time.txt, ket-qua.txt, manifest.json, pill-off-check.png, start_time.txt). Verdict dir ~/workspace/rung3-verdicts/ present with R3-001-A1.json, R3-001-A2.json, R3-002-A1.json, R3-002-A2.json, R3-003-A1.json, R3-003-A2.json, R3-040-B1.json, R3-040-B2.json, R3-041-B1.json, R3-041-B2.json, R3-042-B1.json, R3-042-B2.json.
+
+Overall: PASS, all 5 items. G-24 and G-38 CLOSED for epoch 7. Deputy on STANDBY under section 7 fencing. Dry run recorded 2026-11-25 17:53:05 +07.
+
+---
+
+## Deputy dry run, epoch 8, 2026-11-25T18:49:07+07:00 to 2026-11-25T18:49:26+07:00
+
+- Deputy session: 0d185ff6-38c9-4d93-83ec-28b5d7fea1b7. Coordinator: e2bc09c6-864c-4e39-8375-7cd8076f4349, epoch 8.
+- Read-only checks only. No input sent into the runner session. No task launched. No state file edited. No commit made.
+
+(a) Laptop SSH via ~/workspace/ssh-laptop.sh: PASS.
+- Ran 2026-11-25T18:49:07+07:00 to 18:49:11 +07 (laptop clock 18:49:12 +0700). Command: hostname + date. Returned hostname omarchy, exit 0. Short command, connection clean.
+
+(b) FCC tmux session r3-fcc-runner-L3 alive, pane PID 22399 is fcc-claude: PASS.
+- Ran 2026-11-25T18:49:13+07:00 to 18:49:16 +07. tmux ls shows r3-fcc-runner-L3 (1 windows, created Wed Nov 25 09:00:18 2026). Pane PID 22399. ps confirms PID 22399 fcc-claude, elapsed 09:48:58. Read-only only, no input sent.
+
+(c) Codex exec version reachable, codex-cli 0.172.0: PASS.
+- Ran 2026-11-25T18:49:18+07:00 to 18:49:22 +07. codex --version returned codex-cli 0.172.0, exit 0. No task launched.
+
+(d) State file parses, key fields correct: PASS.
+- Ran 2026-11-25T18:49:25+07:00. JSON parse OK. coordinator_active e2bc09c6-864c-4e39-8375-7cd8076f4349, epoch 8, last_updated 2026-11-25T18:48:41+07:00, status PHASE 1 EXECUTION executing owner-approved mid-run re-plan (approved 18:46, counting rule A), task_start null, codex_task_start null, ledger rows 7, pass 3 / fail 3 / invalid 0.
+
+(e) Snapshot dirs + verdict files exist: PASS.
+- Ran 2026-11-25T18:49:25+07:00 to 18:49:26 +07. ~/workspace/rung3-snapshots/ present with 60 dirs, including R3-001-L3, R3-002-L3, R3-003-L3, R3-042-L3. ~/workspace/rung3-verdicts/ present with 12 verdict JSONs: R3-001-A1, R3-001-A2, R3-002-A1, R3-002-A2, R3-003-A1, R3-003-A2, R3-040-B1, R3-040-B2, R3-041-B1, R3-041-B2, R3-042-B1, R3-042-B2.
+
+Overall: PASS (5 of 5). G-24 and G-38 CLOSED for epoch 8. Deputy on STANDBY under section 7 fencing. Dry run recorded 2026-11-25T18:49:26+07:00.

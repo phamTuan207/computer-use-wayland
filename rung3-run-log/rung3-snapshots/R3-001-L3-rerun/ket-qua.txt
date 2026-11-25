@@ -1,0 +1,7 @@
+Page title: TodoMVC: JavaScript Es5
+Final tasks (4):
+1. Tap the duc 45 phut - not completed
+2. Viet bao cao tuan - completed
+3. Goi dien cho me - not completed
+4. Don dep phong - not completed
+Filter counts at step 4: Active: 3, Completed: 2, All: 5

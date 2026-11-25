@@ -23,9 +23,9 @@
   "class_s_count": 46,
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
-  "current_position": 31,
-  "current_task": "R3-042 graded PASS; HOLD at boundary (owner decision pending)",
-  "deputy": "411037c8-88f0-48e8-a1e7-f5f832cae19f (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 17:41:49 +07, after state last_updated 17:39:29; dry run PASS 17:41:24-17:41:49 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 6, on STANDBY). Session 75531dbf-78ba-41ae-8cb8-59f625ccff4d SUPERSEDED (completed, holds no deputy authority).",
+  "current_position": 1,
+  "current_task": "R3-001 re-run: drive done, snapshot sealed + gate PASS, Pair A scoring next (Class L: no reset until both verdicts audited)",
+  "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
     "h1": "9b9d900",
@@ -33,7 +33,7 @@
     "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
     "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
     "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
-    "todolist_push_tip": "9e55edf0 (epoch 6 takeover + R3-042 PASS push 17:46, ls-remote verified)"
+    "todolist_push_tip": "7517abe6 (epoch 6 tip update + heartbeat, R3-042 PASS, HOLD; ls-remote verified by epoch 7 at takeover)"
   },
   "invalid_by_group": {
     "de": 0,
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T17:39:29+07:00",
+  "last_updated": "2026-11-25T19:13:25+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -296,6 +296,46 @@
       "ts": "2026-11-25T17:45:34+07:00",
       "by": "coordinator-epoch-6",
       "text": "R3-042 GRADED PASS: Pair B scorer 1 (821d0a95) PASS 17:43:41, scorer 2 (931dc922) PASS 17:43:49, both audited PASS (JSON parse, session match, key hashes json 5059f6c4 / md 21f8b61a match freeze, manifest 932abfc1 in grade md, independence declarations present, snapshot + key only, no log.txt, no other-scorer verdict), agree, no tiebreaker. Ledger row appended (recorded 2026-11-25T17:45:34+07:00), validate-ledger PASS (7 rows, 0 errors), ledger-cross-check OK (12 verdict files, 1 test row skipped, 0 errors). Per-task report row appended. Reset: Class S file-based task, no fixture to restore (evidence dir is the snapshot source; no reset needed beyond snapshot seal). Run now 6 graded (3 PASS R3-040/R3-041/R3-042, 3 FAIL R3-001/R3-002/R3-003, 0 INVALID). Bar 53/55 remains unreachable (max PASS 52); owner decision pending with parent. HOLD AT THE BOUNDARY: no new task releases on either lane; task_start/codex_task_start null; FCC idle (pane PID 22399), Codex idle; Zen PID 578117 RSS ~701 MB main (16 procs), well under 8 GB. Next: push ledger + state + heartbeat + per-task + deputy files; then monitor + heartbeat every 10 min until the owner decides."
+    },
+    {
+      "ts": "2026-11-25T17:51:55+07:00",
+      "by": "coordinator-epoch-7",
+      "text": "COORDINATOR TAKEOVER, EPOCH 7, 2026-11-25T17:51:55+07:00: coordinator epoch 6 (9b60bfd6) completed 17:47:46 +07 after grading R3-042 PASS and holding at the boundary; named deputy 411037c8 completed after reporting, no live deputy. Parent appoints successor session 94a8865a-f963-419e-98b6-8296ad0e0cd8 as coordinator, epoch 7, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 94a8865a). All predecessors are dead and cannot write; no split-brain risk. OWNER DIRECTION 2026-11-25 17:49-17:50 (verbatim intent): FCC is weak, give it few tests; mainly Muse and Codex; and opencode; Muse is the main one. Refinement 17:50:50: the split ratio is up to the team, but FCC must get REALLY EASY tasks only, and few of them (Class S, simplest steps, no Class L, no multi-step browser flows); Muse primary and Codex take everything else; opencode per probe. The run CONTINUES (not stopped) for data and to prove Muse drives computer-use well. Run state: 6 graded (3 PASS R3-040/R3-041/R3-042 all Codex; 3 FAIL R3-001/R3-002/R3-003 all FCC fabrication), 0 INVALID. Ledger 7 rows, pushed, remote tip 7517abe6 (ls-remote verified by epoch 7). PASS BAR 53/55 mathematically unreachable (max PASS 52); run continues for data per owner direction. Remaining 49 tasks: old FCC-lane positions 4-28 (25 tasks: R3-004, R3-005, R3-006, R3-007, R3-008, R3-009, R3-010, R3-011, R3-013, R3-014, R3-016, R3-017, R3-018, R3-019, R3-021, R3-022, R3-024, R3-025, R3-026, R3-027, R3-028, R3-029, R3-035, R3-036, R3-037); Codex-lane positions 32-55 (24 tasks: R3-045, R3-046, DP-03, R3-049, R3-055, R3-067, R3-072, R3-074, R3-075, R3-076, R3-078, R3-079, R3-082, R3-083, R3-085, R3-086, R3-088, R3-089, R3-093, R3-094, R3-096, R3-098, R3-099, R3-100). No drive in progress; FCC idle (pane PID 22399), Codex idle; task_start/codex_task_start null. Zen PID 578117 on ws2 (D1 restart done 17:03:19; watch RSS, repeat D1 at a task boundary if it climbs past ~8 GB). R3-029 (position 25, old FCC-lane range, now Claude-run): password held by parent, passed in the R3-029 task brief at release, never in a file; parent re-verifies with the owner before position 25; epoch 7 records that it holds the password from the parent brief. Fresh deputy to be spawned (G-24/G-38) as first orders. Next: deputy, opencode probe (allowed route only, never OpenRouter for opencode), formalize the runner split in this state file, then resume releases under the new mix."
+    },
+    {
+      "ts": "2026-11-25T17:54:00+07:00",
+      "by": "coordinator-epoch-7",
+      "text": "OPENCODE PROBE RESULT (epoch 7, 17:53 +07): opencode does NOT run on an allowed route. Probe: `opencode run -m nvidia/deepseek-ai/deepseek-v4.1-flash \"Reply with the single word READY\"` on the laptop (opencode v2.4.1) returned: \"Error: The model 'deepseek-ai/deepseek-v4.1-flash' has reached its end of life on 2026-11-16T08:00:00Z and is no longer available.\" The nvidia route for DeepSeek v4.1 Flash is EOL. The only other configured route is OpenRouter (provider in opencode.json), which is BANNED for opencode by the owner's hard rule and is out of credits. The owner's rule for opencode is DeepSeek v4.1 Flash free only, do not try other models, NO OpenRouter; so groq/other nvidia models were NOT tried. FLAG FOR THE PARENT/OWNER: opencode cannot be a runner until an allowed DeepSeek route is wired in; fixing needs an owner-level login step (a DeepSeek credential exists in the FCC config but is not wired into opencode; no key was invented or copied). The run proceeds with Muse (primary) + Codex (main) + FCC (few easy tasks); opencode gets no share unless the owner wires a route. OWNER REDIRECT 17:52:55: HOLD execution, do NOT release any tasks; re-plan first, execute only after the owner approves the plan. The 3 FAILED tasks (R3-001, R3-002, R3-003) are to be RE-RUN by Muse primary or Codex (not FCC); the re-plan must propose the ledger treatment (supersede vs separate data) for owner approval. Epoch 7 is writing the mid-run re-plan to improvements/r3-l3-replan-midrun-20261125.md and holding; no releases until the parent forwards the owner's approval."
+    },
+    {
+      "ts": "2026-11-25T17:55:30+07:00",
+      "by": "coordinator-epoch-7",
+      "text": "DEPUTY CONFIRMED, EPOCH 7: fresh deputy b03fde23-3a8e-4a03-b40d-256743644a45. Declaration 2026-11-25 17:52:42 +07 (after state last_updated 2026-11-25T17:51:55+07:00, G-24 freshness satisfied). Dry run PASS 17:52:51-17:53:05 +07, all 5 items PASS: laptop SSH (hostname omarchy), FCC tmux r3-fcc-runner-L3 alive (pane PID 22399, fcc-claude elapsed 08:52:37, no input sent), Codex exec 0.172.0, state-file parse (coordinator_active 94a8865a, epoch 7, task starts null, ledger rows 7), snapshot + verdict paths (R3-042-L3 present, 12 verdict JSONs). G-24 and G-38 CLOSED for epoch 7. Deputy on STANDBY under section 7 fencing. Deputy flags (honest, addressed): state deputy field updated to b03fde23 by this edit; codex_task field still reads R3-042 (graded PASS 17:45:34) and current_position 31, carried forward; both are corrected when the re-plan split is formalized and the next task is released (HOLD in effect, no releases until owner approves the re-plan). Next: write mid-run re-plan (improvements/r3-l3-replan-midrun-20261125.md), report to parent, HOLD."
+    },
+    {
+      "ts": "2026-11-25T17:58:30+07:00",
+      "by": "coordinator-epoch-7",
+      "text": "MID-RUN RE-PLAN WRITTEN (owner redirect 2026-11-25 17:52:55, HOLD): improvements/r3-l3-replan-midrun-20261125.md (164 lines, 25487 chars, 0 em/en dashes, no credential value, no account email; verified by script). Covers: (a) re-run decision for R3-001/R3-002/R3-003 by Muse (fresh independent subagent runners), overriding the old last-attempt limit on R3-001; ledger treatment proposed = supersede at closure recorded in a SEPARATE re-run ledger rung3-run-log/R3-L3-reruns.jsonl (same schema), because the original ledger cannot take a second row per task (validate-ledger.py rejects duplicate task rows, task_id pattern has no re-run suffix, additionalProperties false, verdict files would collide in ledger-cross-check.py); original ledger + FAIL snapshots (manifests 507086e2 / 0741a1aa / e0d416d0) preserved untouched; re-run verdicts in ~/workspace/rung3-verdicts/rerun/, re-run snapshots R3-xxx-L3-rerun; alternative counting rule B (separate data, FAILs stand, bar unreachable) presented with reasoning, recommendation = A. (b) Full split for 52 executions: Muse 25 (3 re-runs + 22 in positions 4-28), Codex 24 (positions 32-55), FCC 3 REALLY EASY named explicitly (R3-014 pos 13 hex-to-RGB/HSL, R3-027 pos 23 username check, R3-037 pos 28 WHOIS lookup), opencode 0. Verified by script: assigned set covers exactly the 52 remaining tasks (55 minus 3 graded PASS), no missing, no extra. Execution order: re-runs 1-3 first, then positions 4-28, then 32-55, single driver at a time. R3-029 (pos 25) is Claude-run; credential parent-held, passed in the task brief at release, never in a file; epoch 7 holds it from the parent brief. (c) Opencode probe result (17:53 +07): does NOT run (nvidia DeepSeek v4.1 Flash EOL 2026-11-16; OpenRouter banned for opencode + out of credits; other models banned); share 0; FLAG for parent/owner: fixing needs an owner-level login step; run proceeds without opencode. (d) Scoring: grader never the author; Pair A (positions 1-28 incl. re-runs, 28 scorings) Mochi scorer 1 where capacity allows (snapshots pushed to repo for her) + fresh independent scorer 2, TB-A fallback scorer 1; Pair B fresh 1B/2B subagent scorers; tiebreakers fresh on disagreement; backpressure max 2 unscored per runner, pause over 30-min lag. (e) Time estimate: 52 executions serialized, about 16 min average = about 13.9h + Class L score-before-reset waits about 1.2h = about 15-17h more; elapsed about 5.2h; projected total about 20-22h, inside the 31h ceiling; re-measure after first 3 Muse tasks. (f) Bar under rule A: reachable if at least 1 re-run passes (3/3 pass = need 47/49, 2/3 = 48/49, 1/3 = 49/49 perfect, 0/3 = unreachable); under rule B max PASS 52, unreachable. HOLD: no releases until the parent forwards the owner's approval. On approval, formalize the split in this state file and release the R3-001 re-run to a fresh Muse runner."
+    },
+    {
+      "ts": "2026-11-25T18:48:41+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "COORDINATOR TAKEOVER, EPOCH 8, 2026-11-25T18:48:41+07:00: coordinator epoch 7 (94a8865a-f963-419e-98b6-8296ad0e0cd8) completed after writing the mid-run re-plan and holding for owner approval; its deputy b03fde23 completed after reporting, no live deputy. Parent appoints successor session e2bc09c6-864c-4e39-8375-7cd8076f4349 as coordinator, epoch 8, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active e2bc09c6-864c-4e39-8375-7cd8076f4349). All predecessors dead, no split-brain risk. OWNER APPROVED the mid-run re-plan at 18:46 +07 with counting rule A (supersede at closure, separate re-run ledger, originals preserved). HOLD lifted; executing the re-plan. Run state carried forward: 6 graded (3 PASS Codex, 3 FAIL FCC, 0 INVALID), ledger 7 rows tip 7517abe6, no drive in progress, FCC/Codex idle, task starts null, Zen PID 578117 ws2 (RSS ~701 MB at takeover check, session free by cursor.lock scan). Runner split formalized in state file (runner_split field): Muse 25 (3 re-runs + 22), Codex 24, FCC 3 easy, opencode 0. First orders: spawn + confirm fresh deputy (G-24/G-38); archive leftover FCC R3-001 evidence on laptop; release R3-001 re-run to a fresh Muse runner. R3-029 credential: held by coordinator from parent brief, passed in the R3-029 task brief at release only, never in any file; parent re-verifies with owner before position 25; coordinator notifies parent as position 25 approaches."
+    },
+    {
+      "ts": "2026-11-25T18:50:07+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DEPUTY CONFIRMED, EPOCH 8: fresh deputy 0d185ff6-38c9-4d93-83ec-28b5d7fea1b7. Declaration 18:49:29 +07 (after state last_updated 18:48:41, G-24 freshness satisfied). Dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS: laptop SSH (omarchy), FCC tmux r3-fcc-runner-L3 PID 22399, codex-cli 0.172.0, state parse (coordinator_active e2bc09c6, epoch 8), snapshot + verdict paths (60 snapshot dirs, 12 verdict JSONs). G-24 and G-38 CLOSED for epoch 8. Deputy on STANDBY under section 7 fencing."
+    },
+    {
+      "ts": "2026-11-25T18:50:07+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-001 RE-RUN RELEASED (position 1, Class L, Claude-run): fresh Muse runner 8828665e-5d20-4b09-a509-85eac38700b0 spawned with lane brief + task only. task_start set to release time 2026-11-25T18:50:07+07:00 (30-min deadline 30 min later; runner writes its own start_time.txt at drive start). runner_pid set null for Muse tasks (no single laptop PID; coordinator enforces timeout via subagent control; FCC pane PID 22399 restored when FCC runs). Pre-release checks: original FAIL snapshot R3-001-L3 manifest_sha256 507086e2 verified intact; leftover FCC evidence on laptop archived to ~/rung3-chung-cu/R3-001/fcc-original-attempt3/ (4 files) so re-run evidence cannot mix; Zen PID 578117 on ws2 window 0x5614f01a0e20, RSS ~701 MB, session free by cursor.lock scan (no holder). Runner brief: correct TodoMVC URL https://todomvc.com/examples/javascript-es5/dist/, allocations from the frozen task (5 texts in order, complete Mua sach Python + Viet bao cao tuan, edit Tap the duc 30 phut -> 45 phut, delete Mua sach Python), pill acquire fail-closed, Class L: leave final state live for scorers, no reset. Next: collect evidence, seal R3-001-L3-rerun snapshot, manifest gate, Pair A scoring (Mochi + fresh scorer 2), re-run ledger row."
+    },
+    {
+      "ts": "2026-11-25T19:13:25+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-001 RE-RUN DRIVE COMPLETE (runner 8828665e): start_time.txt 2026-11-25T18:53:21+07:00, end_time.txt 2026-11-25T19:03:16+07:00 (9 min 55 s, inside 30-min timeout). Evidence on laptop ~/rung3-chung-cu/R3-001/: ket-qua.txt (250 B), 20261125-190300-final-list.png (213198 B), start/end times. RUNNER INFRASTRUCTURE FAILURE: session 8828665e ended with model error (output token cap reached) at ~19:05:51 WITHOUT a final report, but cleanup was done before the error (coordinator verified: no cursor.lock holder, pill visible=false no holders, only long-lived daemons). Evidence is complete on its own; task proceeds to scoring from evidence (runner report reconstructed from evidence files). Pulled 4 files laptop->VM sha256-verified (ket-qua 387a697d, png 04aefd4e, start 62e8525b, end 9c10f125). Sealed snapshot R3-001-L3-rerun, manifest_sha256 23c250b28131aef88151935ecae8a0825712de8a2e97cce796deb4f04c1b34a2, manifest gate PASS (4 files, requirements met). task_start cleared (drive ended 19:03:16). Class L: TodoMVC final state left live, NO reset until both Pair A verdicts audited. Next: publish snapshot to repo for Mochi, assign Pair A scoring (Mochi scorer 1 + fresh scorer 2)."
     }
   ],
   "pass_count": 3,
@@ -341,11 +381,11 @@
     "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
     "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
   },
-  "status": "PHASE 1 - EXECUTION, RUN STARTED, HOLD (bar 53/55 unreachable, owner decision pending)",
-  "coordinator_active": "9b60bfd6-2b02-40f8-a64e-c4fe25770de0",
-  "epoch": 6,
+  "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
+  "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
+  "epoch": 8,
   "task_start": null,
-  "runner_pid": 22399,
+  "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
   "codex_runner_pid": null,
@@ -353,5 +393,96 @@
   "graded": 6,
   "pass": 3,
   "fail": 3,
-  "invalid": 0
+  "invalid": 0,
+  "runner_split": {
+    "approved_by": "owner 2026-11-25 18:46 +07 (counting rule A)",
+    "source": "improvements/r3-l3-replan-midrun-20261125.md section 2",
+    "executions_total": 52,
+    "claude": {
+      "count": 25,
+      "reruns": [
+        "R3-001",
+        "R3-002",
+        "R3-003"
+      ],
+      "positions_4_28": [
+        "R3-004",
+        "R3-005",
+        "R3-006",
+        "R3-007",
+        "R3-008",
+        "R3-009",
+        "R3-010",
+        "R3-011",
+        "R3-013",
+        "R3-016",
+        "R3-017",
+        "R3-018",
+        "R3-019",
+        "R3-021",
+        "R3-022",
+        "R3-024",
+        "R3-025",
+        "R3-026",
+        "R3-028",
+        "R3-029",
+        "R3-035",
+        "R3-036"
+      ],
+      "method": "fresh independent Muse subagent per task, SSH via ~/workspace/ssh-laptop.sh, drive Zen via computer-use (BiDi 9222 + pill wrapper), lane brief + task only"
+    },
+    "codex": {
+      "count": 24,
+      "positions_32_55": [
+        "R3-045",
+        "R3-046",
+        "DP-03",
+        "R3-049",
+        "R3-055",
+        "R3-067",
+        "R3-072",
+        "R3-074",
+        "R3-075",
+        "R3-076",
+        "R3-078",
+        "R3-079",
+        "R3-082",
+        "R3-083",
+        "R3-085",
+        "R3-086",
+        "R3-088",
+        "R3-089",
+        "R3-093",
+        "R3-094",
+        "R3-096",
+        "R3-098",
+        "R3-099",
+        "R3-100"
+      ],
+      "method": "codex exec per task from /home/james, -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check, Hyprland env exported"
+    },
+    "fcc": {
+      "count": 3,
+      "tasks": [
+        "R3-014 (pos 13)",
+        "R3-027 (pos 23)",
+        "R3-037 (pos 28)"
+      ],
+      "method": "tmux r3-fcc-runner-L3 pane PID 22399, easiest tasks only, no coaching"
+    },
+    "opencode": {
+      "count": 0,
+      "reason": "does not run on allowed route (nvidia DeepSeek EOL 2026-11-16, OpenRouter banned for opencode); do not retry, do not block"
+    },
+    "order": "re-runs positions 1,2,3 first (in order), then positions 4-28 in order, then 32-55 in order; one driver at a time"
+  },
+  "replan_midrun": {
+    "file": "improvements/r3-l3-replan-midrun-20261125.md",
+    "approved": "owner 2026-11-25 18:46 +07",
+    "counting_rule": "A (supersede at closure): counted grade = re-run grade if a re-run row exists in R3-L3-reruns.jsonl, else original grade in R3-L3-grades.jsonl; closure report states count both ways",
+    "rerun_ledger": "rung3-run-log/R3-L3-reruns.jsonl (separate, same schema; original ledger untouched)",
+    "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
+    "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
+  },
+  "claude_runner_session": "8828665e-5d20-4b09-a509-85eac38700b0"
 }
