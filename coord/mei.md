@@ -767,3 +767,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Graphify adopted team-wide; skill-scout team exists (parent update 2026-11-26 04:44 +07)
+
+- Graphify adopted team-wide (github.com/Graphify-Labs/graphify, Apache-2.0). Code graph for computer-use-wayland built at ~/workspace/cu-graphify/graphify-out/ (7903 nodes, 16640 edges, 430 communities). Rule: use graphify query / get_node for codebase questions instead of re-reading whole files; rebuild after big changes with graphify . --code-only + graphify cluster-only .
+- GAP on mei's VM: the graph dir and the graphify CLI are NOT here (checked 04:44: no ~/workspace/cu-graphify/, no binary, no pip/npm package). Likely laptop-side/unsynced. Mei asked for a sync/install path and will verify against the stated counts when it lands; until then she keeps using file reads.
+- Skill-scout team now exists (registry ~/workspace/skill-scout/REGISTRY.md): finds repos/skills/tools, matches to staff, checks before installing, equips. Mei sends skill finds to the parent for the registry. Registry file also not on mei's VM yet.
+- Ponytail laptop check: opencode already has the plugin; Codex and FCC do not; installs are re-plan scope. Run stays paused pending re-plan approval.
