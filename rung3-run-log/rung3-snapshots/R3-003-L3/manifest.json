@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "mtime": 1795600803,
+   "name": "20261125-165118-final.png",
+   "sha256": "7ca8483848f87c99c84250e770c11dd6b9b35179ac8992cbb0a4aa5f75da670d",
+   "size": 1099429
+  },
+  {
+   "mtime": 1795599551,
+   "name": "end_time.txt",
+   "sha256": "ba26f21293d63a448f9f85e2a77ea9224d6ebe2a0db91a396f19819ff6412381",
+   "size": 20
+  },
+  {
+   "mtime": 1795600834,
+   "name": "end_time_supplement.txt",
+   "sha256": "fc191d3ddc8572d6981fc6787e5a6d485b8cfbf289cf8338e624b5f73f1011ac",
+   "size": 20
+  },
+  {
+   "mtime": 1795600825,
+   "name": "ket-qua.txt",
+   "sha256": "608d7e6c82005e5f37ad136507d7203e3d0ba91a8e0886e52ce7b9a48401347e",
+   "size": 611
+  },
+  {
+   "mtime": 1795600815,
+   "name": "pill-verify-gone-final.png",
+   "sha256": "1ad5d8ab27edf97a5075bf8d1ca2a3c5cf39aa69303ce935617a077b85198e67",
+   "size": 1099422
+  },
+  {
+   "mtime": 1795599542,
+   "name": "start_time.txt",
+   "sha256": "41c80ac440ed7659ba504474b0b4b1b906ec7eead5942d9ba80b6eca1741b260",
+   "size": 20
+  },
+  {
+   "mtime": 1795600843,
+   "name": "start_time_supplement.txt",
+   "sha256": "9d41113bb9c7eb225f3bddbb9d6351a48ef502c9df99bb667d8cdfef80914bfe",
+   "size": 20
+  }
+ ],
+ "manifest_sha256": "e0d416d0cc7b1d76572cfbdf8ed3960d49e2cd3188312a3b8ce51cd4e4c0ca0c",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-003-L3",
+ "source_dir": "/home/hatch/rung3-chung-cu/R3-003",
+ "task": "R3-003"
+}
