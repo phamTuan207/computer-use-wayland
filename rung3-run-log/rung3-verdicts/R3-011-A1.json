@@ -1,0 +1,22 @@
+{
+  "scorer": "A1",
+  "task": "R3-011",
+  "verdict": "INVALID",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/block-state.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/pill-gone.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/result.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-011-L3-snapshot/rung3-run-log/rung3-snapshots/R3-011-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-011 key section lines 213-220 and pre-declared ruling lines 23-24, todolist-push 67445f75)",
+    "docs/rung3-list-100-tasks.md (section 1 invalid definition lines 9-40 and R3-011 task text lines 373-379, todolist-push 67445f75)",
+    "Independent check by scorer: read-only cloud browser (Environment 1), 2026-11-25 23:18 +07, same URL https://www.timeanddate.com/date/weekday.html?year=2026&month=11&day=11, weekday calculator loaded normally showing Wednesday for 2026-11-11, no Cloudflare challenge"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T23:19:27+07:00",
+  "reason": "The service showed a Cloudflare bot-check page (Just a moment... with Verify you are human, Ray ID a601e73fd83ea29d) at the browser level at run time, so no weekday result could be obtained for any of the 5 dates. This matches the section 1 invalid definition and the pre-declared ruling for this exact condition. The runner did not cause the block (single navigation, no hammering, tab count stable)."
+}
