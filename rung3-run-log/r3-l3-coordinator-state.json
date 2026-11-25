@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-010: drive done, sealed + gate PASS, Pair A scoring next; R3-011 to release",
+  "current_task": "R3-010 GRADED PASS; R3-011 drive BLOCKED by Cloudflare on timeanddate (invalid procedure next)",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T23:02:32+07:00",
+  "last_updated": "2026-11-25T23:14:15+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -606,6 +606,26 @@
       "ts": "2026-11-25T23:02:32+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-010 DRIVE COMPLETE (runner 4fa541d1): first attempt failed at 22:46:27 (act ok:false; pill released, files to previous/); successful run start 2026-11-25T22:52:47+07:00, end 2026-11-25T22:54:02+07:00 (75s, inside timeout). Evidence: ket-qua.txt (283 B), so-do.png (19773 B, exported via Ctrl+Shift+E dialog), board screenshot, scene-final.json, result.json, start/end times. Session clean after (no cursor.lock, pill released). Pulled 7 files sha256-verified. Sealed R3-010-L3 manifest 7c0788a7ce58bfbc845f5f830b16ae9717322b49892031469d7e91b9b2b96111, gate PASS. task_start cleared. Tab-close verification (23:02 list, 23 tabs): 0 excalidraw tabs - runner closed its task tab per the 21:31 standing rule. Next: publish to repo for Mochi, Pair A scoring, release R3-011 (invalid candidate, invalid procedure unchanged)."
+    },
+    {
+      "ts": "2026-11-25T23:03:13+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-010 SCORING ASSIGNED (Pair A): snapshot published at todolist-push d2023919 (manifest 7c0788a7, ls-remote verified). Mochi scorer 1 assigned via daemon run 216 at 23:02:54 (verified=True; verdict returns via branch mochi/verdict-R3-010-L3). Fresh scorer 2 (A2) d90c7d52 spawned with VM-local snapshot; verdict to ~/workspace/rung3-verdicts/R3-010-A2.json. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30/60 min."
+    },
+    {
+      "ts": "2026-11-25T23:03:13+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-011 RELEASED (position 11, Tier B, Class S, Claude-run, INVALID CANDIDATE): day-of-week for 5 locked dates in order (2024-02-29, 2026-01-01, 2026-07-04, 2026-12-31, 2000-02-29) on timeanddate.com day-of-week calculator; 5 screenshots + ket-qua.txt with 5 rows. Key ruling: timeanddate was curl-blocked; if the browser drive is blocked too, the invalid procedure applies (independent evidence + blind confirm + countersign; backups DP-06/DP-07). Runner instructed to report any block honestly and not hammer. Evidence requirements: files [ket-qua.txt], screenshots_min 5. Drive overlaps R3-010 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule."
+    },
+    {
+      "ts": "2026-11-25T23:03:27+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-011 RUNNER SPAWNED: fresh Muse subagent a9ce3da8-11e9-43de-9db1-e31a84324228 (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns). Brief includes the 21:31 tab-close standing rule, the M2 end-of-drive self-check, and the block-reporting instruction for this invalid candidate."
+    },
+    {
+      "ts": "2026-11-25T23:14:15+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-010 GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 23:05:52 (branch mochi/verdict-R3-010-L3, copied to ~/workspace/rung3-verdicts/R3-010-A1.json), A2 d90c7d52 PASS 23:03:53 (R3-010-A2.json). Key hashes verified by both; allowlist clean; manifest 7c0788a7. Both measured so-do.png directly (centers 8.2%/49.8%/91.4%, arrows ~0 deg). Original ledger row recorded (R3-L3-grades.jsonl now 14 rows). Run: 16 graded; under rule A banked count 13 PASS / 0 FAIL. Bar math: need 40/42 remaining (2 slack). Unscored queue back to 1 (R3-011). R3-011 DRIVE BLOCKED (runner a9ce3da8): timeanddate.com weekday page returned Cloudflare 'Just a moment...' challenge in Zen (Ray ID a601e73fd83ea29d), drive 23:06:52-23:08:27, no weekday results; block screenshot + ket-qua.txt recorded, tab closed (23 tabs before/after). This is the exact condition in the frozen key ruling for R3-011 (declare invalid if still blocked in browser). Invalid procedure next: seal block evidence, independent evidence check, blind confirm, countersign with backup per base plan."
     }
   ],
   "pass_count": 3,
@@ -754,5 +774,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "4fa541d1-aaa2-4eb1-8329-96b987c307e2"
+  "claude_runner_session": "a9ce3da8-11e9-43de-9db1-e31a84324228"
 }
