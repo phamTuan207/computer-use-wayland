@@ -1,0 +1,20 @@
+R3-009 WAVE accessibility check
+Tool: https://wave.webaim.org
+
+Site 1: https://www.foxnews.com/
+  Errors: 2
+  Alerts: 309
+  Features: 152
+  Structural Elements: 378
+  Contrast Errors: 18
+  First error item: Missing form label (1 instance)
+  Description: A form control does not have a corresponding label.
+
+Site 2: https://en.wikipedia.org/wiki/Main_Page
+  Errors: 7
+  Alerts: 90
+  Features: 452
+  Structural Elements: 78
+  Contrast Errors: 0
+
+Conclusion: Site 1 (https://www.foxnews.com/) has the larger Errors + Alerts total (311 vs 97).

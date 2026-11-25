@@ -1,0 +1,62 @@
+{
+ "files": [
+  {
+   "mtime": 1795620894,
+   "name": "20261125-222309-wave-site1.png",
+   "sha256": "c541a5a30a2d334cb43d560e9425d722118c096b6e32d6dc32eab600040ddd87",
+   "size": 1158848
+  },
+  {
+   "mtime": 1795620912,
+   "name": "20261125-222326-wave-site2.png",
+   "sha256": "d129d679890a0c8cb3973b3b8c1ebf6c35d1f983a999e0c74ca547cd684570a0",
+   "size": 837798
+  },
+  {
+   "mtime": 1795620930,
+   "name": "20261125-222609-wave-site1-error-detail.png",
+   "sha256": "a7a457da4e7d3147e79e26fcdf7f975390c591729d911d58b377efedbbb3300f",
+   "size": 1388398
+  },
+  {
+   "mtime": 1795620950,
+   "name": "20261125-222715-wave-site1-error-info.png",
+   "sha256": "5b30b5a2ed4c0916d35852a5f30791f5e0dacf2ecac407c94eb7b9ca2e7a3913",
+   "size": 1369047
+  },
+  {
+   "mtime": 1795620968,
+   "name": "20261125-222802-wave-site1-error-info2.png",
+   "sha256": "17018f3b1df2ec1b1737b26d2f52e2733bf891245e901863e81087a2265d7353",
+   "size": 1224671
+  },
+  {
+   "mtime": 1795620862,
+   "name": "end_time.txt",
+   "sha256": "4160c4d5bd46a8885df9fe18eb3a57fd6159155530be1002b8113025f81ec0bd",
+   "size": 26
+  },
+  {
+   "mtime": 1795620876,
+   "name": "ket-qua.txt",
+   "sha256": "6022d64f202589c016ae8ec68d62e5c5b4c86e82b590d337118f38b3471907e2",
+   "size": 540
+  },
+  {
+   "mtime": 1795620987,
+   "name": "pill-gone-check.png",
+   "sha256": "132a5d8f0361ed253617e66964bbab3cb2213baab70cdb8a9c5e748def44abaa",
+   "size": 786399
+  },
+  {
+   "mtime": 1795620849,
+   "name": "start_time.txt",
+   "sha256": "8352c51293d76a693d57524b8971d3ccc8d77ede774f3a650c5881909c8f4bde",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "61c0ba3bf24e5fbea3c6470c39cc0604d858d8702af27a70e59ba86caa6d6889",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-009-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-009",
+ "task": "R3-009"
+}
