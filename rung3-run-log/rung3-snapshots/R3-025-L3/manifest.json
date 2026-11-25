@@ -1,0 +1,20 @@
+{
+ "files": [
+  {
+   "mtime": 1795642041,
+   "name": "end_time.txt",
+   "sha256": "cf1128f0f6b259bf9b06a8dcd09e56faea3b447e99304d7e67fc21503ecadf2e",
+   "size": 26
+  },
+  {
+   "mtime": 1795642032,
+   "name": "start_time.txt",
+   "sha256": "24c6e6658dd246f07be331066e2584ec8e4b49068845c0d97fe943b1161a8ce0",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "13d5004bd6f0df609bf1da016e6e1538e397aab206ebdd10480125e30d4a52c8",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-025-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-025",
+ "task": "R3-025"
+}
