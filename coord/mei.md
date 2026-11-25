@@ -767,3 +767,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Watchdog doi sang 10 phut, mo rong 4 muc kiem tra (2026-11-25 10:35 +07)
+
+Theo lenh chu so huu: lich watchdog doi tu 15 phut sang 10 phut (job id giu nguyen mei-watchdog-15m, lich moi interval@10m, luot chay ke tiep 10:47 +07, da chay thu mot lan luc 10:37). Moi lan chay kiem tra 4 thu: (1) repo todolist-push (coord/mei.md, comment PR) co viec moi khong, (2) tin nhan thong bao cua chu so huu tren repo, (3) tat ca subagent cua mei (con song, ket, co tien trien khong), (4) coordinator Muse tong con song va phan hoi khong. Subagent ket (im hon 15 phut) hay chet, hoac coordinator khong phan hoi hon 60 phut trong khi co viec dang cho, thi bao KHAN ve cho agent chinh xu ly ngay (nhan, khoi dong lai, leo thang). Luot chay cron khong dieu khien truc tiep duoc subagent cua chat chinh, nen no bao cao va agent chinh hanh dong.
