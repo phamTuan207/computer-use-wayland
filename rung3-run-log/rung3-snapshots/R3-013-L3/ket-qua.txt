@@ -1,0 +1,6 @@
+[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,} | 3 | hoa@example.com, dung@test.org, khanh@example.com
+0\d{9} | 3 | 0987654321, 0978123456, 0905551234
+\d{2}\/\d{2}\/\d{4} | 2 | 03/09/2026, 10/09/2026
+\d{2}:\d{2} | 2 | 09:15, 17:45
+\d{1,3}(?:\.\d{3})+ | 2 | 2.750.000, 350.000
+Explanation pattern 5: \d{1,3} a digit, repeated between 1 and 3 times Non-Capturing Group (?:\.\d{3})+ + repeats the group contents below at least once: \. the literal . (4610 / 568 / 2E16) \d{3} a digit, repeated exactly 3 times Global pattern flags g modifier: global. Finds all matches instead of stopping after the first m modifier: multiline. Causes ^ and $ to match the start and end of each line, not only the start and end of the string
