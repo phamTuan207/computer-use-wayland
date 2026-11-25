@@ -1,24 +1,38 @@
 // pwa-driver.js - CDP driver for the Muse / mimeo PWA. Runs ON the laptop via SSH.
 // No dependencies: uses Node's global WebSocket (Node 22+) and fetch.
-// Usage: node pwa-driver.js <port> <title-substring> <action> [action-args...]
+// Usage: node pwa-driver.js <port> <match-spec> <action> [action-args...]
+// match-spec is "pwa:<name>" or "chat:<name>":
+//   pwa:<name>  - the PWA window, URL https://muse.ai/?__pwa=1 (clone1 on Brave, clone2 on Chromium)
+//   chat:<name> - the regular chat tab, URL https://muse.ai/ without __pwa=1 (mei on Brave, mochi on Chromium)
+// Target resolution is by URL only. Page titles are all "Muse" now, so title
+// matching cannot tell the PWA apart from the chat tab on the same port.
 // Prints one JSON object to stdout. Exit 0 on ok, 1 on failure.
 // Actions: send, read, status, list, search, attach, unattach, newchat, back,
 //          call, endcall, reply, react, stop, panel, raw
 // This file is shipped to the laptop by pwa-send.py (cat > /tmp/pwa-driver.js).
 
 const port = process.argv[2];
-const titleMatch = process.argv[3];
+const matchSpec = process.argv[3];
 const action = process.argv[4];
 const args = process.argv.slice(5);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// match-spec format: "pwa:<name>" or "chat:<name>". <name> is the agent display
+// name used by the status action to find the agent name in the page DOM.
+const [matchMode, displayName] = (matchSpec || '').split(':');
+const isPwaUrl = (u) => u && u.includes('muse.ai') && u.includes('__pwa=1');
+const isChatUrl = (u) => u && u.includes('muse.ai') && !u.includes('__pwa=1');
 
 async function main() {
   const out = { ok: false, action };
   try {
     const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-    const page = list.find(t => t.type === 'page' && t.title.includes(titleMatch));
-    if (!page) { out.error = 'NO PAGE for title ' + titleMatch; console.log(JSON.stringify(out)); process.exit(1); }
-    out.target = page.title;
+    let page = null;
+    if (matchMode === 'pwa') page = list.find(t => t.type === 'page' && isPwaUrl(t.url));
+    else if (matchMode === 'chat') page = list.find(t => t.type === 'page' && isChatUrl(t.url));
+    if (!page) { out.error = 'NO PAGE for ' + matchSpec; console.log(JSON.stringify(out)); process.exit(1); }
+    out.target = page.url;
+    out.targetTitle = page.title;
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     let id = 0; const pending = new Map();
     const send = (method, params = {}) => new Promise((res) => {
@@ -79,7 +93,7 @@ async function main() {
       out.ok = Array.isArray(out.messages);
     } else if (action === 'status') {
       out.status = await ev(`(function(){
-        const nameEl=[...document.querySelectorAll('*')].find(e=>e.children.length===0 && e.textContent.trim()==='${titleMatch}');
+        const nameEl=[...document.querySelectorAll('*')].find(e=>e.children.length===0 && e.textContent.trim()==='${displayName}');
         if(!nameEl) return null;
         let box=nameEl; for(let i=0;i<5 && box.parentElement;i++) box=box.parentElement;
         return box.innerText.replace(/\\n/g,' | ').slice(0,200);

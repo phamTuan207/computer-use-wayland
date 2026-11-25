@@ -5,6 +5,8 @@ No mouse, no vision, no computer-use. CDP only.
 Usage:
   pwa-send.py clone1 "message text"            # send a message to clone1
   pwa-send.py clone2 "message text"            # send a message to clone2
+  pwa-send.py mei --action read 5              # read mei's last 5 messages (no send)
+  pwa-send.py mochi --action status            # read mochi's status line (no send)
   pwa-send.py clone1 --action read 5           # read last 5 messages
   pwa-send.py clone1 --action status           # read the agent status line
   pwa-send.py clone1 --action list             # list main + side chats
@@ -20,14 +22,24 @@ Usage:
   pwa-send.py clone1 --action react [emoji]    # react to last agent msg (menu-limited, see report)
 
 How it works:
-- Resolves the CDP target by URL/title via /json/list (never hardcodes target IDs).
+- Resolves the CDP target by URL via /json/list (never hardcodes target IDs).
+  Both pages on a port are titled "Muse" now, so title matching cannot tell the
+  PWA apart from the chat tab. The driver matches the PWA by "__pwa=1" in the URL
+  and the chat tab by a muse.ai URL without "__pwa=1".
 - Ships ~/workspace/pwa-driver.js to the laptop over SSH (stdin pipe) and runs it
   with Node (v26, global WebSocket, no dependencies) via ~/workspace/ssh-laptop.sh.
 - Prints the driver's JSON result to stdout. Exit code 0 on ok, 1 on failure.
 
 Recipients:
-- clone1 = Muse PWA on Brave, CDP 9224, title "Chat - clone1"
-- clone2 = mimeo PWA on Chromium, CDP 9223, title "Chat - clone2"
+- clone1 = Muse PWA on Brave, CDP 9224, URL https://muse.ai/?__pwa=1
+- clone2 = mimeo PWA on Chromium, CDP 9223, URL https://muse.ai/?__pwa=1
+- mei = regular chat tab on Brave, CDP 9224, URL https://muse.ai/ (no __pwa=1)
+- mochi = regular chat tab on Chromium, CDP 9223, URL https://muse.ai/ (no __pwa=1)
+- Mei's tab is never confused with clone1's PWA tab, and mochi's tab is never
+  confused with clone2's PWA tab. Never use clone1's tab as a mei target.
+- NOTE: mei and mochi are normally messaged through the daemon (send.py), not
+  through pwa-send.py. They are recipients here only so read/status resolution
+  works for the shared agents watch.
 """
 import hashlib
 import subprocess
@@ -41,8 +53,10 @@ DRIVER_LAPTOP = "/tmp/pwa-driver.js"
 SSH = str(WORKSPACE / "ssh-laptop.sh")
 
 RECIPIENTS = {
-    "clone1": {"port": "9224", "title": "clone1"},
-    "clone2": {"port": "9223", "title": "clone2"},
+    "clone1": {"port": "9224", "match": "pwa:clone1"},
+    "clone2": {"port": "9223", "match": "pwa:clone2"},
+    "mei": {"port": "9224", "match": "chat:mei"},
+    "mochi": {"port": "9223", "match": "chat:mochi"},
 }
 
 
@@ -73,7 +87,7 @@ def ship_driver():
 def main(argv):
     if len(argv) < 2 or argv[1] not in RECIPIENTS:
         print(__doc__.split("\n\n")[0], file=sys.stderr)
-        print("usage: pwa-send.py clone1|clone2 <message> | --action <action> [args...]", file=sys.stderr)
+        print("usage: pwa-send.py clone1|clone2|mei|mochi <message> | --action <action> [args...]", file=sys.stderr)
         return 2
     rec = RECIPIENTS[argv[1]]
     rest = argv[2:]
@@ -95,7 +109,7 @@ def main(argv):
     def q(s):
         return "'" + s.replace("'", "'\"'\"'") + "'"
     remote = " ".join(
-        ["node", DRIVER_LAPTOP, rec["port"], rec["title"], action] + [q(a) for a in args]
+        ["node", DRIVER_LAPTOP, rec["port"], rec["match"], action] + [q(a) for a in args]
     )
     rc, out, err = run_ssh(remote)
     sys.stdout.write(out)
