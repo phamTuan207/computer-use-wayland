@@ -1,0 +1,29 @@
+R3-006 ket qua
+Article URL: https://en.wikipedia.org/wiki/Albert_Einstein
+History reached via: click
+
+Newer revision:
+  revision ID (oldid): 1383618653
+  edit time: 18:53, 3 November 2026
+  editor: Sainide
+Older revision:
+  revision ID (oldid): 1383609309
+  edit time: 17:44, 3 November 2026
+  editor: David Eppstein
+
+Diff URL: https://en.wikipedia.org/w/index.php?title=Albert_Einstein&diff=1383618653&oldid=1383609309
+
+Change 1:
+  OLD: Born as a subject to the [[Kingdom of Württemberg]], part of the [[German Empire]],<ref group=note name=GEcitizen/> Einstein moved to Switzerland in 1895, forsaking his citizenship the following year. In 1896, at the age of seventeen, he enrolled in the mathematics and physics teaching diploma program at the Swiss [[ETH Zurich|federal polytechnic school]] in Zurich, graduating in 1900. He acquired Swiss citizenship a year later, which he kept for the rest of his life, and afterwards secured a permanent position at the [[Swiss Patent Office]] in [[Bern]]. In 1905, he submitted a successful [[PhD]] dissertation to the [[University of Zurich]]. In 1914, he moved to Berlin to join the [[Prussian
+  NEW: Born as a subject to the [[Kingdom of Württemberg]], part of the [[German Empire]]<ref group=note name=GEcitizen/> which he later renounced on 28 January 1896, just 6 weeks before he turned 17, avoiding [[Conscription in Germany|conscription into military service]].<ref>{{Cite book |last=Fölsing |title=Albert Einstein |date= |year=1997 |pages=40}}</ref> In 1895, he moved to [[Pavia]] to stay with his family which moved there an year earlier and then to Swiss canton of [[Aarau]], to attend an year of cantonal school ([[German language|German]]: ''Kantonsschule)''. In 1896, at the age of seventeen, he enrolled in the mathematics and physics teaching diploma program at the Swiss [[ETH Zurich|fe
+  (changed part: ', Einstein moved to Switzerland forsaking citizenship the following' -> 'which he later renounced on 28 January 1896, just 6 weeks before he turned 17, avoiding [[Conscription Germany|conscription into military service]].<ref>{{Cite book |last=Fölsing |title=Albert Einstei')
+Change 2:
+  OLD: In 1894, Hermann and Jakob's company tendered for a contract to install electric lighting in Munich, but without success—they lacked the capital that would have been required to update their technology from direct current to the more efficient, [[alternating current]] alternative.<ref name="EQyag"/> The failure of their bid forced them to sell their Munich factory and search for new opportunities elsewhere. The Einstein family moved to [[Kingdom of Italy|Italy]], first to [[Milan]] and a few months later to [[Pavia]], where they settled in [[Palazzo Cornazzani]].<ref>{{cite web |last1=University of Pavia |title=Einstein, Albert |url=http://musei.unipv.eu/msu/our-museums/historical-figures/al
+  NEW: In 1894, Hermann and Jakob's company tendered for a contract to install electric lighting in Munich, but without success—they lacked the capital that would have been required to update their technology from direct current to the more efficient, [[alternating current]] alternative.<ref name="EQyag"/> The failure of their bid forced them to sell their Munich factory and search for new opportunities elsewhere. The Einstein family moved to [[Kingdom of Italy|Italy]], first to [[Milan]] and a few months later to [[Pavia]], where his father Hermann and his uncle [[:de:Jakob_Einstein|Jakob Einstein]] ran "Einstein-Garrone National Electrotechnical Workshop" ([[Italian language|Italian]]: ''Officine
+  (changed part: 'they settled in Palazzo Cornazzani' -> 'his father Hermann and his uncle :de:Jakob_Einstein|Jakob Einstein ran "Einstein-Garrone National Electrotechnical Workshop" ([[Italian language|Italian]]: ''Officine Elettrotecniche Nazionali Einstei')
+Change 3:
+  OLD: In 1895, at the age of sixteen, Einstein sat the entrance examination for the [[ETH Zurich|federal polytechnic school]] (later the Eidgenössische Technische Hochschule, ETH) in [[Zurich]], Switzerland. He failed to reach the required standard in the general part of the test,<ref name=Stachel2008a>Stachel, et al (2008). Vol. 1 (1987), p. 11.</ref> but performed with distinction in physics and mathematics.{{Sfnp|Fölsing|1997|pp=36–37}} On the advice of the polytechnic's principal, he completed his secondary education at the [[Old Cantonal School Aarau|Argovian cantonal school]] (a [[Gymnasium (school)|gymnasium]]) in [[Aarau]], Switzerland, graduating in 1896.<ref name="b250">{{cite journal | 
+  NEW: In 1895, at the age of sixteen, Einstein sat the entrance examination for the [[ETH Zurich|federal polytechnic school]] (later the Eidgenössische Technische Hochschule, ETH) in [[Zurich]], Switzerland. He failed to reach the required standard in the general part of the test,<ref name=Stachel2008a>Stachel, et al (2008). Vol. 1 (1987), p. 11.</ref> but performed with distinction in physics and mathematics.{{Sfnp|Fölsing|1997|pp=36–37}} On the advice of the polytechnic's principal, [[Albin Herzog]], he completed his secondary education at the [[Old Cantonal School Aarau|Argovian cantonal school]] (a [[Gymnasium (school)|gymnasium]]) in [[Aarau]], Switzerland, graduating in 1896.<ref name="b250"
+  (changed part: '' -> ', [[Albin Herzog]]')
+
+Verification: Change #1 verified: its inserted NEW text 'renounced on 28 January 1896, just 6 weeks before he turned 17' (the rendered form of the diff's inserted segment) found verbatim in the body text of the newer revision (oldid 1383618653) via DOM innerText search.
