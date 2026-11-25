@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-003 re-run GRADED PASS; R3-004 (position 4, Claude-run) driving (runner c1bd191a)",
+  "current_task": "R3-004: drive done, sealed + gate PASS, Pair A scoring next; R3-005 to release",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T20:38:29+07:00",
+  "last_updated": "2026-11-25T20:55:12+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -401,6 +401,16 @@
       "ts": "2026-11-25T20:38:29+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-003 RE-RUN GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 20:28:47 (branch mochi/verdict-R3-003-L3-rerun, copied to ~/workspace/rung3-verdicts/rerun/R3-003-A1.json), A2 1ae28d91 PASS 20:29:19 (R3-003-A2.json). Key hashes verified by both (json 5059f6c4, md 21f8b61a); allowlist clean; manifest 8ffe9217. Re-run ledger row recorded (R3-L3-reruns.jsonl now 3 rows). Run: 9 graded; under rule A banked count 6 PASS / 0 FAIL (all 3 re-runs PASS). Bar math: need 47/49 remaining (2 slack). R3-004 drive in progress (runner c1bd191a); note: FAILED.txt + failed-state.png appeared in ~/rung3-chung-cu/R3-004/ at 20:37 while runner still active; awaiting its report."
+    },
+    {
+      "ts": "2026-11-25T20:38:45+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "TIME RE-MEASURE (after first 3 Claude-run tasks, per re-plan): drives R3-001 9m55s, R3-002 ~10m16s window (4m51s main drive), R3-003 17m06s; mean drive ~12.4 min. Wall release-to-ledger: R3-001 ~35 min (runner infra error at end), R3-002 ~44 min (tiebreaker), R3-003 ~37 min. With drive/score overlap the effective per-task wall is ~22-25 min; 49 executions remain -> ~19-20h more, run-complete ~27-28h total from 12:45 start, INSIDE the 31h ceiling (ends 19:45 26/11). No pause trigger met (revised run-complete < 31h; Claude drive mean inside estimate). Continue with overlap discipline: release next drive as soon as the previous task is sealed, unscored queue max 2."
+    },
+    {
+      "ts": "2026-11-25T20:55:12+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-004 DRIVE COMPLETE (runner c1bd191a): start 2026-11-25T20:31:17+07:00, end 2026-11-25T20:51:04+07:00 (19m47s, inside timeout). Evidence: ket-qua.txt (1513 B: Google Doc URL + 5 Go install steps + doc link), 20261125-204802-doc-reopened.png (725489 B), start/end times. Session clean after (no cursor.lock, pill released). Note for scorers' context (not a grading instruction): the live go.dev doc now names tarball go1.27.4 while the frozen key (verified 2026-11-23) names go1.14.3; step commands otherwise identical. Pulled 4 files sha256-verified. Sealed R3-004-L3 manifest 47f9d4f5fd4f6d53eb783b1c583b9e2e87e6bfe8f3a78901b8f6858aa9eb1f09, gate PASS. task_start cleared. Next: publish to repo for Mochi, Pair A scoring, release R3-005."
     }
   ],
   "pass_count": 3,
@@ -449,7 +459,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": "2026-11-25T20:29:14+07:00",
+  "task_start": null,
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
