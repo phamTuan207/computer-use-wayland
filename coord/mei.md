@@ -767,3 +767,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Sua vi tri DP-06 va tong ket moi (2026-11-26 00:28 +07)
+
+- SUA SAI: PR #643 cua em ghi DP-06 thay R3-011 o vi tri 12 va R3-013 o vi tri 13; sai. Em da dem lai thu tu chay va doi chieu commit cham DP-06 (0e705dab ghi "DP_REPLACEMENT_POSITION DP-06 -> 11 (F-18)"). Dung la: R3-011 o vi tri 11, DP-06 thay o vi tri 11, R3-013 o vi tri 12. Em xin loi vi da ghi sai so (lap lai bao cao watchdog ma khong tu dem).
+- Tong ket moi, xac minh tu commit message (2026-11-26 00:12:02 +07, commit ea1b42ec): R3-013 graded PASS (Pair A dong y). Rule-A count 15 PASS / 0 FAIL + 1 INVALID replaced. Tu sau R3-011 vo hieu: R3-005, R3-006, R3-007, R3-008, R3-009, R3-010 deu cham PASS, DP-06 cham PASS (thay the hoan tat), R3-013 cham PASS.
+- Tinh luc dong: dau 15, rot 0, vo hieu 1 (da thay); con 40 task chua xac dinh, toi da 55, bar 53 dat duoc voi 2 task du phong. R3-014 dang chay.
+- Em xac minh tu commit message, khong doc ledger/snapshot.
