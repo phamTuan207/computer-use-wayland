@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-001 re-run: drive done, snapshot sealed + gate PASS, Pair A scoring next (Class L: no reset until both verdicts audited)",
+  "current_task": "R3-001 re-run GRADED PASS (re-run ledger 1 row). Class L reset next, then R3-002 re-run (position 2, Claude-run).",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T19:13:25+07:00",
+  "last_updated": "2026-11-25T19:25:28+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -336,6 +336,16 @@
       "ts": "2026-11-25T19:13:25+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-001 RE-RUN DRIVE COMPLETE (runner 8828665e): start_time.txt 2026-11-25T18:53:21+07:00, end_time.txt 2026-11-25T19:03:16+07:00 (9 min 55 s, inside 30-min timeout). Evidence on laptop ~/rung3-chung-cu/R3-001/: ket-qua.txt (250 B), 20261125-190300-final-list.png (213198 B), start/end times. RUNNER INFRASTRUCTURE FAILURE: session 8828665e ended with model error (output token cap reached) at ~19:05:51 WITHOUT a final report, but cleanup was done before the error (coordinator verified: no cursor.lock holder, pill visible=false no holders, only long-lived daemons). Evidence is complete on its own; task proceeds to scoring from evidence (runner report reconstructed from evidence files). Pulled 4 files laptop->VM sha256-verified (ket-qua 387a697d, png 04aefd4e, start 62e8525b, end 9c10f125). Sealed snapshot R3-001-L3-rerun, manifest_sha256 23c250b28131aef88151935ecae8a0825712de8a2e97cce796deb4f04c1b34a2, manifest gate PASS (4 files, requirements met). task_start cleared (drive ended 19:03:16). Class L: TodoMVC final state left live, NO reset until both Pair A verdicts audited. Next: publish snapshot to repo for Mochi, assign Pair A scoring (Mochi scorer 1 + fresh scorer 2)."
+    },
+    {
+      "ts": "2026-11-25T19:14:47+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-001 RE-RUN SCORING ASSIGNED (Pair A): snapshot published to repo at todolist-push 3511b060 (rung3-run-log/rung3-snapshots/R3-001-L3-rerun/, manifest 23c250b2, ls-remote verified). Mochi scorer 1 (70cd99d1) assigned via daemon run 207 at 19:14:28 (verified=True, items 47->48; verdict returns via branch mochi/verdict-R3-001-L3-rerun). Fresh scorer 2 (A2) 7ec2c8e4 spawned with VM-local snapshot + Class L live re-read (read-only, pill acquire/release); verdict to ~/workspace/rung3-verdicts/rerun/R3-001-A2.json. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30 min target / 60 hard. Coordinator audits both verdicts before any re-run ledger row; Class L reset only after both audited."
+    },
+    {
+      "ts": "2026-11-25T19:25:28+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-001 RE-RUN GRADED PASS: A1 Mochi PASS 19:15:29 (branch mochi/verdict-R3-001-L3-rerun), A2 7ec2c8e4 PASS 19:17:51 (live re-read agrees), agree, both audited PASS (parse, sessions, key hashes 5059f6c4/21f8b61a, manifest 23c250b2, allowlist clean). Re-run ledger R3-L3-reruns.jsonl created with 1 row (recorded 19:25:18), validate-ledger PASS, ledger-cross-check OK (2 verdicts, 0 errors). Per-task report row appended (marked rerun). Under counting rule A this PASS supersedes the original R3-001 FAIL at closure (original ledger + snapshot untouched). Run state: 6 original graded (3 PASS / 3 FAIL) + 1 re-run PASS. Next: Class L reset of TodoMVC state, then release R3-002 re-run (position 2, Claude-run; coordinator runs Tier A checker once at scoring)."
     }
   ],
   "pass_count": 3,
@@ -389,7 +399,7 @@
   "codex_task": "R3-042",
   "codex_task_start": null,
   "codex_runner_pid": null,
-  "graded_count": 6,
+  "graded_count": 7,
   "graded": 6,
   "pass": 3,
   "fail": 3,
