@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: R3-014 cham PASS, luc dong dau 16 rot 0 (2026-11-26 00:45 +07)
+
+- Commit b83ab388 (00:45:54 +07): R3-014 graded PASS (Pair A dong y, Tier A checker PASS, FCC 1/3). Rule-A count 16 PASS / 0 FAIL + 1 INVALID replaced.
+- Tinh luc dong: dau 16, rot 0, vo hieu 1 (da thay); con 39 task chua xac dinh, toi da 55, bar 53 dat duoc voi 2 task du phong. Day la task dau tien trong 3 task de nhat cua FCC (R3-014, R3-027, R3-037) va FCC da dau.
+- Em xac minh tu commit message, khong doc ledger/snapshot.
