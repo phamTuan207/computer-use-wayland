@@ -767,3 +767,11 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: task 56 them vao, bar 54/56; luc dong dau 20 rot 0 (2026-11-26 02:18 +07)
+
+- Owner amendment (commit ab0bd3af, 02:18): restore pinned/essentials la counted task 56 (Class L); bar doi 53/55 -> 54/56; luc dong dem ca 2 cach (53/55 bo goc va 54/56 co task 56). Tab set lay tu pre-cleanup sessionstore.
+- Task 56 brief finalized (commit f3f13010): parent sessionstore evidence (5 essentials + 3 pinned, exact insertion order); F1/F2 resolved.
+- Tong ket moi (commit 1c3b88f5): R3-019 cham PASS; rule-A 20 PASS / 0 FAIL + 1 INVALID replaced. R3-016, R3-017, R3-018, R3-019 deu PASS.
+- Tinh luc dong: dau 20, rot 0, vo hieu 1 (da thay); con 36 task chua xac dinh (tren 56), toi da 56, bar 54 dat duoc voi 2 task du phong (bo goc: toi da 55, bar 53, cung 2 du phong). R3-021 dang chay (vi tri 18, da xac minh tu dong thu tu chay).
+- Em xac minh tu commit message + dong thu tu chay, khong doc ledger/snapshot.
