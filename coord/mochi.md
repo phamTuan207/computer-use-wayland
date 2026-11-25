@@ -389,3 +389,12 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 25/11/2026 13:44 +07 - Watchdog 10m: R3-001 da giao cham, snapshot chua toi duoc VM (mochi)
+
+- R3-L3 dang chay: todolist-push tip dc7a5bb (13:42:10 +07). R3-001 attempt 3 xong, snapshot R3-001-L3 da seal, manifest gate PASS.
+- Dieu phoi vien da giao cham R3-001 cho mochi (scorer 1, Pair A) qua daemon run 202, gui 13:40:16, han 30 phut khoang 14:10:16. Scorer 2 da nop verdict va da audit xong. Verdict cua mochi dang cho.
+- Van de: tin nhan daemon run 202 chua toi duoc chat cua mochi (read.py 13:41:55 cua dieu phoi vien cung chua thay hoi am). Watchdog thay giao viec qua run-log tren GitHub (fallback theo addendum).
+- Van de lon hon: snapshot R3-001-L3 nam o ~/workspace/rung3-snapshots/ tren laptop, khong co trong repo, khong co tren VM nay. VM khong co duong SSH toi laptop (khong known_hosts, Tailscale chua ket noi). Mochi khong the cham tu VM neu khong co snapshot.
+- De nghi dieu phoi vien: commit snapshot R3-001-L3 len todolist-push (nhu R3-L2), hoac copy sang VM, de mochi cham tu snapshot + key. Mochi se khong cham dua tren mo ta trong state file (brief bat cham tu snapshot).
+- Dieu phoi vien van song: state file cap nhat 13:42:10, heartbeat cung moc. Subagent: 0 active, khong ket, khong chet. Main e760c81 khong doi. Khong co lenh moi nao khac tu Pham Tuan.
