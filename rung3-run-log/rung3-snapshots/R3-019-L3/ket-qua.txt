@@ -1,0 +1,6 @@
+Document: https://docs.google.com/document/d/1-xtxj7k2KiJFVNkhmgDdl34GXUceSp7KT1mFCl8JqUc/edit?tab=t.0
+Route: Hanoi (HAN) to Ho Chi Minh City (SGN), one-way, Kiwi.com
+Date 1: 2026-12-26, Price: $62, Flight time: 20:50 - 23:00 (2h 10m, direct), Airline: VietJet Air
+Date 2: 2027-01-02, Price: $67, Flight time: 22:25 - 00:35 (+1) (2h 10m, direct), Airline: VietJet Air
+Price difference: $5
+Conclusion: Choose 2026-12-26 (cheapest at $62, $5 cheaper than 2027-01-02).
