@@ -19,7 +19,7 @@ Phase 0 is COMPLETE except for two items that only the parent/owner can close (s
 | G-31 nine members | DONE | Clone1 YES (replied ~1 min via pwa-send.py). Clone2 YES (token reset 02:38, ready; 03:18 watchdog message corroborates). Codex YES (daemon alive 0.172.0, live codex exec replied session 01a2106e; lane brief now acknowledged, G-30 closed). FCC YES (ack 09:06). Opencode NO on allowed routes (DeepSeek free limit reached, nvidia EOL; OpenRouter NOT tried, banned) — support-only, run proceeds without it. agy YES via herdr w4:p1. Mei YES, Mochi YES (messaging chain). Muse YES (coordinator). |
 | G-32 docs consistency | DONE (fixed) | 10 mismatches fixed: state file hashes updated (thu-tu eaffee95e281..., du-phong a57b488f158...), FCC pane PID 203375 -> 22399 (version 2.1.332), Mochi full session id 70cd99d1-ecef-4d02-9f42-714d7e86ab85 recorded, freeze tip ccd83e5 -> 81919c0c, last_updated 2026-11-25T09:15. Execution plan stamped SUPERSEDED ON IDS (canonical: state file + thu-tu-chay.txt + re-plan; canonical scorer IDs 1B 4e2f52d4, 2B 2e3ae678, TB-A 97290681, TB-B2 df4defcc; Class L 9, Class S 46). |
 | G-33 TB-B2 sign-off | CLOSED | Independent verifier re-graded all four calibration cases from scratch and SIGNED OFF, 4/4 agreement (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS). Frozen key sha256 5059f6c4 verified. |
-| G-34 watchdogs verified | DONE (5/6 succeeded, 1 running) | See Watchdogs section. 5 of 6 new run watchdogs have a successful last run. zen-laptop-health was still in flight at 09:25; verify its last run before task 1. mei-mochi-15m-watchdog updated and left DISABLED pending owner run-start approval. |
+| G-34 watchdogs verified | DONE (6/6 succeeded) | See Watchdogs section. All 6 new run watchdogs have a successful last run (09:15-09:19). mei-mochi-15m-watchdog updated and left DISABLED pending owner run-start approval. |
 | G-35 final verification | DONE | Fresh pass 09:15-09:25 (after 21:38 24/11): validate-ledger.py PASS (1 row, 0 errors), ledger-cross-check.py OK (0 verdict files, 1 test row skipped), Zen PID 6444 alive (zen-bin), BiDi 9222 responding, FCC tmux r3-fcc-runner-L3 alive (created 09:00:18), fcc-server 8082 healthy, read.py mei + mochi ok=true, daemon + supervisor alive (VM, master_ok true). No regressions. |
 | G-36 Tier A checkers | DONE | Tier A checkers 10/10 PASS against the frozen key, negative controls correct. |
 | G-37 timeout rule | DONE | Timeout file fixed: over 30 min is FAIL, stop, log, never graded from partial evidence. pkill -f "codex exec" line fixed to exact-PID-only (G-43). |
@@ -44,7 +44,7 @@ All watchdogs carry the owner's CDP/DOM-first observation rule (CLI/API first, t
 |---|---|---|---|
 | mei-mochi-15m-watchdog | 5 min | DISABLED (pending owner run-start approval; owner disabled it 20:00 24/11) | n/a (disabled) |
 | r3l3-coordinator-liveness-watch | 5 min | ENABLED | 09:15:33 +07 |
-| r3l3-zen-laptop-health | 15 min | ENABLED | in flight at 09:25 (run b441df07, started 09:15:10); verify before task 1 |
+| r3l3-zen-laptop-health | 15 min | ENABLED | 09:19:42 +07 |
 | r3l3-runner-process-watch | 15 min | ENABLED | 09:17:28 +07 |
 | r3l3-ledger-push-watch | 60 min | ENABLED | 09:15:58 +07 |
 | r3l3-gutenberg-fixture-watch | 60 min | ENABLED | 09:16:34 +07 |
