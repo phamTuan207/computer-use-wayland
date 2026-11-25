@@ -1,0 +1,62 @@
+{
+ "files": [
+  {
+   "mtime": 1795596175,
+   "name": "20261125-154500-json1.png",
+   "sha256": "1a9daf3f097340cc6671122704a9ddda36ad0dbb953cf7c4b972faae83da37f0",
+   "size": 1071805
+  },
+  {
+   "mtime": 1795596187,
+   "name": "20261125-154600-json2.png",
+   "sha256": "1a9daf3f097340cc6671122704a9ddda36ad0dbb953cf7c4b972faae83da37f0",
+   "size": 1071805
+  },
+  {
+   "mtime": 1795596200,
+   "name": "20261125-154700-json3.png",
+   "sha256": "1a9daf3f097340cc6671122704a9ddda36ad0dbb953cf7c4b972faae83da37f0",
+   "size": 1071805
+  },
+  {
+   "mtime": 1795595707,
+   "name": "end_time.txt",
+   "sha256": "048e7a60490ffffb74b43affefaa9aeb9f2d225d59078314c58e02598815d37f",
+   "size": 20
+  },
+  {
+   "mtime": 1795595689,
+   "name": "final.png",
+   "sha256": "92ff892d1ea4b2b87a181331bf9b8e74d8a4738f6a425e97f2ba7a5b2f1cb8b7",
+   "size": 761833
+  },
+  {
+   "mtime": 1795595677,
+   "name": "ket-qua.txt",
+   "sha256": "ccdc0fd33dadac2e56083d117f42761a47b1763249c2266a7635ce5ecdaa4c54",
+   "size": 256
+  },
+  {
+   "mtime": 1795596693,
+   "name": "pill-verify-gone-2.png",
+   "sha256": "1a9daf3f097340cc6671122704a9ddda36ad0dbb953cf7c4b972faae83da37f0",
+   "size": 1071805
+  },
+  {
+   "mtime": 1795595718,
+   "name": "pill-verify-gone.png",
+   "sha256": "92ff892d1ea4b2b87a181331bf9b8e74d8a4738f6a425e97f2ba7a5b2f1cb8b7",
+   "size": 761833
+  },
+  {
+   "mtime": 1795595698,
+   "name": "start_time.txt",
+   "sha256": "9a3a0c66cce6607fe6a79e38bb935de6c5d04e3ad5faaf4098ac2a3eace9978b",
+   "size": 20
+  }
+ ],
+ "manifest_sha256": "0741a1aa90bc20b1257888fc6be33377aae02b351693a581c850b1b4d6852f15",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-002-L3",
+ "source_dir": "/home/hatch/rung3-chung-cu/R3-002",
+ "task": "R3-002"
+}

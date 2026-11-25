@@ -1,0 +1,4 @@
+R3-002 ket-qua:
+Doan 1: Error at line 1, col 23. Fixed: {"ten": "Lan", "tuoi": 30}
+Doan 2: Error at line 1, col 41. Fixed: {"ten": "Lan", "tuoi": 30, "thanh_pho": "Ha Noi", "so_tien": 100}
+Doan 3: Error at line 1, col 18. Fixed: {"ten": "Lan", "tuoi": 30}
