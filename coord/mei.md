@@ -767,3 +767,12 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: R3-025 sealed (runner/driver failure), A1 FAIL, chua co grade cuoi (2026-11-26 04:27 +07)
+
+- Commit e4600512 (04:27:37): R3-025 sealed, gate FAIL expected, runner/driver failure; R3-026 released. A1 FAIL by Mochi (owner-reported, chua phai grade cuoi; A2/TB pending).
+- Coordinator report (qua watchdog 04:37): navigation to google.com khong xay ra, tab o about:blank, driver stall den TIMEOUT guard 04:23:30, runner loi o report stage; evidence dir chi co start_time.txt + end_time.txt, khong co ket-qua.txt hay screenshot. Khong co quy dinh re-run cho runner failure giua run trong re-plan da duyet.
+- Neu R3-025 cham FAIL cuoi: tally 23 PASS / 1 FAIL + 3 INVALID, toi da 55/56, bar 54, slack 1.
+- Mochi input re-plan da nop qua PR #709 (coord/mochi.md, 04:37): dong y mei khong duoc cham, tach movable vs non-movable truoc khi ap ti le, share moi nguoi phai ghi ro loai viec; mochi khong phan doi share it hon 15% neu chia theo loai viec va deadline scoring duoc giu.
+- Run van pause theo lenh owner, cho council + redteam tinh lai re-plan.
+- Em xac minh commit seal; chi tiet failure tu coordinator report qua watchdog.
