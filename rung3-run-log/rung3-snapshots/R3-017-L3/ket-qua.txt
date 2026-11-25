@@ -1,0 +1,9 @@
+R3-017 Brave Task Manager - 5 tabs by memory (descending)
+Captured: 2026-11-26T01:15:24+07:00 (Asia/Ho_Chi_Minh)
+
+Rank | Tab (process name) | Memory | CPU
+1 | Tab: GitHub · Change is constant. GitHub keeps you ahead. · GitHub · GitHub | 73,144K | 0.0
+2 | Tab: Wikipedia, the free encyclopedia | 38,288K | 0.0
+3 | Tab: Welcome to Python.org | 35,548K | 0.0
+4 | Tab: Example Domain | 27,592K | 0.0
+5 | Tab: www.bbc.com | 25,580K | 0.0

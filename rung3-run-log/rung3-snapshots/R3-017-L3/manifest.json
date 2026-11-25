@@ -1,0 +1,32 @@
+{
+ "files": [
+  {
+   "mtime": 1795630852,
+   "name": "20261126-011455-brave-taskmgr.png",
+   "sha256": "22975ae037d365b3f004e8f30f430eca87ff9076721934b4fca65bc95cc52c16",
+   "size": 447210
+  },
+  {
+   "mtime": 1795630831,
+   "name": "end_time.txt",
+   "sha256": "6dbe889e3cad859245d535b4ed2d5214e042e1fd2266a99ad98ae9320eb9e0f1",
+   "size": 26
+  },
+  {
+   "mtime": 1795630840,
+   "name": "ket-qua.txt",
+   "sha256": "c9e164d664fa718ecabf829840090b19f1101be9e049ef86ffdb35269aa69c26",
+   "size": 436
+  },
+  {
+   "mtime": 1795630822,
+   "name": "start_time.txt",
+   "sha256": "c8d1ba6866c2a792e043f2cecd0734080cd08c4f45735f1faa913b6815c2176b",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "0c5f876438105f10b9464364b07fd9d71c659302c2ea26c75d566c8e963c9dc5",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-017-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-017",
+ "task": "R3-017"
+}
