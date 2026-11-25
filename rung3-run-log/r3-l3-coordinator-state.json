@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T12:47:50+07:00",
+  "last_updated": "2026-11-25T12:50:53+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "1 trial row only, validated PASS",
@@ -78,7 +78,8 @@
     "RE-REVIEW ROUND 1, 2026-11-25 (owner order 11:19, unanimous bar): Council 1 DISAGREE (RB-1 deputy re-confirmation missing, RB-2 scorer addendum line 11), Council 2 DISAGREE (B-1 checkpoint trigger half-done), Council 3 DISAGREE (deputy re-confirmation, superseded note deleted, ONLY sentence missing, addendum line 11), redteam NOT READY (B-F2 deputy re-confirmation, N-01 Zen on ws1 not ws2 with no move step, N-03 addendum lines 5 and 11). Fixes applied in this edit: checkpoint trigger aligned to re-plan line 269 in time-budget.md and thu-tu-chay.txt line 90; ONLY sentence added to thu-tu-chay.txt line 84; superseded R3-047 note re-added (see previous note); scorer addendum lines 5 (tip 81919c0c, 577 lines) and 11 (DP-06, DP-07) fixed; both lane briefs re-issued (F-04(e) Zen-visible guard, grim/finish lines, worktree re-plan path, Codex carve-out parenthetical); re-plan G-46 records the bar-table pattern (valid N needs N-2) and the Zen-to-ws2 move as a coordinator start item. Deputy re-confirmation is a PARENT action (parent messages deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930) and must be timestamped AFTER this state edit. Round 2 re-review follows the deputy confirmation.",
     "RE-REVIEW ROUND 2 FIX, 2026-11-25 (deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930): RB-1/R2-B1 deputy identity propagated (re-plan, state deputy field, thu-tu line 38); session 8397cff5 SUPERSEDED with no authority; session 6f9f3647 superseded by this deputy. R2-M1 dry run re-run PASS 11:53 +07 in own session (SSH via ssh-laptop.sh, tmux r3-fcc-runner-L3 alive, state file parse OK, git log tip b26a34c5). R2-M2 word 'authoritative' deleted from scorer addendum line 5. C2 O-1 pause-release default aligned in time-budget.md to re-plan line 269 (default continue if owner unreachable within 30 minutes). R2-S3 '(prepare baseline)' qualifier added to tip 81919c0c in thu-tu line 2, du-phong line 2, freeze field. R2-S1 TB-B2 verifier session id searched in prepare records and NOT recoverable; commit-identification b061f87c accepted (see tbb2 sign-off note). R2-S2 next declaration phrases tip as at-time-of-reading and cites lane-brief acks FCC 11:36/11:39, Codex 11:37:33. G-32 hash refresh: thu-tu-chay.txt current sha256 a759ad21266743beea94e7e22bf962c3a380aa2efadee86d0461f9bf8ae2395d; du-phong.txt current sha256 7d17b9b73584bfcafe0c238bc328859c011a263232df748ade7e098fe2889290. The 11:33 hashes (f739f22e, 0cf06dda) are superseded by this entry. Order re-verified: 55 tokens, token 25 R3-029, token 34 DP-03, token 49 R3-089, R3-047 absent, 0 duplicates. Laptop copies re-synced byte-identical. State file written via temp file then rename (G-48 atomic write).",
     "RUN STARTED 2026-11-25T12:45:58+07:00 (owner start order 12:39): coordinator_active 05a503a0-c287-4f24-a1b3-ff4011f692b0, epoch 1, PHASE 1, task 1 R3-001 to FCC. Zen moved to ws2 (verified 12:42). Deputy f41d8a84. G-50: mei/mochi/clone2 internal watchdogs confirmed; clone1 watchdog last confirmed 10:29 (next 10:37), PWA reachable idle, covered by shared agents-watch. Codex exec READY 12:43 (7376 tokens).",
-    "SCORER RUN SESSIONS 2026-11-25T12:47:50+07:00: calibration sessions (dc7e0d0d, 4e2f52d4, 2e3ae678) completed and cannot resume, so the run uses fresh sessions briefed identically (same briefs + addendum, same independence declarations, received at run start). Pair A scorer 2 run session 8c0f267e; Pair B scorer 1 run session a5b74f37; Pair B scorer 2 run session ef2ebec6. Mochi unchanged (70cd99d1). Tiebreakers standby (97290681, df4defcc), spawned on demand; IDs updated then. thu-tu-chay.txt NOT edited (frozen, sha256 a759ad21); the state file is the live record of run scorer sessions."
+    "SCORER RUN SESSIONS 2026-11-25T12:47:50+07:00: calibration sessions (dc7e0d0d, 4e2f52d4, 2e3ae678) completed and cannot resume, so the run uses fresh sessions briefed identically (same briefs + addendum, same independence declarations, received at run start). Pair A scorer 2 run session 8c0f267e; Pair B scorer 1 run session a5b74f37; Pair B scorer 2 run session ef2ebec6. Mochi unchanged (70cd99d1). Tiebreakers standby (97290681, df4defcc), spawned on demand; IDs updated then. thu-tu-chay.txt NOT edited (frozen, sha256 a759ad21); the state file is the live record of run scorer sessions.",
+    "TASK_START FIX 2026-11-25T12:50:53+07:00 (timeout-watch 12:48 run): added explicit task_start 2026-11-25T12:46:09+07:00 (R3-001 brief file mtime on the laptop, handed to FCC right after) and runner_pid 22399 (fcc-claude, tmux r3-fcc-runner-L3) for the current task R3-001. Coordinator updates task_start + runner_pid at every task start from now on. 30-min deadline for R3-001 is 13:16:09+07:00."
   ],
   "pass_count": 0,
   "plan_adaptations": [
@@ -125,5 +126,7 @@
   },
   "status": "PHASE 1 - EXECUTION, RUN STARTED",
   "coordinator_active": "05a503a0-c287-4f24-a1b3-ff4011f692b0",
-  "epoch": 1
+  "epoch": 1,
+  "task_start": "2026-11-25T12:46:09+07:00",
+  "runner_pid": 22399
 }
