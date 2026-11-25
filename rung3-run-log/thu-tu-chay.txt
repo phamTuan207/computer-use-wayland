@@ -1,5 +1,5 @@
 Thu tu chay rung 3, ma lan chay R3-L3
-Viet lai 2026-11-24 18:12 +07 (Phase 0 coordinator). Cap nhat 2026-11-25 (final prepare review). Branch todolist-push tip 81919c0c.
+Viet lai 2026-11-24 18:12 +07 (Phase 0 coordinator). Cap nhat 2026-11-25 (final prepare review). Branch todolist-push tip 81919c0c (prepare baseline).
 Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 9b9d900b3bab21074958a3d372a0780b856cb065
 sha256 danh sach (ban 55 task, lay ngay 2026-11-24, R3-L3): c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec
 Tong: 55 task (trinh duyet 35, desktop 20). Trung binh 37, kho 11, rat kho 7.
@@ -35,7 +35,7 @@ Nguoi cham (2 cap, theo quyet dinh tang toc 2026-11-24, da hieu chinh Phase 0):
 
 Dieu phoi vien va pho:
 - Dieu phoi vien Phase 0: agent 68a84d25-2e88-48b1-b2ee-9911e2a4191c. File trang thai: rung3-run-log/r3-l3-coordinator-state.json (cap nhat sau moi task).
-- Pho dieu phoi vien (deputy): session ID 8397cff5-3099-4735-93fb-34415db38a3c. Ban khai: ~/workspace/r3-l3-deputy-declaration.md (ban khai moi 2026-11-25 09:34 +07, dry run PASS 09:32-09:34, G-24 va G-38 da dong). Pho chi hanh dong khi dieu phoi vien duoc xac nhan khong con kha dung hoac agent cha chi dao tiep quan.
+- Pho dieu phoi vien (deputy): session ID f41d8a84-3a3d-45d2-bb28-62a75fb98930. Ban khai: ~/workspace/r3-l3-deputy-declaration.md (ban khai moi 2026-11-25, round-2 fix, viet sau lan sua state file cuoi cung cua round-2 fix, dry run PASS 11:53 +07 trong phien cua pho moi, G-24 va G-38 da dong). Pho chi hanh dong khi dieu phoi vien duoc xac nhan khong con kha dung hoac agent cha chi dao tiep quan. Session 8397cff5 SUPERSEDED, khong con quyen pho; session 6f9f3647 bi pho moi thay the (ban khai cua no dung nhung no da hoan thanh va danh tinh chua tung duoc truyen di).
 
 Cam doc tai lieu thu nghiem (trial contamination):
 - Nguoi chay, nguoi cham 1 va nguoi cham 2 deu CAM doc ~/workspace/rung3-preflight-trial.md va ~/workspace/rung3-preflight-REPORT.md truoc va trong luc chay va cham.

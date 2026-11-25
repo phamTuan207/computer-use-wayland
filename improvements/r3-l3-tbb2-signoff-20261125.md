@@ -137,3 +137,7 @@ I sign off on the TB-B2 calibration for gate G-33. The gap identified in the coo
 note (approval resting on the coordinator's own check only, with no independent
 verification) is now closed by this independent verification. I did not start the run and
 did not run any run task.
+
+## Round-2 fix note (R2-S1, 2026-11-25)
+
+The verifier session id was searched in the prepare records (memory log ~/memory/2026-11-25.md, the prepare report, this sign-off file) and is NOT recoverable; the prepare phase recorded only that the verifier was an independent subagent, with no session id. Commit-identification is accepted instead: this sign-off is identified by commit b061f87c, committed 2026-11-25 09:20:08 +07. N-06 is closed as a recorded limitation, per the round-2 redteam fallback (fix if recoverable, otherwise accept commit-identification).

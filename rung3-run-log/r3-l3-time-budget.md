@@ -31,7 +31,7 @@ CHECKPOINT AFTER THE 3RD GRADED TASK (CORRECTED per Council 2 A3 and redteam M-0
 - The coordinator PAUSES and reports to the owner ONLY if the revised
   run-complete exceeds 31 hours (staffed ceiling) OR a per-class mean
   exceeds its estimate by more than 25 percent with at least 3 graded
-  tasks of that class. The run continues ONLY on the owner's decision.
+  tasks of that class. The run continues on the owner's decision; if the owner is unreachable within 30 minutes, the default is continue, record the estimate, and re-check at the next milestone (re-plan line 269, pre-authorized before task 1).
 - A revised run-complete of 22-31 hours continues with a recorded estimate
   (no pause). The trigger does not fire on the biased early sample (R3-001
   Class L serial plus R3-002 pilot) against a band the plan itself calls a

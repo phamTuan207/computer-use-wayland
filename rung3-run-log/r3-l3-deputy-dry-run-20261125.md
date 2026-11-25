@@ -40,3 +40,9 @@ The deputy has no direct channel to another subagent session (dc7e0d0d, 1B, 2B, 
 ## Conclusion
 
 G-38 PASS. The laptop is reachable via SSH, every live laptop service the deputy would need on takeover is verified alive, the messaging chain to mei and mochi is verified working, and the contact path for every worker in the state file is confirmed (direct where possible, via the parent where the architecture requires it). The takeover procedure is proven. No failure to report.
+
+## Re-run by the round-2 fix deputy (G-38, R2-M1)
+
+- Date and time: 2026-11-25 11:53:43-11:53:49 +07 (Asia/Ho_Chi_Minh)
+- Deputy: f41d8a84-3a3d-45d2-bb28-62a75fb98930 (round-2 fix deputy, replaces 6f9f3647 and 8397cff5; both superseded)
+- Result: PASS. Contact-path check run in this deputy's own session: SSH via ~/workspace/ssh-laptop.sh OK (hostname omarchy, laptop clock 11:53:48 +07); tmux has-session r3-fcc-runner-L3 OK (session alive); state file read plus JSON parse OK (last_updated 2026-11-25T11:33:08+07:00, status PHASE 0, RUN NOT STARTED, position 0); git log tip b26a34c5, working tree clean. The full contact-path table above (09:32-09:34, previous deputy) is re-confirmed as the procedure record; this re-run proves the new deputy session itself can reach the laptop and read the state file. No failure to report.

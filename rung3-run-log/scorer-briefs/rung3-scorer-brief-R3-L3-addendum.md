@@ -2,7 +2,7 @@
 
 - Run: R3-L3, 55 tasks, starts 2026-11-25 on the owner's word. This addendum supersedes any conflicting part of the R3-L2 scorer briefs (rung3-scorer1-mochi-brief.md, rung3-scorer2-brief.md, rung3-scorer3-tiebreaker-brief.md) for the R3-L3 run. The independence conditions, allowlist, denylist, and invalid rules in those briefs still apply unless this addendum states otherwise.
 - Frozen key: docs/rung3-answer-keys.md sha256 21f8b61a, docs/rung3-answer-keys.json sha256 5059f6c4. List: docs/rung3-list-100-tasks.md sha256 c1d9a220. Pass bar 53/55. Invalid cap max 5 total, max 2 per difficulty group. No key/list edit after task 1.
-- Branch: todolist-push, tip 81919c0c (prepare baseline). Execution plan: ~/workspace/r3-l3-execution-plan-20261124.md (577 lines, authoritative).
+- Branch: todolist-push, tip 81919c0c (prepare baseline). Execution plan: ~/workspace/r3-l3-execution-plan-20261124.md (577 lines).
 
 ## Pairs (lane-aligned)
 

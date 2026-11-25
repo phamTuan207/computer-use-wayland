@@ -1,5 +1,5 @@
 Du phong R3-L3 (ma lan chay R3-L3, 2026-11-24)
-Dong bang: H1 9b9d900 / H2 5fac0eb. Branch todolist-push tip 81919c0c.
+Dong bang: H1 9b9d900 / H2 5fac0eb. Branch todolist-push tip 81919c0c (prepare baseline).
 Pass bar 53/55. Invalid cap: toi da 5 toan bo, toi da 2 moi nhom do kho.
 R3-011 ruling: 1 su co chung duoc chung minh tinh la 1 invalid cho ca muc tran
 tong (5) va muc tran nhom (2). Curl 403 KHONG du lam bang chung browser-block.
