@@ -1,0 +1,77 @@
+{
+ "keys": [
+  "i18nextLng",
+  "excalidraw",
+  "version-dataState",
+  "excalidraw-collab",
+  "excalidraw-state",
+  "version-files",
+  "excalidraw-theme"
+ ],
+ "elements": [
+  {
+   "type": "rectangle",
+   "text": null,
+   "x": 236,
+   "y": 550,
+   "w": 170,
+   "h": 106
+  },
+  {
+   "type": "text",
+   "text": "Bat dau",
+   "x": 281,
+   "y": 591,
+   "w": 80,
+   "h": 25
+  },
+  {
+   "type": "ellipse",
+   "text": null,
+   "x": 740,
+   "y": 540,
+   "w": 125,
+   "h": 125
+  },
+  {
+   "type": "text",
+   "text": "Xu ly",
+   "x": 779,
+   "y": 590,
+   "w": 47,
+   "h": 25
+  },
+  {
+   "type": "diamond",
+   "text": null,
+   "x": 1194,
+   "y": 546,
+   "w": 179,
+   "h": 120
+  },
+  {
+   "type": "text",
+   "text": "Ket\nthuc",
+   "x": 1262,
+   "y": 581,
+   "w": 43,
+   "h": 50
+  },
+  {
+   "type": "arrow",
+   "text": null,
+   "x": 413,
+   "y": 604,
+   "w": 320,
+   "h": 1
+  },
+  {
+   "type": "arrow",
+   "text": null,
+   "x": 864,
+   "y": 604,
+   "w": 329,
+   "h": 3
+  }
+ ]
+}

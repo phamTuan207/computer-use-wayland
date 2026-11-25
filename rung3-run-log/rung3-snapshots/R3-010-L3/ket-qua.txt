@@ -1,0 +1,9 @@
+Page title: Excalidraw Whiteboard
+Shapes:
+1. Rectangle: Bat dau
+2. Ellipse (circle): Xu ly
+3. Diamond: Ket thuc
+Arrows:
+1. Arrow: Bat dau -> Xu ly (rectangle right edge to circle left edge)
+2. Arrow: Xu ly -> Ket thuc (circle right edge to diamond left edge)
+Exported PNG: so-do.png

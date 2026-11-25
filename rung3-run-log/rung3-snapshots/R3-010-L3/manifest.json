@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "mtime": 1795622478,
+   "name": "20261125-225332-excalidraw.png",
+   "sha256": "53e90fa7324f82a32c708947a908e9b5c06fdae45826af7c896dd26c88b5dce0",
+   "size": 583004
+  },
+  {
+   "mtime": 1795622433,
+   "name": "end_time.txt",
+   "sha256": "7b903b73574dd3385bfd4f8874c5f86ab24f77eaa2eba947c4e46f8151724c5e",
+   "size": 33
+  },
+  {
+   "mtime": 1795622446,
+   "name": "ket-qua.txt",
+   "sha256": "a67a52793dcbadf06602833da50ff3e83c82e5f89b44283db9270dce0560a71a",
+   "size": 283
+  },
+  {
+   "mtime": 1795622505,
+   "name": "result.json",
+   "sha256": "2ea839aec8889b2562c990b7967159bb5cdc78cd04261fbe37d5dabf112fdb64",
+   "size": 1590
+  },
+  {
+   "mtime": 1795622492,
+   "name": "scene-final.json",
+   "sha256": "2c71162f1929b10e516776d33e42738b5fd255190339cdf330c596b1c5fc7454",
+   "size": 963
+  },
+  {
+   "mtime": 1795622461,
+   "name": "so-do.png",
+   "sha256": "cd35590890462d19047c6f2c6af8e6f0e39bf860b7756df9c6ac848484b152c3",
+   "size": 19773
+  },
+  {
+   "mtime": 1795622419,
+   "name": "start_time.txt",
+   "sha256": "174dbe878e06139558612321f4fb20c0f6b9dc8edd96f5d60929b03ba95209f4",
+   "size": 33
+  }
+ ],
+ "manifest_sha256": "7c0788a7ce58bfbc845f5f830b16ae9717322b49892031469d7e91b9b2b96111",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-010-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-010",
+ "task": "R3-010"
+}
