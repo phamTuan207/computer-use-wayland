@@ -1,0 +1,21 @@
+{
+  "scorer": "A1",
+  "task": "R3-019",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/20261126-014322-kiwi-date1.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/20261126-014401-kiwi-date2.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/20261126-015859-doc-reopened.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-019-L3-snapshot/rung3-run-log/rung3-snapshots/R3-019-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-019 key section lines 271-277, todolist-push 21fc43f8)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-019 task text lines 417-419, todolist-push 21fc43f8)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T02:10:01+07:00",
+  "reason": "Both dates are the correct key dates (run date + 30 and + 37 days), both lowest prices match the Kiwi screenshots exactly ($62 for 2026-12-26, $67 for 2027-01-02), both flight times and airlines match the screenshots exactly, the price difference is calculated correctly ($5), and the document contains the 2-row table plus a conclusion naming the specific cheaper date. Every key check passes."
+}
