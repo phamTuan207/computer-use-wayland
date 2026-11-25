@@ -193,3 +193,44 @@ I take over ONLY under the fencing rules: I verify the coordinator is DEAD (via 
 ## Standby commitment
 
 I am on STANDBY. I will NOT start any task on my own. I will NOT message the owner directly. I will NOT write to the ledger, the state file, or any verdict file. I will NOT issue run orders while on standby. I will NOT commit anything to any repo (only the coordinator commits during the run). I will NOT drive the browser, score anything, or touch the ledger or verdict files. I will only act as coordinator if the parent verifies the coordinator is dead and directs me to take over under section 7 fencing. If told to take over, I will first re-read the coordinator state file and resume coordination from the recorded position. If told to stand down, I will end. This declaration is timestamped 2026-11-25 15:33:53 +07, AFTER the state file last_updated 2026-11-25T15:32:17+07:00, so it satisfies G-24 freshness for this deputy appointment.
+
+---
+
+## Deputy declaration, epoch 6, 2026-11-25 17:41:49 +07
+
+- Deputy session ID: 411037c8-88f0-48e8-a1e7-f5f832cae19f
+- Date and time: 2026-11-25 17:41:49 +07 (Asia/Ho_Chi_Minh)
+- Role: deputy coordinator for run code R3-L3 (rung 3, run code R3-L3), STANDBY ONLY
+
+## What this replaces
+
+This declaration REPLACES the declaration by deputy session 75531dbf-78ba-41ae-8cb8-59f625ccff4d (15:33:53 +07, 2026-11-25, epoch 5). Per the state file, coordinator epoch 5 (a10c8de0) completed 17:36:22 +07 after filing its escalation report, parent-verified dead, and the parent appointed successor session 9b60bfd6-2b02-40f8-a64e-c4fe25770de0 as coordinator, epoch 6. Deputy 75531dbf completed and holds no live deputy authority. Sessions f41d8a84, 8397cff5, 6f9f3647, cfcc2d11, a001c1bc, cd538736 remain superseded. I am the new deputy, appointed by the parent (coordinator epoch 6) after the epoch 6 coordinator takeover. I have NOT edited the state file deputy field; that is the coordinator's / parent's record to update, and I do not commit anything during the run.
+
+## What I read
+
+I read the following files in full before writing this declaration, verifying each live:
+
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json (CURRENT state file, last_updated 2026-11-25T17:39:29+07:00, verified live, parses as JSON, including the epoch-6 takeover note at ts 2026-11-25T17:39:29+07:00).
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md (the previous deputies' declarations, to see what they certified and what is now superseded).
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-dry-run-20261125.md (the dry-run record, including the 09:32-09:34 PASS, the 11:53 +07 re-run PASS, and the epoch 2, epoch 3, epoch 4, epoch 5 re-run PASS sections).
+
+## State as read (state file last_updated 2026-11-25T17:39:29+07:00)
+
+- Run code: R3-L3. Status: PHASE 1 - EXECUTION, RUN STARTED, HOLD (bar 53/55 unreachable, owner decision pending).
+- coordinator_active: 9b60bfd6-2b02-40f8-a64e-c4fe25770de0. Epoch: 6.
+- Current position: 3. Current task: R3-042 (sealed, scoring pending). Completed positions: 0. Pass count 2, fail count 3, invalid count 0. Bar 53/55, 55 tasks.
+- Graded so far: R3-001 FAIL, R3-040 PASS, R3-002 FAIL, R3-041 PASS, R3-003 FAIL. 5 graded, 2 PASS, 3 FAIL, 0 INVALID. Pass bar 53/55 is mathematically unreachable (max PASS 52); this is an owner-decision run-stop condition and the parent is taking the decision to the owner. HOLD in effect: no new task releases on either lane.
+- R3-042 (Codex, position 31) evidence sealed (manifest 932abfc1, gate PASS), Pair B scoring pending; epoch 6 will score it, then hold at the boundary.
+- task_start is null, codex_task_start is null. No drive in progress; FCC idle, Codex idle.
+- Ledger: 6 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23), validated PASS, cross-check OK; pushed, remote tip 917a27e3 verified by epoch 6.
+- Takeover record in the state file: coordinator epoch 5 (a10c8de0) completed 17:36:22 +07 after filing its escalation report (state file last note 17:35:57), parent-verified dead; named deputy 75531dbf completed, no live deputy. Parent appoints successor session 9b60bfd6-2b02-40f8-a64e-c4fe25770de0 as coordinator, epoch 6, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 9b60bfd6). All predecessors are dead and cannot write; no split-brain risk.
+- Runners: FCC via tmux session r3-fcc-runner-L3 on the laptop (pane PID 22399, fcc-claude 2.1.332). Codex via codex exec (0.172.0, non-interactive, one invocation per task from /home/james, no interactive session because the TUI stalls in tmux).
+- Class L: 9 tasks. Class S: 46 tasks. Pass bar: 53/55. Backups used: DP-03.
+
+## Takeover fencing (re-plan section 7)
+
+I take over ONLY under the fencing rules: I verify the coordinator is DEAD (via the parent plus state-file mtime: no heartbeat for 15 minutes AND the state file has not been written for 15 minutes), not merely silent. I take over ONLY if the parent (main Muse) verifies the coordinator is dead and messages me to take over. Never take over on silence alone. If the coordinator is alive but unreachable, I do NOT take over; I restore the channel instead (restart the daemon, restart the supervisor, verify read.py works within 5 minutes, then confirm the coordinator is reachable). I write a takeover record into the state file BEFORE issuing any order (coordinator_active set to my id, epoch incremented, timestamp, reason). Workers obey only the coordinator id named in the state file field coordinator_active. The old coordinator stops writing the moment it is no longer active. The wake chain is: cron alerts the parent, the parent messages me to take over (the parent is the only party that can reach a standby subagent session).
+
+## Standby commitment
+
+I am on STANDBY. I will NOT start any task on my own. I will NOT message the owner directly. I will NOT write to the ledger, the state file, or any verdict file. I will NOT issue run orders while on standby. I will NOT commit anything to any repo (only the coordinator commits during the run). I will NOT drive the browser, score anything, or touch the ledger or verdict files. I will only act as coordinator if the parent verifies the coordinator is dead and directs me to take over under section 7 fencing. If told to take over, I will first re-read the coordinator state file and resume coordination from the recorded position. If told to stand down, I will end. This declaration is timestamped 2026-11-25 17:41:49 +07, AFTER the state file last_updated 2026-11-25T17:39:29+07:00, so it satisfies G-24 freshness for this deputy appointment.
