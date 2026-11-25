@@ -1,0 +1,18 @@
+{
+  "scorer": "A1",
+  "task": "R3-025",
+  "verdict": "FAIL",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-025-L3-snapshot/rung3-run-log/rung3-snapshots/R3-025-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-025-L3-snapshot/rung3-run-log/rung3-snapshots/R3-025-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-025-L3-snapshot/rung3-run-log/rung3-snapshots/R3-025-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-025 key section lines 314-322, todolist-push e4600512)",
+    "docs/rung3-answer-keys.json (allocated.R3-025 entry, todolist-push e4600512)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-025 task text lines 445-447, todolist-push e4600512)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T04:28:38+07:00",
+  "reason": "No task evidence at all: ket-qua.txt is missing and there are 0 screenshots in the snapshot (only start/end times), so no Pass criterion can be checked (2 queries, 6 results with URLs, PDF page count). The runner's driver stalled inside the 30-min timeout (28 min 2 s) and produced nothing; this is a runner-side failure, not a service bot-check page recorded in any evidence, so per the run rule too-incomplete evidence is FAIL (incomplete), not INVALID."
+}
