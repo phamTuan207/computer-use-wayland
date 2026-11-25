@@ -1,6 +1,6 @@
 # R3-L3 Lane Brief: Codex runner (positions 29-55)
 
-- Date: 2026-11-25. Run: R3-L3, 55 tasks, branch todolist-push, frozen list commit 9b9d900, frozen key sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8.
+- Date: 2026-11-25. Run: R3-L3, 55 tasks, branch todolist-push, frozen list commit 9b9d900, frozen key sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8. AMENDED 2026-11-25 (final prepare review): R3-047 dropped by owner order, DP-03 replaces it at position 34; pill mechanism named (section 11). Re-acknowledgement required before task 1.
 - This brief SUPERSEDES all earlier runner briefs. The R3-L1 Codex brief (/home/james/rung3-runner-brief-codex.md and ~/workspace/rung3-runner-brief-codex.md, written 23/11 for R3-L1) is VOID for this run. Do NOT follow it. If any value in this brief conflicts with that file, THIS brief wins.
 - Source of the rules in this brief: the R3-L3 re-plan ~/workspace/r3-l3-replan-final-20261124.md and the execution plan ~/workspace/r3-l3-execution-plan-20261124.md. Pass bar 53/55. Invalid cap max 5 total, max 2 per difficulty group.
 - No personal info in this brief. No credential value in this brief.
@@ -10,7 +10,7 @@
 
 - Runner: Codex (Codex CLI on the laptop, model gpt-6-luna). Delivery: one `codex exec` invocation per task, launched by the coordinator from /home/james. There is NO interactive Codex tmux session for this run. The old tmux sessions r3-codex-runner and r3-codex-runner-L3 are DELETED. Do not use them. Do not touch the A1 pilot tmux session.
 - Positions 29-55, in this fixed order, one task at a time, sequential:
-  R3-040, R3-041, R3-042, R3-045, R3-046, R3-047, R3-049, R3-055, R3-067, R3-072, R3-074, R3-075, R3-076, R3-078, R3-079, R3-082, R3-083, R3-085, R3-086, R3-088, R3-089, R3-093, R3-094, R3-096, R3-098, R3-099, R3-100.
+  R3-040, R3-041, R3-042, R3-045, R3-046, DP-03, R3-049, R3-055, R3-067, R3-072, R3-074, R3-075, R3-076, R3-078, R3-079, R3-082, R3-083, R3-085, R3-086, R3-088, R3-089, R3-093, R3-094, R3-096, R3-098, R3-099, R3-100. (DP-03 replaces the dropped R3-047 at position 34, owner order 25/11 10:34. R3-047 does not run.)
 - The run does NOT start until the coordinator releases task 1. Do NOT start any task until the coordinator assigns it to you in writing (one codex exec invocation per assigned task). Never run ahead, never run a task assigned to another runner, never re-run a task without a written coordinator order.
 
 ## 2. Corrections to the stale R3-L1 brief
@@ -47,7 +47,7 @@
 - Timeout: 30 minutes per task, wall clock, from task start to evidence-ready. Over 30 minutes is FAIL, stop, log. A timed-out task is never graded from partial evidence. (R3-040 ran 4h05 in R3-L2. That must not recur.)
 - Backpressure: max 2 unscored tasks outstanding. If the lane has 2 unscored tasks AND the oldest scoring lag exceeds 30 minutes, the coordinator pauses the lane (the other lane continues). The lane resumes when the outstanding count drops below 2.
 - Tier A tasks in your lane (the coordinator runs the checker once and hands the identical output to both scorers; you still write full evidence): R3-072, R3-082.
-- Pre-milestone reminders in your lane: Gutenberg re-checked in a browser right before position 34 (R3-047). If Gutenberg is still down, R3-047 is declared INVALID plus the medium backup DP-03. R3-079 coupled reset before position 43. R3-089 fixture verified before position 49. R3-100 port check before position 55 (R3-100 is graded from saved files only; the live port check is done by the runner at run time, immediately after the task, and recorded in the evidence).
+- Pre-milestone reminders in your lane: DP-03 runs at position 34 in place of the dropped R3-047 (owner order 25/11 10:34). No Gutenberg check, no Gutenberg monitoring. R3-079 coupled reset before position 43. R3-089 fixture verified before position 49. R3-100 port check before position 55 (R3-100 is graded from saved files only; the live port check is done by the runner at run time, immediately after the task, and recorded in the evidence).
 - Session rule (single driver): one driver at a time. Before you drive, confirm the session is free. Session free only by /proc fd scan for cursor.lock. If you get a guardian or session-busy error, STOP and report at once, do not retry blindly.
 
 ## 6. Durable trace per codex exec invocation (re-plan rule, G-25)
@@ -89,7 +89,7 @@
 ## 11. Pill (re-plan rule)
 
 - The "Computer use active" pill MUST show on ANY live drive, before you drive. Re-acquire it proactively before any segment expected to exceed about 8 minutes. Log each acquire and expire with wall-clock time. Record any gap in the task evidence with its duration.
-- Live drives go through a computer-use session (pill shows). Raw drive paths without the pill are read-only until a pill mechanism exists for them.
+- Pill mechanism (exact, final review 25/11): before ANY live drive, acquire the pill with: python3 /home/james/computer-use-wayland/scripts/overlay.py acquire --agent CODEX --method CodexExec --pid <your-own-pid>. Env on the laptop: HYPRLAND_INSTANCE_SIGNATURE (dir name under /run/user/1000/hypr), WAYLAND_DISPLAY=wayland-1, XDG_RUNTIME_DIR=/run/user/1000. FAIL CLOSED: if acquire does not return visible=true, do NOT drive. After the drive, release with: python3 /home/james/computer-use-wayland/scripts/overlay.py release --agent CODEX --method CodexExec --pid <your-own-pid>. Check status with: python3 /home/james/computer-use-wayland/scripts/overlay.py status. Drives run on ws2. Log each acquire and release with wall-clock time.
 
 ## 12. Git, models, personal data (re-plan rules)
 

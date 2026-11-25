@@ -40,8 +40,8 @@ CLASS L (exception, score-before-reset, runner waits): 9 tasks
 CLASS S (snapshot-sufficient, decoupled scoring OK): the other 46 run tasks.
 - Screenshot/file comparison tasks (R3-002, R3-007, R3-009, R3-011, R3-013, R3-014,
   R3-017, R3-018, R3-021, R3-022, R3-024, R3-025, R3-026, R3-027, R3-028, R3-029,
-  R3-037, R3-041, R3-046, R3-047, R3-049, R3-072, R3-076, R3-082): scorer compares
-  against the sealed screenshot / ket-qua.txt / checker output.
+  R3-037, R3-041, R3-046, DP-03, R3-049, R3-072, R3-076, R3-082): scorer compares
+  against the sealed screenshot / ket-qua.txt / checker output. (DP-03 thay the R3-047 o vi tri 34, loai bo theo lenh chu so huu 2026-11-25 10:34; DP-03 la Class S, giong R3-047.)
 - Saved-file tasks (R3-005 QR images, R3-008 MP3, R3-010 PNG, R3-016 CSV, R3-045 GIF,
   R3-067 PNG, R3-083 PNG, R3-085 frame, R3-086 command outputs, R3-093 files, R3-094 files):
   scorer opens the saved file in the snapshot.

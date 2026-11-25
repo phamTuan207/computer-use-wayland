@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rung 3 ledger schema validation.
 
-Validates rung3-run-log/R3-L1-grades.jsonl against
+Validates rung3-run-log/R3-L3-grades.jsonl against
 rung3-ci/ledger-schema.json using only the standard library.
 Checks: one JSON object per line, required fields and types,
 verdict enums, task ID shape, run code shape, scorer sessions
@@ -120,7 +120,7 @@ def validate_row(row, lineno):
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-        root, "rung3-run-log", "R3-L1-grades.jsonl")
+        root, "rung3-run-log", "R3-L3-grades.jsonl")
     if not os.path.isfile(path):
         print("FAIL: ledger file missing: %s" % path)
         return 1

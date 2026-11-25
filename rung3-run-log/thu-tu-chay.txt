@@ -1,11 +1,11 @@
 Thu tu chay rung 3, ma lan chay R3-L3
-Viet lai 2026-11-24 18:12 +07 (Phase 0 coordinator). Branch todolist-push tip ccd83e5.
+Viet lai 2026-11-24 18:12 +07 (Phase 0 coordinator). Cap nhat 2026-11-25 (final prepare review). Branch todolist-push tip 81919c0c.
 Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 9b9d900b3bab21074958a3d372a0780b856cb065
 sha256 danh sach (ban 55 task, lay ngay 2026-11-24, R3-L3): c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec
 Tong: 55 task (trinh duyet 35, desktop 20). Trung binh 37, kho 11, rat kho 7.
 Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
 Thu tu chay co dinh, chay theo dung thu tu nay, khong doi thu tu giua chung:
-R3-001 R3-002 R3-003 R3-004 R3-005 R3-006 R3-007 R3-008 R3-009 R3-010 R3-011 R3-013 R3-014 R3-016 R3-017 R3-018 R3-019 R3-021 R3-022 R3-024 R3-025 R3-026 R3-027 R3-028 R3-029 R3-035 R3-036 R3-037 R3-040 R3-041 R3-042 R3-045 R3-046 R3-047 R3-049 R3-055 R3-067 R3-072 R3-074 R3-075 R3-076 R3-078 R3-079 R3-082 R3-083 R3-085 R3-086 R3-088 R3-089 R3-093 R3-094 R3-096 R3-098 R3-099 R3-100 
+R3-001 R3-002 R3-003 R3-004 R3-005 R3-006 R3-007 R3-008 R3-009 R3-010 R3-011 R3-013 R3-014 R3-016 R3-017 R3-018 R3-019 R3-021 R3-022 R3-024 R3-025 R3-026 R3-027 R3-028 R3-029 R3-035 R3-036 R3-037 R3-040 R3-041 R3-042 R3-045 R3-046 DP-03 R3-049 R3-055 R3-067 R3-072 R3-074 R3-075 R3-076 R3-078 R3-079 R3-082 R3-083 R3-085 R3-086 R3-088 R3-089 R3-093 R3-094 R3-096 R3-098 R3-099 R3-100 
 
 Khoa dap an (key file) - dong bang R3-L3 ngay 2026-11-24:
 - docs/rung3-answer-keys.md sha256: 21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60 (R3-L3, 2026-11-24)
@@ -13,7 +13,7 @@ Khoa dap an (key file) - dong bang R3-L3 ngay 2026-11-24:
 - Tag dong bang: R3-L3-FREEZE (se tao sau khi commit dong bang, tro toi commit dong bang; tag cu R3-L1-FREEZE-2 giu lai, danh dau SUPERSEDED, tro toi commit e2e3608)
 
 Nguoi chay (runner):
-- fcc: fcc-claude CLI tren laptop, phien MOI r3-fcc-runner-L3 (pane PID 203375, fcc-claude 2.1.331, tao 2026-11-24 17:18:33 +07, da xac minh phan hoi). Chay vi tri 1-28 (R3-001 den R3-037). Phien cu r3-fcc-runner (R3-L2) DA XOA, khong dung.
+- fcc: fcc-claude CLI tren laptop, phien MOI r3-fcc-runner-L3 (pane PID 22399, fcc-claude 2.1.332, tao 2026-11-25 09:00:18 +07, da xac minh phan hoi). Chay vi tri 1-28 (R3-001 den R3-037). Phien cu r3-fcc-runner (R3-L2) DA XOA, khong dung.
 - codex: Codex CLI tren laptop, dung codex exec (khong tuong tac, moi task mot lan goi), khong dung phien tmux tuong tac. Ly do: phien Codex tuong tac moi trong tmux bi ket (TUI khong phan hoi, ca 0.172.0 va 0.171.0, phien cu cung ket). codex exec da chung minh: codex exec -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check "Reply READY" tra loi READY, 7376 tokens, EXIT=0 (log /tmp/codex-exec-test.log tren laptop, session 01a20d16). Moi task Codex: dieu phoi vien goi codex exec tu /home/james voi prompt cua task, ghi lai session ID va output. Chay vi tri 29-55 (R3-040 den R3-100). Cac phien tmux Codex cu (r3-codex-runner, r3-codex-runner-L3) DA XOA, khong dung.
 - clone1: CHUA XAC MINH DUOC, khong phai nguoi chay hom nay. Clone1 chi tham gia khi dieu phoi vien nhan duoc tra loi moi tu clone1 kem session ID co ten va ghi vao day truoc task 1; khi do dieu phoi vien chia lai batch bang van ban.
 - Mochi KHONG DUOC CHAY: mochi la nguoi cham 1 Cap A, cham moi task Cap A. Chay task roi tu cham la tu cham.
@@ -22,7 +22,7 @@ Nguoi chay (runner):
 
 Nguoi cham (2 cap, theo quyet dinh tang toc 2026-11-24, da hieu chinh Phase 0):
 - Cap A (vi tri 1-28, fcc, R3-001 den R3-037):
-  - Nguoi cham 1A: mochi (Chromium tren laptop port 9223, target A67A718D5E236F894F9863F48834743C, session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85). Mochi CHI cham Cap A. Mochi khong cham Cap B.
+  - Nguoi cham 1A: mochi (Chromium tren laptop port 9223, target A25AA6F0370A00A174BC5304A333417D, session ID: 70cd99d1-ecef-4d02-9f42-714d7e86ab85). Mochi CHI cham Cap A. Mochi khong cham Cap B.
   - Nguoi cham 2A: scorer-2 (ten: scorer-2, session ID: dc7e0d0d-24b2-4d94-9729-f106d21eff16, ban khai khong lien quan truoc: da nhan 2026-11-23).
   - Hoa giai Cap A: session ID: 97290681-d2ce-4230-9869-13c1c68df5d1 (TB-A, calibration 4/4, APPROVED, independent verifier xac nhan). Chi goi khi Cap A bat dong hoac tranh chap vo hieu. Hoa giai cu (R3-L2) DA XONG, khong dung.
 - Cap B (vi tri 29-55, codex, R3-040 den R3-100):
@@ -35,7 +35,7 @@ Nguoi cham (2 cap, theo quyet dinh tang toc 2026-11-24, da hieu chinh Phase 0):
 
 Dieu phoi vien va pho:
 - Dieu phoi vien Phase 0: agent 68a84d25-2e88-48b1-b2ee-9911e2a4191c. File trang thai: rung3-run-log/r3-l3-coordinator-state.json (cap nhat sau moi task).
-- Pho dieu phoi vien (deputy): session ID 028399b1-634c-4b37-84d1-6c8689c87ab8. Ban khai: ~/workspace/r3-l3-deputy-declaration.md (doc ke hoach + trang thai 2026-11-24 17:24:46 +07, san sang tiep quan). Pho chi hanh dong khi dieu phoi vien duoc xac nhan khong con kha dung hoac agent cha chi dao tiep quan.
+- Pho dieu phoi vien (deputy): session ID 8397cff5-3099-4735-93fb-34415db38a3c. Ban khai: ~/workspace/r3-l3-deputy-declaration.md (ban khai moi 2026-11-25 09:34 +07, dry run PASS 09:32-09:34, G-24 va G-38 da dong). Pho chi hanh dong khi dieu phoi vien duoc xac nhan khong con kha dung hoac agent cha chi dao tiep quan.
 
 Cam doc tai lieu thu nghiem (trial contamination):
 - Nguoi chay, nguoi cham 1 va nguoi cham 2 deu CAM doc ~/workspace/rung3-preflight-trial.md va ~/workspace/rung3-preflight-REPORT.md truoc va trong luc chay va cham.
@@ -73,18 +73,18 @@ Cac rulings da chot truoc khi chay:
 - R3-013: mau 3 dang escaped duoc dong bang trong key file (dau / la delimiter o regex101 JS flavor).
 - DP-03: N = 5 (so cong TCP co ten tien trinh hien du, do ngay 2026-11-23 19:20, co 9 cong, lay 5 cong dau theo thu tu cong tang dan). N toi thieu 3.
 - R3-086: 2 ten mien do buoc tong hop cap phat: example.com, en.wikipedia.org.
-- R3-089: R3-089 o vi tri 49/55 (vi tri 48 la R3-088). Fixture log phai duoc lam moi thoi gian sua NGAY TRUOC KHI R3-089 CHAY (touch -d "1 day ago" cho 6 file, "10 days ago" cho 6 file). Moc hien tai: 2026-11-22 19:20 (xac minh 2026-11-24 17:07, find -mtime -7 tra 6 file). Han cung: 2026-11-29 19:20. Neu task 1 chay sau 2026-11-29, lam moi lai truoc khi chay. Xem rung3-run-log/r3-l3-r3-089-refresh.md.
+- R3-089: R3-089 o vi tri 49/55 (vi tri 48 la R3-088). Fixture log phai duoc lam moi thoi gian sua NGAY TRUOC KHI R3-089 CHAY (touch -d "1 day ago" cho 6 file, "10 days ago" cho 6 file). Moc hien tai: 2026-11-24 08:59:42 (lam moi 2026-11-25 08:59 +07 bang touch -d "1 day ago", find -mtime -7 tra 6 file). Han cung: 2026-12-01 08:59. Neu chay vuot qua 2026-12-01, lam moi lai truoc khi R3-089 chay. Xem rung3-run-log/r3-l3-r3-089-refresh.md.
 - R3-019: tuyen Ha Noi den Ho Chi Minh, ngay 1 = ngay chay + 30 ngay, ngay 2 = ngay chay + 37 ngay.
 - R3-009: 2 URL https://www.foxnews.com/ va https://en.wikipedia.org/wiki/Main_Page, moi trang it nhat 1 loi (kiem tra trinh duyet truoc khi chay 2026-11-24: Fox News Errors 2, Wikipedia Errors 7; BBC Errors 0, da thay). WAVE kiem tra lai day du 5 so 2026-11-24 17:11-17:19: Fox News Errors 2, Alerts 311, Features 145, Structural 382, Contrast 16; Wikipedia Errors 7, Alerts 80, Features 451, Structural 75, Contrast 0.
 - R3-008: giong Joanna (doan 1) va Matthew (doan 2), ca 2 la giong Regular tieng Anh My. Neu han muc 3000 ky tu mien phi trong ngay da het truoc khi chay thi task tuyen bo vo hieu truoc khi chay, ap dung du phong.
 - R3-075: requirements.txt chi co requests==2.32.3 (thuan Python). Dong chao ky vong: "Xin chao rung 3". Key DA XAC MINH DUNG (fixture sha256 khop key, Python 3.14.10, 2026-11-24 17:07).
 - R3-029: key DA XAC MINH DUNG (Mochi 2026-11-24 17:11-17:19: ca 5 ten san pham dung: iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, tat ca In Stock; tai khoan test rung3-029-test@example.com da tao, wishlist hoat dong). Mat khau tai khoan test trong Secure Vault, khong ghi o day.
 - DP-05: sqlite3 co san tren laptop (/usr/bin/sqlite3). DP-05 dung sqlite3 tren laptop (quyet dinh cua dieu phoi vien 2026-11-23, ghi trong key file). R3-021 van dung sqliteonline.com.
-- R3-047: ung vien INVALID truoc khi chay (Gutenberg bao tri, Mochi xac nhan bang trinh duyet 2026-11-24 17:29 +07, giong luc R3-L2). Kiem tra lai gutenberg.org bang trinh duyet ngay truoc khi R3-047 chay (vi tri 34). Neu van bao tri, tuyen bo INVALID va dung DP-03. Neu da mo lai, chay binh thuong. R3-017 (bbc.com) KHONG vo hieu (Mochi xac nhan tai binh thuong 17:29 +07).
+- R3-047: DA LOAI BO KHOI RUN theo lenh chu so huu 2026-11-25 10:34 +07. R3-047 KHONG chay, KHONG phai INVALID, KHONG tinh vao muc tran (0 invalid). DP-03 thay the o vi tri 34 (xem dong thu tu o tren). Khong kiem tra lai Gutenberg, khong giam sat Gutenberg nua. R3-017 (bbc.com) KHONG vo hieu (Mochi xac nhan tai binh thuong 17:29 +07).
 - R3-011, R3-028, R3-036, R3-046: ung vien INVALID truoc khi chay theo key (ca 4 nhom trung binh).
 
 Ghi chu cong cu resume (Worker 1, 2026-11-23 22:00 +07):
 - resume.py load_order da sua o commit 68b85ed (doc het token tren moi dong, khong chi token dau tien). Dry-run 2026-11-23 22:00 +07 tren file nay: ORDER 55 task, GRADED 0, REMAINING 55, NEXT R3-001.
 - resume.py doc thu tu tu file nay; thu tu co dinh nam o mot dong duy nhat gom 55 ID.
 
-Thoi gian chay du kien: 19-31 gio (honest range, staff cho 31h). Checkpoint sau task thu 3 duoc cham: neu uoc tinh hoan thanh vuot 19-21h hoac thoi gian chu ky trung binh vuot ke hoach hon 25%, dieu phoi vien TAM DUNG va bao chu so huu; chay tiep chi khi chu so huu quyet dinh. Xem rung3-run-log/r3-l3-time-budget.md.
+Thoi gian chay du kien: 19-31 gio (honest range, staff cho 31h). Checkpoint sau task thu 3 duoc cham: neu uoc tinh hoan thanh vuot 31h hoac thoi gian chu ky trung binh vuot ke hoach hon 25%, dieu phoi vien TAM DUNG va bao chu so huu; chay tiep chi khi chu so huu quyet dinh. Xem rung3-run-log/r3-l3-time-budget.md.

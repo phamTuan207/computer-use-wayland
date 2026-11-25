@@ -43,9 +43,9 @@
 
 ## Invalid (pre-run candidates and cap math)
 
-- Pre-run invalid candidates (declared by the coordinator at preflight, before task 1): R3-011, R3-028, R3-036, R3-046 (one shared cause, timeanddate.com), R3-047 (separate cause, Gutenberg maintenance). You do NOT score tasks that do not run; there is no evidence to score.
-- Cap math (R3-011 ruling): a proven shared cause counts as 1 invalid for BOTH the total cap (5) and the group cap (2). So the 4 tasks R3-011/028/036/046 = 1 invalid, R3-047 = 1 invalid, total medium group = 2, which is AT the group cap. If a 3rd medium invalid occurs during the run, the group cap is exceeded and the coordinator STOPS the run; only the owner decides whether to continue, re-freeze, or cancel.
-- R3-047 re-check: the coordinator re-checks gutenberg.org in a browser right before R3-047 runs (position 34, not 35). If still down, R3-047 is declared INVALID and backup DP-03 is used. If back, R3-047 runs normally.
+- Pre-run invalid candidates (declared by the coordinator at preflight, before task 1): R3-011, R3-028, R3-036, R3-046 (one shared cause, timeanddate.com). R3-047 is NOT a candidate: it is DROPPED from the run by owner order 25/11 10:34, replaced by DP-03 at position 34, consumes 0 invalids. You do NOT score tasks that do not run; there is no evidence to score.
+- Cap math (R3-011 ruling): a proven shared cause counts as 1 invalid for BOTH the total cap (5) and the group cap (2). So the 4 tasks R3-011/028/036/046 = 1 invalid if the shared cause is proven. The medium group currently has 0 invalids (the R3-047 drop is not an invalid). If a 3rd medium invalid occurs during the run, the group cap is exceeded and the coordinator STOPS the run; only the owner decides whether to continue, re-freeze, or cancel. If all 4 shared-cause tasks go invalid, DP-06 and DP-07 replace 2 of them, 2 drop, valid 53, bar recomputes to 51/53 (see the re-plan G-46).
+- DP-03 at position 34: DP-03 (medium, Class S, Pair B) runs at position 34 in place of the dropped R3-047. Score DP-03 from its sealed snapshot like any Class S task. No Gutenberg check.
 
 ## Class L timeout
 

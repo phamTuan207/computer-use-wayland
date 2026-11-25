@@ -1,6 +1,6 @@
-# Rung 3 run log (R3-L1)
+# Rung 3 run log (R3-L3)
 
-Append-only ledger: `R3-L1-grades.jsonl`, one JSON object per line,
+Append-only ledger: `R3-L3-grades.jsonl`, one JSON object per line,
 one row per graded task. Schema: `rung3-ci/ledger-schema.json`.
 Validate with `python3 rung3-ci/validate-ledger.py`.
 

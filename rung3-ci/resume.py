@@ -3,7 +3,7 @@
 
 Run state is thu-tu-chay.txt (the fixed run order, one task ID per
 line, # comments allowed) plus the run ledger
-rung3-run-log/R3-L1-grades.jsonl (one row per graded task).
+rung3-run-log/R3-L3-grades.jsonl (one row per graded task).
 
 Commands:
   next      Print the next ungraded task in run order and the evidence
@@ -55,7 +55,7 @@ def load_order(state_dir):
 
 
 def load_graded(state_dir):
-    path = os.path.join(state_dir, "R3-L1-grades.jsonl")
+    path = os.path.join(state_dir, "R3-L3-grades.jsonl")
     graded = {}
     if not os.path.isfile(path):
         return graded, path

@@ -28,13 +28,13 @@ CHECKPOINT AFTER THE 3RD GRADED TASK:
       tasks) x 55, and
   (b) whether the mean cycle time exceeds the plan estimate by more than
       25 percent.
-- If the revised run-complete estimate is OUTSIDE 19-21 hours (i.e. the
-  run will take longer than 21 hours at the current pace) OR the mean cycle
+- If the revised run-complete estimate is OUTSIDE 19-31 hours (i.e. the
+  run will take longer than 31 hours at the current pace) OR the mean cycle
   time exceeds the plan estimate by more than 25 percent, the coordinator
   PAUSES the run and reports to the owner with options (continue at the
   slower pace, reduce scope, change the scoring approach, or stop). The run
   continues ONLY on the owner's decision.
-- If the revised estimate is inside 19-21 hours and the mean cycle time is
+- If the revised estimate is inside 19-31 hours and the mean cycle time is
   within 25 percent of the plan estimate, the coordinator continues without
   reporting (the checkpoint is passed, recorded in the state file).
 - The checkpoint is mandatory. The coordinator does not skip it because

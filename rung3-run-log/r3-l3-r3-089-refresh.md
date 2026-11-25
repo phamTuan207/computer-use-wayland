@@ -6,11 +6,11 @@ files (log-01 to log-12). The key expects find -mtime -7 to return exactly 6
 files (log-01 to log-06). The fixture is time-sensitive: the mtimes must be
 set so that log-01..06 are within 7 days and log-07..12 are older than 7 days.
 
-CURRENT FIXTURE STATE (verified 2026-11-24 17:07 +07):
-- log-01..06 mtime 2026-11-22 19:20 (within 7 days). find -mtime -7 returns 6.
-- log-07..12 mtime 2026-11-13 19:20 (older than 7 days). find -mtime -7
+CURRENT FIXTURE STATE (verified 2026-11-25 08:59 +07, refreshed by touch -d "1 day ago"):
+- log-01..06 mtime 2026-11-24 08:59:42 (within 7 days). find -mtime -7 returns 6.
+- log-07..12 mtime 2026-11-15 08:59:42 (older than 7 days). find -mtime -7
   excludes them.
-- HARD EXPIRY: 2026-11-29 19:20 +07. After that, log-01..06 are older than
+- HARD EXPIRY: 2026-12-01 08:59 +07. After that, log-01..06 are older than
   7 days and find -mtime -7 returns 0, not 6. The task becomes ungradeable.
 
 REFRESH OWNER AND DATE:
@@ -22,9 +22,9 @@ REFRESH OWNER AND DATE:
   the run starts; the refresh is done 1 day before the task, not earlier
   (refreshing too early risks the mtimes ageing past the window if the run
   slips).
-- If the run has not reached R3-089 by 2026-11-28 19:20, the coordinator
-  refreshes the fixture on 2026-11-28 (so it stays valid through 2026-12-05)
-  and records the refresh here.
+- If the run has not reached R3-089 by 2026-11-30 12:00, the coordinator
+  refreshes the fixture on 2026-11-30 (so it stays valid through 2026-12-07)
+  and records the refresh here. (Date guard, final review 25/11.)
 
 REFRESH PROCEDURE (run on the laptop, in ~/rung3-goc/nd09-logs/):
 1. Confirm the current state first: run
@@ -68,4 +68,5 @@ CONFIRMATION PROCEDURE (before R3-089 starts):
   matter.
 
 REFRESH LOG:
-- (none yet; fixture verified fresh 2026-11-24 17:07 +07, count 6, expiry 2026-11-29 19:20)
+- 2026-11-25 08:59 +07: fixture refreshed (touch -d "1 day ago" log-01..06, "10 days ago" log-07..12), count 6, expiry 2026-12-01 08:59. Verified by prepare (G-39).
+- (earlier: fixture verified fresh 2026-11-24 17:07 +07, count 6, expiry 2026-11-29 19:20; superseded by the 25/11 refresh.)

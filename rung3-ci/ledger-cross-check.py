@@ -33,13 +33,53 @@ PAIR_A_POSITIONS = range(1, 29)
 PAIR_B_POSITIONS = range(29, 56)
 
 
-def task_position(task_id):
-    """Return the run position (1-55) for a task id, or None."""
+ORDER_FILE_DEFAULT = "rung3-run-log/thu-tu-chay.txt"
+
+# Backup tasks used mid-run are NOT in the fixed order line; they inherit
+# the position of the task they replaced (F-18). Record each mid-run
+# replacement here when it happens (position = the replaced task's
+# position). DP-03 is already in the order line (pre-run replacement for
+# the dropped R3-047 at position 34), so it needs no entry here.
+DP_REPLACEMENT_POSITION = {}
+
+
+def load_order(order_path):
+    """Return {task_id: position} from the fixed run-order line."""
     import re
-    m = re.match(r"^R3-(\d{3})$", task_id or "")
-    if not m:
-        return None
-    return int(m.group(1))
+    order = {}
+    try:
+        with open(order_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return order
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        tokens = line.split()
+        if len(tokens) >= 10 and all(re.match(r"^(R3-\d{3}|DP-\d{2})$", t) for t in tokens):
+            for i, t in enumerate(tokens, 1):
+                order[t] = i
+            return order
+    return order
+
+
+def task_position(task_id, order=None):
+    """Return the run position (1-55) for a task id, or None.
+
+    The position comes from the fixed run-order line in thu-tu-chay.txt,
+    NOT from the task number: R3-029 is position 25 (Pair A), not 29.
+    A DP task inherits the replaced task's position (F-18): DP-03 is
+    position 34. Mid-run backups not in the order line use
+    DP_REPLACEMENT_POSITION above.
+    """
+    if order is None:
+        order = {}
+    if task_id in order:
+        return order[task_id]
+    if task_id in DP_REPLACEMENT_POSITION:
+        return DP_REPLACEMENT_POSITION[task_id]
+    return None
 
 
 def pair_for_position(pos):
@@ -68,6 +108,8 @@ def read_json(path):
 def main():
     ledger_path = sys.argv[1] if len(sys.argv) > 1 else LEDGER_DEFAULT
     verdict_dir = sys.argv[2] if len(sys.argv) > 2 else VERDICT_DIR_DEFAULT
+    order_path = sys.argv[3] if len(sys.argv) > 3 else ORDER_FILE_DEFAULT
+    order = load_order(order_path)
     errors = []
     checked = 0
     skipped = 0
@@ -93,6 +135,14 @@ def main():
             errors.append("line %d: missing task_id" % i)
             continue
         final_grade = row.get("final_grade")
+        pos = task_position(task_id, order)
+        if pos is None:
+            errors.append("%s: no run position found in %s (not in the order line and not in DP_REPLACEMENT_POSITION)" % (task_id, order_path))
+            continue
+        expected_pair = pair_for_position(pos)
+        if expected_pair is None:
+            errors.append("%s: position %s is outside 1-55" % (task_id, pos))
+            continue
         files = verdict_files_for(task_id, verdict_dir)
         if not files:
             errors.append("%s: no verdict files found in %s" % (task_id, verdict_dir))
@@ -116,6 +166,19 @@ def main():
                 # expected on disagreement and is not an error by itself.
                 if suffix == "TB":
                     errors.append("%s: tiebreaker verdict %s != ledger final %s" % (task_id, v_verdict, final_grade))
+            # Pair check (was dead code before the final review 25/11):
+            # the verdict file's pair must match the pair implied by the
+            # task's run position (1-28 Pair A, 29-55 Pair B). The pair
+            # comes from the verdict file's "pair" field when present, and
+            # from its suffix (A1/A2 are Pair A, B1/B2 are Pair B) when
+            # present. A TB file has no suffix pair; only its "pair" field
+            # is checked.
+            v_pair = v.get("pair")
+            if v_pair and v_pair != expected_pair:
+                errors.append("%s: verdict file %s pair %s != expected pair %s (position %s)" % (task_id, path, v_pair, expected_pair, pos))
+            suffix_pair = {"A1": "A", "A2": "A", "B1": "B", "B2": "B"}.get(suffix)
+            if suffix_pair and suffix_pair != expected_pair:
+                errors.append("%s: verdict file %s suffix %s is Pair %s but position %s is Pair %s" % (task_id, path, suffix, suffix_pair, pos, expected_pair))
             checked += 1
     if errors:
         print("FAIL: %d cross-check error(s):" % len(errors))

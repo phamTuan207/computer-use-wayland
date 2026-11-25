@@ -1,6 +1,6 @@
 # R3-L3 Lane Brief: FCC runner (positions 1-28)
 
-- Date: 2026-11-25. Run: R3-L3, 55 tasks, branch todolist-push, frozen list commit 9b9d900, frozen key sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8.
+- Date: 2026-11-25. Run: R3-L3, 55 tasks, branch todolist-push, frozen list commit 9b9d900, frozen key sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8. AMENDED 2026-11-25 (final prepare review): pill mechanism named (section 9); OpenRouter carve-out for the FCC backend (section 10). Re-acknowledgement required before task 1.
 - This brief SUPERSEDES all earlier runner briefs. The three R3-L1 files on the laptop are VOID for this run: /home/james/rung3-runner-brief.md, /home/james/rung3-runner-brief-fcc.md, /home/james/rung3-fcc-runner-brief.md (all written 23/11 for R3-L1). Do NOT follow them. If any value in this brief conflicts with those files, THIS brief wins.
 - Source of the rules in this brief: the R3-L3 re-plan ~/workspace/r3-l3-replan-final-20261124.md and the execution plan ~/workspace/r3-l3-execution-plan-20261124.md. Pass bar 53/55. Invalid cap max 5 total, max 2 per difficulty group.
 - No personal info in this brief. No credential value in this brief.
@@ -71,12 +71,12 @@
 ## 9. Pill (re-plan rule)
 
 - The "Computer use active" pill MUST show on ANY live drive, before you drive. Re-acquire it proactively before any segment expected to exceed about 8 minutes. Log each acquire and expire with wall-clock time. Record any gap in the task evidence with its duration.
-- Live drives go through a computer-use session (pill shows). Raw drive paths without the pill are read-only until a pill mechanism exists for them.
+- Pill mechanism (exact, final review 25/11): before ANY live drive, acquire the pill with: python3 /home/james/computer-use-wayland/scripts/overlay.py acquire --agent FCC --method FCC --pid <your-own-pid>. Env on the laptop: HYPRLAND_INSTANCE_SIGNATURE (dir name under /run/user/1000/hypr), WAYLAND_DISPLAY=wayland-1, XDG_RUNTIME_DIR=/run/user/1000. FAIL CLOSED: if acquire does not return visible=true, do NOT drive. After the drive, release with: python3 /home/james/computer-use-wayland/scripts/overlay.py release --agent FCC --method FCC --pid <your-own-pid>. Check status with: python3 /home/james/computer-use-wayland/scripts/overlay.py status. Drives run on ws2. Log each acquire and release with wall-clock time.
 
 ## 10. Git, models, personal data (re-plan rules)
 
 - You NEVER commit, push, or edit repo files. Only the coordinator commits to the run-log branch during the run. (For the record, the coordinator rule is: explicit pathspec on BOTH the add and the commit, verify git status --porcelain shows only intended files before committing, never git add -A, verify every push via ls-remote.)
-- NO OpenRouter. Never try it, never propose it. No banned model routes of any kind.
+- NO OpenRouter for Opencode. Never try it, never propose it. No banned model routes of any kind. CARVE-OUT (owner decision 25/11 09:23): FCC MAY use its built-in OpenRouter-free backend (fcc-server reports provider open_router, model open_router/openrouter/free). The OpenRouter ban applies ONLY to Opencode. Your built-in backend is allowed; do not treat it as a violation and do not re-flag it.
 - NO personal data in any repo text or evidence file: no real name, address, email, phone, schedule, photo, account, password, or token. The R3-029 credential stays in the task brief only (section 5) and never in a file.
 
 ## 11. What you NEVER do
