@@ -1,0 +1,20 @@
+{
+  "scorer": "A1",
+  "task": "R3-004",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-004-L3-snapshot/rung3-run-log/rung3-snapshots/R3-004-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-004-L3-snapshot/rung3-run-log/rung3-snapshots/R3-004-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-004-L3-snapshot/rung3-run-log/rung3-snapshots/R3-004-L3/20261125-204802-doc-reopened.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-004-L3-snapshot/rung3-run-log/rung3-snapshots/R3-004-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-004-L3-snapshot/rung3-run-log/rung3-snapshots/R3-004-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-004 section only, lines 146-158, todolist-push 25ce78bb)",
+    "docs/rung3-answer-keys.json (R3-004 entry only, todolist-push 25ce78bb)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-004 task text only, todolist-push 25ce78bb)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T20:56:58+07:00",
+  "reason": "All 5 installation steps are present in order, each matches the corresponding numbered step in the official Go document with a specific command or action, the document's step 6 is correctly excluded, and the link is the correct go.dev URL. The saved document is evidenced by the reopened screenshot with all content visible. Note: the runner's step 1 uses go1.27.4 (current version from the live page) while the frozen key records go1.14.3 (stale, a 2020 release); accepted on substance, flagged in the grade file for the coordinator audit."
+}
