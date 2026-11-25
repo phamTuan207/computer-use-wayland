@@ -21,22 +21,24 @@ BREAKDOWN (for the coordinator to track against):
   of runner time plus the snapshot/gate/score time. Budget for up to 3
   timeouts in the 31-hour figure.
 
-CHECKPOINT AFTER THE 3RD GRADED TASK:
+CHECKPOINT AFTER THE 3RD GRADED TASK (CORRECTED per Council 2 A3 and redteam M-06, final review 25/11):
 - After the 3rd task is graded (not after the 3rd task runs, after the 3rd
-  GRADE enters the ledger), the coordinator computes:
+  GRADE enters the ledger), the coordinator recomputes per lane:
   (a) the revised run-complete estimate = (mean cycle time of the 3 graded
       tasks) x 55, and
-  (b) whether the mean cycle time exceeds the plan estimate by more than
-      25 percent.
-- If the revised run-complete estimate is OUTSIDE 19-31 hours (i.e. the
-  run will take longer than 31 hours at the current pace) OR the mean cycle
-  time exceeds the plan estimate by more than 25 percent, the coordinator
-  PAUSES the run and reports to the owner with options (continue at the
-  slower pace, reduce scope, change the scoring approach, or stop). The run
-  continues ONLY on the owner's decision.
-- If the revised estimate is inside 19-31 hours and the mean cycle time is
-  within 25 percent of the plan estimate, the coordinator continues without
-  reporting (the checkpoint is passed, recorded in the state file).
+  (b) whether a per-class mean exceeds its estimate by more than 25 percent,
+      with at least 3 graded tasks of that class.
+- The coordinator PAUSES and reports to the owner ONLY if the revised
+  run-complete exceeds 31 hours (staffed ceiling) OR a per-class mean
+  exceeds its estimate by more than 25 percent with at least 3 graded
+  tasks of that class. The run continues ONLY on the owner's decision.
+- A revised run-complete of 22-31 hours continues with a recorded estimate
+  (no pause). The trigger does not fire on the biased early sample (R3-001
+  Class L serial plus R3-002 pilot) against a band the plan itself calls a
+  lower bound.
+- A 3-hour wall-clock fallback checkpoint is added: if the 3rd graded task
+  has not landed by 3 hours after task 1, the coordinator reports to the
+  owner.
 - The checkpoint is mandatory. The coordinator does not skip it because
   the first 3 tasks went well. It is the only early warning that the run
   will overrun.

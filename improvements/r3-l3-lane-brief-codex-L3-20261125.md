@@ -2,7 +2,7 @@
 
 - Date: 2026-11-25. Run: R3-L3, 55 tasks, branch todolist-push, frozen list commit 9b9d900, frozen key sha256 5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8. AMENDED 2026-11-25 (final prepare review): R3-047 dropped by owner order, DP-03 replaces it at position 34; pill mechanism named (section 11). Re-acknowledgement required before task 1.
 - This brief SUPERSEDES all earlier runner briefs. The R3-L1 Codex brief (/home/james/rung3-runner-brief-codex.md and ~/workspace/rung3-runner-brief-codex.md, written 23/11 for R3-L1) is VOID for this run. Do NOT follow it. If any value in this brief conflicts with that file, THIS brief wins.
-- Source of the rules in this brief: the R3-L3 re-plan ~/workspace/r3-l3-replan-final-20261124.md and the execution plan ~/workspace/r3-l3-execution-plan-20261124.md. Pass bar 53/55. Invalid cap max 5 total, max 2 per difficulty group.
+- Source of the rules in this brief: the R3-L3 re-plan ~/workspace/r3l3-run-wt/improvements/r3-l3-replan-final-20261124.md (worktree copy, the ONLY operative plan; the root copy is SUPERSEDED) and the execution plan ~/workspace/r3-l3-execution-plan-20261124.md. Pass bar 53/55. Invalid cap max 5 total, max 2 per difficulty group.
 - No personal info in this brief. No credential value in this brief.
 - No em dash or en dash in this brief. Commas, periods, short hyphens only.
 
@@ -89,12 +89,12 @@
 ## 11. Pill (re-plan rule)
 
 - The "Computer use active" pill MUST show on ANY live drive, before you drive. Re-acquire it proactively before any segment expected to exceed about 8 minutes. Log each acquire and expire with wall-clock time. Record any gap in the task evidence with its duration.
-- Pill mechanism (exact, final review 25/11): before ANY live drive, acquire the pill with: python3 /home/james/computer-use-wayland/scripts/overlay.py acquire --agent CODEX --method CodexExec --pid <your-own-pid>. Env on the laptop: HYPRLAND_INSTANCE_SIGNATURE (dir name under /run/user/1000/hypr), WAYLAND_DISPLAY=wayland-1, XDG_RUNTIME_DIR=/run/user/1000. FAIL CLOSED: if acquire does not return visible=true, do NOT drive. After the drive, release with: python3 /home/james/computer-use-wayland/scripts/overlay.py release --agent CODEX --method CodexExec --pid <your-own-pid>. Check status with: python3 /home/james/computer-use-wayland/scripts/overlay.py status. Drives run on ws2. Log each acquire and release with wall-clock time.
+- Pill mechanism (exact, final review 25/11): before ANY live drive, acquire the pill with: python3 /home/james/computer-use-wayland/scripts/overlay.py acquire --agent CODEX --method CodexExec --pid <your-own-pid>. Env on the laptop: HYPRLAND_INSTANCE_SIGNATURE (dir name under /run/user/1000/hypr), WAYLAND_DISPLAY=wayland-1, XDG_RUNTIME_DIR=/run/user/1000. FAIL CLOSED: if acquire does not return visible=true, do NOT drive. After the drive, release with: python3 /home/james/computer-use-wayland/scripts/overlay.py release --agent CODEX --method CodexExec --pid <your-own-pid>. Check status with: python3 /home/james/computer-use-wayland/scripts/overlay.py status. After release, verify the pill is actually gone with a grim screenshot, not only with status (a session-owned pill can stay visible after release while status says false; fail-safe direction). End your computer-use session (finish) at the end of each task. Drives run on ws2. Before driving, confirm Zen is visible on ws2 (hyprctl workspaces shows Zen on ws2). If Zen is not visible on ws2, do NOT switch workspaces blindly; report to the coordinator and wait. Log each acquire and release with wall-clock time.
 
 ## 12. Git, models, personal data (re-plan rules)
 
 - You NEVER commit, push, or edit repo files. Only the coordinator commits to the run-log branch during the run. (For the record, the coordinator rule is: explicit pathspec on BOTH the add and the commit, verify git status --porcelain shows only intended files before committing, never git add -A, verify every push via ls-remote.)
-- NO OpenRouter. Never try it, never propose it. No banned model routes of any kind.
+- NO OpenRouter. Never try it, never propose it. No banned model routes of any kind. (The OpenRouter ban applies ONLY to Opencode; it does not restrict Codex's own backend.)
 - NO personal data in any repo text or evidence file: no real name, address, email, phone, schedule, photo, account, password, or token. No credential value in any brief or file.
 
 ## 13. What you NEVER do

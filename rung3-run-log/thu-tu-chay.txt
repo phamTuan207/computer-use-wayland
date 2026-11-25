@@ -81,10 +81,10 @@ Cac rulings da chot truoc khi chay:
 - R3-029: key DA XAC MINH DUNG (Mochi 2026-11-24 17:11-17:19: ca 5 ten san pham dung: iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, tat ca In Stock; tai khoan test rung3-029-test@example.com da tao, wishlist hoat dong). Mat khau tai khoan test trong Secure Vault, khong ghi o day.
 - DP-05: sqlite3 co san tren laptop (/usr/bin/sqlite3). DP-05 dung sqlite3 tren laptop (quyet dinh cua dieu phoi vien 2026-11-23, ghi trong key file). R3-021 van dung sqliteonline.com.
 - R3-047: DA LOAI BO KHOI RUN theo lenh chu so huu 2026-11-25 10:34 +07. R3-047 KHONG chay, KHONG phai INVALID, KHONG tinh vao muc tran (0 invalid). DP-03 thay the o vi tri 34 (xem dong thu tu o tren). Khong kiem tra lai Gutenberg, khong giam sat Gutenberg nua. R3-017 (bbc.com) KHONG vo hieu (Mochi xac nhan tai binh thuong 17:29 +07).
-- R3-011, R3-028, R3-036, R3-046: ung vien INVALID truoc khi chay theo key (ca 4 nhom trung binh).
+- R3-011, R3-028, R3-036, R3-046: ung vien INVALID truoc khi chay theo key (ca 4 nhom trung binh). Day la NHOM DUY NHAT con lai co the INVALID truoc khi chay o nhom trung binh (R3-047 da loai bo, khong tinh).
 
 Ghi chu cong cu resume (Worker 1, 2026-11-23 22:00 +07):
 - resume.py load_order da sua o commit 68b85ed (doc het token tren moi dong, khong chi token dau tien). Dry-run 2026-11-23 22:00 +07 tren file nay: ORDER 55 task, GRADED 0, REMAINING 55, NEXT R3-001.
 - resume.py doc thu tu tu file nay; thu tu co dinh nam o mot dong duy nhat gom 55 ID.
 
-Thoi gian chay du kien: 19-31 gio (honest range, staff cho 31h). Checkpoint sau task thu 3 duoc cham: neu uoc tinh hoan thanh vuot 31h hoac thoi gian chu ky trung binh vuot ke hoach hon 25%, dieu phoi vien TAM DUNG va bao chu so huu; chay tiep chi khi chu so huu quyet dinh. Xem rung3-run-log/r3-l3-time-budget.md.
+Thoi gian chay du kien: 19-31 gio (honest range, staff cho 31h). Checkpoint sau task thu 3 duoc cham: dieu phoi vien TAM DUNG va bao chu so huu CHI NEU uoc tinh hoan thanh vuot 31h HOAC trung binh theo class vuot ke hoach hon 25% voi it nhat 3 task da cham cua class do; uoc tinh 22-31h thi chay tiep (ghi lai uoc tinh, khong tam dung); neu task thu 3 chua duoc cham sau 3 gio ke tu task 1 thi bao chu so huu. Xem rung3-run-log/r3-l3-time-budget.md.

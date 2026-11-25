@@ -1,8 +1,8 @@
 # Independent Verification Sign-off: TB-B2 Calibration (Gate G-33)
 
 Run code: R3-L3, branch todolist-push.
-Verified: 2026-11-25 Asia/Ho_Chi_Minh.
-Verifier: independent verifier for the R3-L3 run. I did NOT author the TB-B2 calibration file
+Verified: 2026-11-25 Asia/Ho_Chi_Minh. Committed 2026-11-25 09:20:08 +07 in b061f87c (R3-L3 Phase 0 prepare complete).
+Verifier: independent verifier for the R3-L3 run. Verifier session id: not recorded in the prepare phase (the verifier was an independent subagent; it did not author the TB-B2 calibration file, did not run any rung 3 task, and did not run the preflight trial, as stated below). This file is identified by its commit b061f87c. I did NOT author the TB-B2 calibration file
 (`~/workspace/r3-l3-calibration-TBB2.md`), did NOT run any rung 3 task, and did NOT run the
 preflight trial. I re-graded all four calibration cases from scratch, from the snapshots plus
 the frozen key only. I did not trust the calibration file's numbers: every measurement below

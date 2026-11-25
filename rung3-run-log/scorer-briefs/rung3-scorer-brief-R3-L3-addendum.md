@@ -2,13 +2,13 @@
 
 - Run: R3-L3, 55 tasks, starts 2026-11-25 on the owner's word. This addendum supersedes any conflicting part of the R3-L2 scorer briefs (rung3-scorer1-mochi-brief.md, rung3-scorer2-brief.md, rung3-scorer3-tiebreaker-brief.md) for the R3-L3 run. The independence conditions, allowlist, denylist, and invalid rules in those briefs still apply unless this addendum states otherwise.
 - Frozen key: docs/rung3-answer-keys.md sha256 21f8b61a, docs/rung3-answer-keys.json sha256 5059f6c4. List: docs/rung3-list-100-tasks.md sha256 c1d9a220. Pass bar 53/55. Invalid cap max 5 total, max 2 per difficulty group. No key/list edit after task 1.
-- Branch: todolist-push, tip fa72d87. Execution plan: ~/workspace/r3-l3-execution-plan-20261124.md (565 lines, authoritative).
+- Branch: todolist-push, tip 81919c0c (prepare baseline). Execution plan: ~/workspace/r3-l3-execution-plan-20261124.md (577 lines, authoritative).
 
 ## Pairs (lane-aligned)
 
 - Pair A (positions 1-28, FCC lane, R3-001 to R3-037): scorer 1 Mochi (70cd99d1), scorer 2 dc7e0d0d, tiebreaker 97290681 (TB-A, calibration 4/4 APPROVED).
 - Pair B (positions 29-55, Codex lane, R3-040 to R3-100): scorer 1B 4e2f52d4, scorer 2B 2e3ae678, tiebreaker df4defcc (TB-B2, calibration 4/4 APPROVED). Original TB-B (3f3aca86) is NOT used.
-- A backup inherits the pair of the task it replaces. DP-01 is retired and is never assigned. Medium backups in order: DP-03, DP-06, DP-07. Hard: DP-02 only (Class L). Very hard: DP-05 only.
+- A backup inherits the pair of the task it replaces. DP-01 is retired and is never assigned. DP-03 is USED (replaces R3-047 at position 34) and is no longer available. Medium backups in order: DP-06, DP-07. Hard: DP-02 only (Class L). Very hard: DP-05 only.
 - Mei is disqualified as a scorer (authored the list and keys). She does review/analysis only.
 
 ## Decoupled scoring (this replaces the R3-L2 serial rule)
