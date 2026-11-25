@@ -1,0 +1,16 @@
+R3-008 ket qua
+Remaining free characters at start: 3000
+
+Voice: Joanna
+File: am-thanh-1.mp3
+File size (bytes): 174284
+Duration (seconds): 29.04
+Paragraph:
+Learning a new language opens doors to different cultures and new ways of thinking. Every day, learners practice listening, speaking, reading, and writing to build confidence step by step. Mistakes are a natural part of the journey, and each correction brings the learner closer to fluency. With patience, regular practice, and good materials, anyone can make steady progress. The key is to keep going, even when progress feels slow, because small daily efforts add up to real change over time.
+
+Voice: Matthew
+File: am-thanh-2.mp3
+File size (bytes): 238076
+Duration (seconds): 39.672
+Paragraph:
+The bicycle is one of the most useful inventions in human history, and it changed the way people travel in towns and cities. Early bicycles were heavy, hard to ride, and expensive, so only a small number of people could own one. Over time, makers improved the design with lighter frames, better brakes, and air filled tires, which made cycling safer and more comfortable for everyone. Today, bicycles help people stay healthy, save money, and protect the environment, because they use no fuel and make no smoke. In many cities, leaders build special lanes for cyclists, and more people choose to ride to work or school each year. A short ride each morning wakes the body and clears the mind.
