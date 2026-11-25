@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-014: drive done, sealed + gate PASS + Tier A checker PASS, Pair A scoring next; R3-016 to release",
+  "current_task": "R3-014 GRADED PASS (FCC 1/3 easy tasks done); R3-016 (position 15) drive in progress (started 00:38:32)",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-26T00:34:35+07:00",
+  "last_updated": "2026-11-26T00:45:53+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -701,6 +701,26 @@
       "ts": "2026-11-26T00:34:35+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-014 DRIVE COMPLETE (FCC, session r3-fcc-runner-L3): start 2026-11-26T00:20:14+07:00, end 2026-11-26T00:24:46+07:00 (4m32s, inside timeout). Evidence: ket-qua.txt (130 B, 3 rows with RGB + HSL), 3 color screenshots, start/end times, pill-verify-gone.png. Session clean after (no cursor.lock, pill released). Pulled 6 files sha256-verified. Sealed R3-014-L3 manifest b6540e2c0cb71c03830f8a902d95447bf8f427fc18ccb1b9e81a7ac2c1115e23, gate PASS. Tier A checker (coordinator, once): PASS, reasons []. task_start cleared. Tab note: FCC navigated an existing Zen tab to the color picker and left it open (1 htmlcolorcodes tab remains, 24 tabs total); it did not open a new tab it could safely close. The stale task tab goes into the next boundary cleanup batch. Scorers judge the evidence as sealed. Next: publish to repo for Mochi, Pair A scoring (checker output handed identically to both), release R3-016."
+    },
+    {
+      "ts": "2026-11-26T00:35:04+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-014 SCORING ASSIGNED (Pair A): snapshot published at todolist-push 38cd6c95 (manifest b6540e2c, ls-remote verified). Mochi scorer 1 assigned via daemon run 220 at 00:34:49 (verified=True; verdict returns via branch mochi/verdict-R3-014-L3). Fresh scorer 2 (A2) 1c6b2f68 spawned with VM-local snapshot; verdict to ~/workspace/rung3-verdicts/R3-014-A2.json. Tier A checker PASS handed identically to both. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30/60 min."
+    },
+    {
+      "ts": "2026-11-26T00:35:04+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-016 RELEASED (position 15, Tier B, Class S, Claude-run): Mockaroo fake data - 4 fields (First Name, Last Name, Email Address, Age Number 18-90), 10 rows, CSV download to du-lieu.csv, verify (10 data rows, 4 columns, column names, every row 4 values, emails contain @, ages integers 18-90), ket-qua.txt. No login needed (browser-verified 24/11); if the site demands login at run time the task is INVALID per section 1 - runner instructed to report honestly. Evidence requirements: files [ket-qua.txt, du-lieu.csv], screenshots_min 0 (preview screenshot still required by pass criteria). Drive overlaps R3-014 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule."
+    },
+    {
+      "ts": "2026-11-26T00:35:19+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-016 RUNNER SPAWNED: fresh Muse subagent 9c2bbc71-6096-47f1-9a71-8eb003ca8702 (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns). Brief includes the 21:31 tab-close standing rule, the M2 end-of-drive self-check, and the login-demand invalid path."
+    },
+    {
+      "ts": "2026-11-26T00:45:53+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-014 GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 00:35:47 (branch mochi/verdict-R3-014-L3, copied to ~/workspace/rung3-verdicts/R3-014-A1.json), A2 1c6b2f68 PASS 00:35:39 (R3-014-A2.json). Key hashes verified by both; allowlist clean; manifest b6540e2c. Tier A checker PASS. Both scorers verified the 3 screenshots each show a different hex. Original ledger row recorded (R3-L3-grades.jsonl now 18 rows). Run: 20 graded; under rule A banked count 16 PASS / 0 FAIL + 1 INVALID (replaced by DP-06 PASS). Bar math: need 37/39 remaining (2 slack). Unscored queue back to 1 (R3-016 driving). FCC has 2 easy tasks left (R3-027 pos 23, R3-037 pos 28)."
     }
   ],
   "pass_count": 3,
@@ -749,7 +769,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": null,
+  "task_start": "2026-11-26T00:35:04+07:00",
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
@@ -849,5 +869,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "ad8af041-16f8-4e8a-a678-9bcb3361e077"
+  "claude_runner_session": "9c2bbc71-6096-47f1-9a71-8eb003ca8702"
 }
