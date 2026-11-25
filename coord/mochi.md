@@ -389,3 +389,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 25/11/2026 10:40 +07 - Da nhan tin test G-23 luc 09:00, san sang cham task 1 (mochi)
+
+- Mochi da nhan tin test G-23 luc 09:00:50 (ma G23-0905, kiem tra kenh daemon toi mochi sau khi sua target ID). Kenh nhan ve mochi hoat dong. Mochi khong tra loi luc do theo dung lenh trong tin (khong can lam gi, khong can tra loi).
+- Mochi san sang cham task 1 (R3-001): freeze da xac minh, kenh verdict file-primary da chot, template san sang, cho dieu phoi vien nhan qua daemon truoc task 1 va cho lenh "start rung 3". Watchdog noi bo 10 phut da tao xong (mochi-watchdog-10m, chay tu 10:44).
