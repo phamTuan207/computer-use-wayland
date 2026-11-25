@@ -1,6 +1,13 @@
 R3-L3 timeout watcher and kill procedure (precondition 8, Decision B).
 Written 2026-11-24 17:30 +07 by the Phase 0 coordinator.
 
+TIMEOUT VERDICT RULE (RESOLVED, re-plan G-37, 2026-11-25): over 30 minutes
+is FAIL, stop, log. A timed-out task is NEVER graded from partial evidence.
+A timed-out task with a failed gate is FAIL (incomplete). A timed-out task
+with a passed gate is still FAIL on timeout, with the evidence kept for the
+record only. This rule replaces the earlier partial-evidence grading rule
+below; where the two disagree, this rule wins.
+
 TASK TIMEOUT: 30 minutes per task (hard, speedup council decision).
 The coordinator starts a wall-clock timer when the runner begins a task.
 If the runner has not produced a completed evidence folder within 30 minutes,
@@ -17,8 +24,8 @@ TIMEOUT WATCHER (how the coordinator watches):
   once (a short message asking for status). If it is still silent 5 minutes
   later, the coordinator treats it as stuck.
 - The 30-minute deadline is absolute. A task that is 90 percent done at
-  29 minutes still stops at 30 minutes. Partial evidence is kept and graded
-  as-is (see partial-evidence rule below).
+  29 minutes still stops at 30 minutes. Partial evidence is kept for the
+  record only and is never graded (see the resolved verdict rule above).
 
 KILL PROCEDURE (what the coordinator does at 30 minutes):
 1. Tell the runner to STOP the current task immediately (a short message in
@@ -31,27 +38,29 @@ KILL PROCEDURE (what the coordinator does at 30 minutes):
      fresh FCC session (new tmux session, verify it responds) before the
      next task.
    - Codex: if using codex exec, the invocation is a single process; kill it
-     with pkill -f "codex exec" (or kill the PID recorded at launch). If using
+     by the exact PID recorded at launch only, never by pkill -f. If using
      an interactive session, tmux send-keys C-c, then kill-session if needed.
 4. Freeze the evidence folder as-is (snapshot it with snapshot.py --name
-   R3-xxx-L3). Do NOT delete partial evidence.
-5. Run the manifest gate on the snapshot. If the gate FAILS (missing required
-   files), the task is graded from whatever is in the snapshot (partial
-   evidence rule). If the gate PASSES, grade normally.
+   R3-xxx-L3). Do NOT delete partial evidence. The snapshot is kept for the
+   record only; it is never graded.
+5. Run the manifest gate on the snapshot for the record (whether the
+   evidence was complete at the timeout). The gate result does not change
+   the verdict: the task is FAIL on timeout either way.
 6. Record the timeout in the coordinator state file and in the ledger row
    (timestamps.task_end = the 30-minute mark, and a note that the task timed
-   out). The timeout itself is not a verdict; the grade comes from the
-   evidence (PASS/FAIL/INVALID per the key).
+   out). The verdict is FAIL on timeout (resolved rule G-37).
 7. The next task starts only after the timeout is fully recorded and the
    runner session is verified responsive again. Do not start the next task
    while the timed-out runner is still running.
 
-PARTIAL-EVIDENCE RULE:
-- A task that times out is graded on the evidence that exists at the timeout.
-- If the evidence is enough to check against the key, grade PASS or FAIL.
-- If the evidence is too incomplete to check (no ket-qua.txt, no screenshots,
-  no deliverable), grade FAIL (incomplete), not INVALID. A timeout is a
-  runner failure, not a task defect.
+PARTIAL-EVIDENCE RULE (SUPERSEDED by the resolved verdict rule above,
+kept here so the change is visible, not silently deleted):
+- OLD RULE (no longer in force): a task that times out was graded on the
+  evidence that exists at the timeout; if the evidence was enough to check
+  against the key, grade PASS or FAIL; if too incomplete, grade FAIL.
+- RESOLVED RULE (G-37, in force): a timed-out task is FAIL, stop, log,
+  never graded from partial evidence, whether the gate passes or fails.
+  The evidence is kept for the record only.
 - A timeout does NOT consume a backup slot. Backups are only for INVALID
   tasks. A timed-out task is recorded as FAIL and the run continues to the
   next task.
@@ -63,7 +72,7 @@ planning council estimate; these are the tasks the coordinator watches most
 closely, and the timeout applies to them the same as to all tasks):
 - R3-003 (B-hybrid, 3 articles with Wayback fallbacks): R3-L2 took the full
   window and ended BLOCKED. If the runner cannot finish the 3-article table
-  in 30 minutes, it stops and is graded on what exists.
+  in 30 minutes, it stops and is FAIL on timeout (resolved rule G-37).
 - R3-040 (B-hybrid, Wayback + archive.org): R3-L2 retry took a long time
   (Wayback 429s). Same 30-minute cap.
 - R3-042 (B-hybrid): similar multi-step web research.

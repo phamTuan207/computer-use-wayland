@@ -1,0 +1,17 @@
+# R3-L3 per-task reports (G-41)
+# Created 2026-11-25 by the Phase 0 prepare worker (docs gates).
+# One line per graded task, append-only, in run order.
+# The reporting-chain watch (5-minute cron) greps this file.
+# The coordinator's chat message to the parent, if any, is a copy of
+# the file line below, not the record itself.
+# Format (pipe-delimited, one line per task):
+#   TIMESTAMP | TASK_ID | VERDICT | PAIR | TIEBREAKER | INVALID_OR_BACKUP | ELAPSED
+# TIMESTAMP: ISO 8601 with timezone, time the report line was written.
+# TASK_ID: R3-xxx, or DP-0x when a backup replaces a task.
+# VERDICT: PASS, FAIL, or INVALID.
+# PAIR: A (positions 1-28) or B (positions 29-55).
+# TIEBREAKER: tiebreaker session short id if one was invoked, else "-".
+# INVALID_OR_BACKUP: "INVALID:<reason> -> <backup>" when invalid,
+#   or "BACKUP:<backup>" when a backup ran, else "-".
+# ELAPSED: task wall time, e.g. 14m22s (from task start to graded).
+# No rows yet. The run has not started.
