@@ -24,8 +24,8 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "RESUME GATE PASSED (council+redteam unanimous with conditions, redteam reconvene 06:30). Epoch 9: complete redteam section 6.4 checks 3-9, then release R3-027 (frozen position 23, FCC lane). Checks 10-12 before touched tasks. Full plan: improvements/r3-l3-replan-total-20261126.md.",
-  "deputy": "8aef68b3-a324-4159-aba5-493fdfe304e4 (epoch 9 deputy; declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T05:05:22+07:00, after state last_updated 2026-11-26T05:04:58+07:00, G-24 freshness satisfied; dry run PASS: state file epoch 9 + coordinator_active verified, ledgers 29 rows 21 PASS/4 INVALID/3 FAIL/1 TEST + 3 re-run PASS, rule-A 24 PASS / 0 FAIL; on STANDBY under re-plan section 7 fencing)",
+  "current_task": "EPOCH 10 TAKEOVER. Resume gate PASSED with conditions (redteam reconvene 06:30). Epoch 10 completes redteam section 6.4 checks 3-9, then releases R3-027 (frozen position 23, FCC lane). Checks 10-12 before touched tasks. Plan: improvements/r3-l3-replan-total-20261126.md.",
+  "deputy": "4e4c8de2-9955-4075-a1e9-bb98335624d8 (epoch 10 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T06:34:53+07:00, after state last_updated 2026-11-26T06:34:15+07:00, G-24 freshness satisfied; dry run 5/5 PASS 06:34: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive, codex-cli 0.172.0, state parse epoch 10 coordinator_active f1dac71f, ledgers 29 rows 21 PASS/4 INVALID/3 FAIL/1 TEST + 3 re-run PASS rule-A 24 PASS / 0 FAIL, scorer paths present; epoch 9 deputy 8aef68b3 SUPERSEDED; on STANDBY under section 7 fencing)",
   "fail_count": 3,
   "freeze": {
     "h1": "9b9d900",
@@ -42,7 +42,7 @@
     "trung_binh": 3
   },
   "invalid_count": 4,
-  "last_updated": "2026-11-26T06:31:21+07:00",
+  "last_updated": "2026-11-26T06:35:20+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1101,6 +1101,16 @@
       "ts": "2026-11-26T06:31:21+07:00",
       "by": "replan-coordinator",
       "text": "RE-PLAN SYNTHESIS: final plan improvements/r3-l3-replan-total-20261126.md. Council-1/2/3 + redteam (DISAGREE) + fix A/B + F3 proof + redteam reconvene (AGREE with conditions). State updated: invalid_by_group repaired (trung_binh 3, kho 1, total 4), heartbeat line 23 split + parse verified, gate decisions + lanes + cap/bars recorded in replan_total_20261126. RESUME ORDER to epoch 9: pass redteam 6.4 checks 3-9, then release R3-027 (frozen position 23, FCC). R3-089 guard refresh 2026-11-30 12:00 stands even if not reached (fixture expiry 2026-12-01 08:59). Events logged via log-event.sh (source replan-coordinator)."
+    },
+    {
+      "ts": "2026-11-26T06:34:15+07:00",
+      "by": "coordinator-epoch-10",
+      "text": "COORDINATOR TAKEOVER, EPOCH 10, 2026-11-26T06:34:15+07:00: coordinator epoch 9 (1a1a1188-9be6-45dc-ae75-9c7bfbe96894) completed after startup (parent-verified via failed send, agent not found). Parent appoints successor session f1dac71f-f10f-4d18-adb2-6e6ed0732dea as coordinator, epoch 10, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active f1dac71f). Predecessor is dead and cannot write; no split-brain risk. Inherited state verified against files: ledger 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run rows all PASS; rule-A 24 PASS / 0 FAIL; invalid_by_group trung_binh 3, kho 1 (repaired at synthesis); unscored queue EMPTY; no runner alive; Zen session free; last graded R3-025 PASS. Resume gate PASSED with conditions (council+redteam unanimous, redteam reconvene 06:30); checks 1-2 DONE at synthesis (state written, counters repaired, heartbeat line 23 split + parse verified). Epoch 10 completes checks 3-9 before R3-027 releases (frozen position 23, FCC lane). Fresh deputy to be spawned (epoch 9 deputy 8aef68b3 declaration predates the 06:31 synthesis state write, stale in substance)."
+    },
+    {
+      "ts": "2026-11-26T06:35:20+07:00",
+      "by": "coordinator-epoch-10",
+      "text": "DEPUTY CONFIRMED, EPOCH 10: fresh deputy 4e4c8de2-9955-4075-a1e9-bb98335624d8. Declaration 2026-11-26T06:34:53+07:00 (after state last_updated 06:34:15, G-24 freshness satisfied). Dry run 5/5 PASS: laptop SSH, FCC tmux r3-fcc-runner-L3 alive, codex-cli 0.172.0, state parse (epoch 10, coordinator_active f1dac71f), ledgers 29+3 rows rule-A 24 PASS / 0 FAIL, scorer/tiebreaker paths present. G-24 and G-38 CLOSED for epoch 10. Deputy on STANDBY under section 7 fencing. Epoch 9 deputy 8aef68b3 superseded."
     }
   ],
   "pass_count": 21,
@@ -1147,8 +1157,8 @@
     "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
   },
   "status": "PAUSED at pause point, RESUME GATE PASSED with conditions (owner 04:31 pause, 04:53 delegated gate, redteam reconvene 06:30 YES/YES with 12 checks). Ledger: 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 24 PASS / 0 FAIL. Bars (N-2): 52/54 original, 53/55 with task 56, slack 2. Next: R3-027 frozen position 23 after checks 3-9.",
-  "coordinator_active": "1a1a1188-9be6-45dc-ae75-9c7bfbe96894 (epoch 9, label e8ee3f83-4124-d1bd-d443-1fe9a499f973, takeover 2026-11-26T05:04:58+07:00)",
-  "epoch": 9,
+  "coordinator_active": "f1dac71f-f10f-4d18-adb2-6e6ed0732dea (epoch 10, takeover 2026-11-26T06:34:15+07:00)",
+  "epoch": 10,
   "task_start": null,
   "runner_pid": null,
   "codex_task": "R3-042",
