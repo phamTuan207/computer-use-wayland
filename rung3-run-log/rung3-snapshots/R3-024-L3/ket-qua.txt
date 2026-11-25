@@ -1,0 +1,27 @@
+R3-024 ket-qua
+Task: Openverse image search (openverse.org) for 3 keywords in order - "mountain lake", "city bicycle", "old library" - images only, reuse-allowed filter, record first image of each (name, author, specific license, original link), screenshots of the 3 detail pages, links only (no downloads).
+
+Result: BLOCKED by Cloudflare bot check on the search results page. No image data was obtained. Nothing below is fabricated.
+
+Steps done in Zen (new tab, ws2):
+- Opened https://openverse.org/ (homepage loaded, title "Openly Licensed Images, Audio and More | Openverse").
+- Selected content type "Images" via the search-type popover (verified: search-type button label "Images", radio Images aria-checked=true).
+- Clicked the search box (#search-bar), cleared it (Ctrl+A, Backspace), typed "mountain lake" (read-back verified exact value "mountain lake").
+- Clicked the Search submit button. Browser navigated to https://openverse.org/search/image?q=mountain+lake
+- The results page never loaded. Instead Cloudflare showed: title "Just a moment...", heading "openverse.org", text "Performing security verification - This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot." Ray ID: a6035b302a2fb39e.
+- Waited 60 seconds and re-read the page: still the same Cloudflare verification page (same Ray ID), checked again at 2026-11-26T03:23+07:00.
+- Per drive rules (stop on bot check, do not hammer), no reload, no challenge interaction, and no further searches were attempted. Keywords 2 and 3 were not searched because the service block applies to the search endpoint.
+
+3 rows (image name, author, license, original link):
+1. mountain lake: NOT OBTAINED (Cloudflare bot check blocked the results page; first image never shown)
+2. city bicycle: NOT OBTAINED (not searched; stopped after the service block on keyword 1)
+3. old library: NOT OBTAINED (not searched; stopped after the service block on keyword 1)
+
+Original links: none obtained (detail pages unreachable). No images were downloaded.
+
+Reuse filter note: the reuse/license filters live on the results page, which never loaded, so no filter could be applied or verified. The homepage states all Openverse content is under a Creative Commons license or in the public domain.
+
+Screenshots in this folder:
+- blocked-cloudflare-20261126-032300.png (Cloudflare "Just a moment..." verification page for https://openverse.org/search/image?q=mountain+lake)
+
+Times (+07): start 2026-11-26T03:10:54+07:00 (start_time.txt), block first seen about 03:21, re-checked 03:23, end in end_time.txt.
