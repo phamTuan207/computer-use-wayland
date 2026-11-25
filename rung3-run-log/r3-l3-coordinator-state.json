@@ -33,7 +33,7 @@
     "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
     "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
     "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
-    "todolist_push_tip": "d781b171 (ledger push 15:33, epoch 5)"
+    "todolist_push_tip": "9e55edf0 (epoch 6 takeover + R3-042 PASS push 17:46, ls-remote verified)"
   },
   "invalid_by_group": {
     "de": 0,
