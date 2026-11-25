@@ -1,0 +1,56 @@
+{
+ "files": [
+  {
+   "mtime": 1795598753,
+   "name": "browserleaks-cookies-after-20261125-162000.jpg",
+   "sha256": "9f27e502ab4320fcdf4069efbe724bd998dc50a869364d361468f6fd88011eed",
+   "size": 415451
+  },
+  {
+   "mtime": 1795598764,
+   "name": "browserleaks-fonts-after-20261125-162025.jpg",
+   "sha256": "0ac34cad38129b3375206115786f5f009b6d0c93a870e321c612b17c7d3a2a53",
+   "size": 562563
+  },
+  {
+   "mtime": 1795598776,
+   "name": "browserleaks-javascript-20261125-161016.jpg",
+   "sha256": "ef80c0c571ce3bfdfc62757cde5848dc3159c6a79af3e29aa87b4641cd826102",
+   "size": 511294
+  },
+  {
+   "mtime": 1795598787,
+   "name": "browserleaks-javascript-after-20261125-162000.jpg",
+   "sha256": "6f12f40e922f22c2e9fe3e7f698ef9d3bc3fb7407a9e97de4fea5ea2da787b9f",
+   "size": 432444
+  },
+  {
+   "mtime": 1795598799,
+   "name": "browserleaks-javascript-final-20261125-162125.jpg",
+   "sha256": "83e318205df6f82c83e771662bb09cca0f0f24e2415f5a8b148a9b0041cecd11",
+   "size": 432263
+  },
+  {
+   "mtime": 1795598808,
+   "name": "end_time.txt",
+   "sha256": "edbbbeff76fe3c7b38f72d7d6bccd30a679d3d747f94e362df822f70fceeb8b8",
+   "size": 24
+  },
+  {
+   "mtime": 1795598817,
+   "name": "ket-qua.txt",
+   "sha256": "d33f76aab0b81da8d978a01c46239af0ae2fc3fecacf3071257ed70b58cbce81",
+   "size": 1252
+  },
+  {
+   "mtime": 1795598827,
+   "name": "start_time.txt",
+   "sha256": "241103dd4436e0c4ec0bd37591514ae4aaf16091da4d0fa727bcd099dcf6d102",
+   "size": 24
+  }
+ ],
+ "manifest_sha256": "482348ffee067e4cf926343a115900653a4c166054e3e5912e596af649fb1026",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-041-L3",
+ "source_dir": "/home/hatch/rung3-chung-cu/R3-041",
+ "task": "R3-041"
+}

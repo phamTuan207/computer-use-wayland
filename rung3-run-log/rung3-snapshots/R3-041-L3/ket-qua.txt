@@ -1,0 +1,24 @@
+R3-041 — Kết quả kiểm tra dấu vết trình duyệt
+
+Lần đầu (browserleaks.com/javascript và browserleaks.com/fonts)
+1. User Agent: Mozilla/5.0 (X11; Linux x86_64; rv:160.0) Gecko/20100101 Firefox/160.0
+2. Ngôn ngữ (navigator.language): en-US (navigator.languages: ["en-US", "en"])
+3. Múi giờ: Asia/Ho_Chi_Minh
+4. Kích thước màn hình (Screen Resolution): 1920×1200, tỷ lệ 16:10
+5. Độ sâu màu: 24-bit TrueColor
+6. Cookie: bật (cookieEnabled = true)
+7. JavaScript: bật (JavaScript Enabled = True)
+8. Font phát hiện: 345 (164 unique metrics found)
+
+Kích thước cửa sổ ban đầu
+- window.innerWidth × window.innerHeight: 1605 × 1160
+- window.outerWidth × window.outerHeight: 1853 × 1176
+
+Sau khi thu nhỏ cạnh phải vào 200 px
+- window.innerWidth × window.innerHeight: 1405 × 1160
+- window.outerWidth × window.outerHeight: 1653 × 1176
+- Screen Resolution vẫn 1920×1200, 24-bit TrueColor.
+
+Kiểm tra lại sau khi tải lại trang
+- User Agent, ngôn ngữ, múi giờ, độ phân giải màn hình, độ sâu màu, cookie, JavaScript và số font: không đổi so với lần đầu.
+- Viewport đổi theo cửa sổ: 1605×1160 → 1405×1160. Screen Resolution vẫn 1920×1200.
