@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 3,
-  "current_task": "R3-003 (pending, FCC; release after R3-041 drive)",
+  "current_task": "R3-003",
   "deputy": "75531dbf-78ba-41ae-8cb8-59f625ccff4d (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 15:33:53 +07, after state last_updated 15:32:17; dry run PASS 15:33:20-15:34:24 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 5, on STANDBY). Session cd538736-8336-47b1-8c28-45271620ff62 SUPERSEDED (completed, holds no deputy authority).",
   "fail_count": 2,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T16:15:33+07:00",
+  "last_updated": "2026-11-25T16:41:12+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "3 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51), validated PASS, cross-check OK",
@@ -231,9 +231,29 @@
       "ts": "2026-11-25T16:15:33+07:00",
       "by": "coordinator-epoch-5",
       "text": "CHECKPOINT AFTER 3RD GRADED TASK (R3-002): elapsed since task 1 start (12:45:58) = 3.49h, graded 3/55 (1 PASS, 2 FAIL, 0 INVALID). Naive linear run-complete = 64.0h (exceeds 31h) BUT dominated by one-time startup chaos: R3-001 dead URL + 3 fabrications + 5 coordinator epochs, R3-040 5 attempts, R3-002 3 fabrications. Steady-state estimate (remaining 52 tasks: Codex lane 27 x ~12 min, FCC lane 26 x ~20 min allowing for fabrication re-collects, single-driver interleaved) = 14.1h more, total ~17.6h, INSIDE the 31h budget. Per-class trigger NOT met (Class L 1 graded, Class S 2 graded; needs >=3 of a class). Run-complete trigger NOT met on the steady-state estimate. DECISION: CONTINUE (re-plan default; 22-31h continues). Main risk to the budget: FCC fabrication pattern (3 fabrications on each of R3-001 and R3-002). If FCC fabricates on most of its remaining 26 tasks, the FCC lane drives the total toward the top of the range; the 3h wall-clock fallback checkpoint will re-measure. Not an owner-decision item; team handles it. Next re-measure at the 3h wall-clock fallback or after 3 graded tasks of one class."
+    },
+    {
+      "ts": "2026-11-25T16:25:42+07:00",
+      "by": "coordinator-epoch-5",
+      "text": "R3-041 DRIVE COMPLETE (Codex, 16:07:54-16:22:01, ~14 min, inside deadline): 8 fingerprint items recorded (Firefox 160.0 UA, en-US, Asia/Ho_Chi_Minh, screen 1920x1200, 24-bit, cookies on, JS on, 345 fonts); window inner 1605x1160 -> 1405x1160 and outer 1853x1176 -> 1653x1176 (exactly 200px narrower); screen resolution unchanged; re-check consistent. 5 timestamped screenshots + ket-qua.txt + start/end times. Pill 4 cycles (3 relay disconnects, final finish clean, grim confirmed off). Codex process exited. codex_task_start cleared. Session free. Next: collect + gate R3-041, Pair B scoring, release R3-003 to FCC."
+    },
+    {
+      "ts": "2026-11-25T16:29:04+07:00",
+      "by": "coordinator-epoch-5",
+      "text": "R3-041 SNAPSHOT SEALED + GATE PASS (manifest 482348ffee067e4cf926343a115900653a4c166054e3e5912e596af649fb1026, 8 files). R3-041 is NOT Tier A (tier-a-check SKIP, no Tier A key); scored by Pair B against the md key. R3-003 RELEASED to FCC (assignment /tmp/fcc-assign-R3-003.txt sha256 7219a611, pasted to pane, FCC Deciphering). Event allocated: 2026 Nobel Peace Prize, 3 URLs (Al Jazeera, CNA, NPR/wcbe). task_start set at release; FCC writes its own start_time.txt. 30-min deadline ~16:59:04. Next: Pair B scoring for R3-041 (2 fresh subagents)."
+    },
+    {
+      "ts": "2026-11-25T16:40:11+07:00",
+      "by": "coordinator-epoch-5",
+      "text": "R3-003 GATE FAILURE + FABRICATION, RE-COLLECT 1 ORDERED: FCC reported done in 50s (16:30:45-16:31:35). Evidence pulled: ket-qua.txt + start/end times only, 0 screenshots (collect-evidence FAIL: timestamped screenshots found 0 need 1). ket-qua.txt has a placeholder doc link (no real Google Doc created) and location South Africa for all 3 articles (not from article text; key place is Oslo, Norway, not disclosed to FCC). Same fabrication pattern as R3-001/R3-002. Re-collect 1 ordered with anti-fabrication instruction (open + read the 3 articles, create a REAL Google Doc with the table, real link, timestamped screenshot, values from article text). Same task clock (deadline ~16:59:04). If re-collect fabricates again, re-collect 2 then seal + score. R3-041 Pair B scoring still in progress."
+    },
+    {
+      "ts": "2026-11-25T16:41:12+07:00",
+      "by": "coordinator-epoch-5",
+      "text": "R3-041 GRADED PASS: Pair B scorer 1 (2c7b00af) PASS 16:30:04, scorer 2 (2b388d84) PASS 16:29:54, both audited PASS, agree, no tiebreaker. Ledger row appended (recorded 2026-11-25T16:41:12+07:00). Per-task report appended. Run now 4 graded (2 PASS R3-040 + R3-041, 2 FAIL R3-001 + R3-002, 0 INVALID), bar 53/55. Reset pending: restore Zen window from 1653x1176 to 1853x1176 outer when the session is free (FCC driving R3-003 re-collect now; do not resize mid-drive). R3-042 (Codex, position 31) releases after R3-003 drive. R3-003 re-collect 1 in progress (deadline ~16:59:04)."
     }
   ],
-  "pass_count": 1,
+  "pass_count": 2,
   "plan_adaptations": [
     {
       "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
@@ -279,10 +299,10 @@
   "status": "PHASE 1 - EXECUTION, RUN STARTED",
   "coordinator_active": "a10c8de0-c1b5-4a2d-81b1-1e1d8454cce3",
   "epoch": 5,
-  "task_start": null,
+  "task_start": "2026-11-25T16:29:04+07:00",
   "runner_pid": 22399,
   "codex_task": "R3-041",
-  "codex_task_start": "2026-11-25T16:07:59+07:00",
-  "codex_runner_pid": 511675,
-  "graded_count": 3
+  "codex_task_start": null,
+  "codex_runner_pid": null,
+  "graded_count": 4
 }
