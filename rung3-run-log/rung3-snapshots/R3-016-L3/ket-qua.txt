@@ -1,0 +1,10 @@
+Task: R3-016 Mockaroo fake data
+Page title: Mockaroo - Random Data Generator and API Mocking Tool | JSON / CSV / SQL / Excel
+Fields (4) with types: First Name (First Name), Last Name (Last Name), Email Address (Email Address), Age (Number, min 18, max 90)
+Schema note (DOM read-back): {"dec": "0", "format": "csv", "max": "90", "min": "18", "names": ["First Name", "Last Name", "Email Address", "Age"], "rows": "10", "types": ["First Name", "Last Name", "Email Address", "Number"]}
+Rows requested: 10, format: CSV
+CSV data rows (excluding header): 10
+CSV columns (4): First Name, Last Name, Email Address, Age
+Every row has 4 values: True
+Email verification (every email contains @): True
+Age verification (every age integer 18-90): True

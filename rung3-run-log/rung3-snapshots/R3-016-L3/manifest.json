@@ -1,0 +1,38 @@
+{
+ "files": [
+  {
+   "mtime": 1795630078,
+   "name": "20261126-005725-mockaroo-preview.png",
+   "sha256": "556d6c0c5e525e2f470da4d90ea112b17934057dd5c27dd2fed790cd7c7f3032",
+   "size": 628246
+  },
+  {
+   "mtime": 1795630052,
+   "name": "du-lieu.csv",
+   "sha256": "267c3bd3e22c703d77aa3cfbfde4c9b7cd3f096212ae9b4733748b526be41977",
+   "size": 441
+  },
+  {
+   "mtime": 1795630034,
+   "name": "end_time.txt",
+   "sha256": "9efc556788124dabd57ea9b103ac89ef4b8eee87a45c27ea7cf35ad7adf35942",
+   "size": 33
+  },
+  {
+   "mtime": 1795630043,
+   "name": "ket-qua.txt",
+   "sha256": "377e8b7750ea50c5c2c16e1b5d0db0cc2d5e9c092860ea78364b2f4a98527f2b",
+   "size": 738
+  },
+  {
+   "mtime": 1795630024,
+   "name": "start_time.txt",
+   "sha256": "d072e834fc3795d3782540ab4082eae7c3137457b0553fe50bd6a9a97219e757",
+   "size": 33
+  }
+ ],
+ "manifest_sha256": "dd4992764d5923e5baf24b408471bcfd41e13cbc987a663b5350c6d82a0bdf2d",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-016-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-016",
+ "task": "R3-016"
+}
