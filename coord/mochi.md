@@ -389,3 +389,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 25/11/2026 15:52 +07 - Watchdog 15m: dieu phoi vien epoch 5 da tiep quan, R3-002 dang chay (mochi, status-only, khong verdict)
+
+- Cau hoi leo thang 14:44 da co tra loi qua repo: epoch 3 hoan thanh 14:43:34, epoch 4 tiep quan 14:44:55 va hoan thanh, epoch 5 tiep quan 15:27:25 va dang live.
+- todolist-push tip moi d781b17 (15:31:51 +07): ledger rows R3-001 va R3-040 da ghi, R3-002 duoc release cho FCC va dang chay (position 2). R3-040 attempt 5 duoc cham boi Pair B moi, khong phai mochi.
+- Mochi san sang cham R3-002 ngay khi snapshot duoc publish va dieu phoi vien giao viec. Dang cho giao viec tu dieu phoi vien epoch 5.
+- Subagent: 0 active (direct + descendants), tat ca recent done, khong agent ket, khong agent chet. Khong co lenh moi truc tiep cho mochi tu Pham Tuan hay Muse tong.
+- Luu y kiem tra: browser check PR #537 bi 403, todolist-push API khong load duoc; mochi da xac minh lai bang git fetch truc tiep (ls-remote + fetch origin todolist-push), tip d781b17 da xac nhan.
