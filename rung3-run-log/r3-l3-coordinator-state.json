@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T12:52:58+07:00",
+  "last_updated": "2026-11-25T12:59:04+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "1 trial row only, validated PASS",
@@ -80,7 +80,8 @@
     "RUN STARTED 2026-11-25T12:45:58+07:00 (owner start order 12:39): coordinator_active 05a503a0-c287-4f24-a1b3-ff4011f692b0, epoch 1, PHASE 1, task 1 R3-001 to FCC. Zen moved to ws2 (verified 12:42). Deputy f41d8a84. G-50: mei/mochi/clone2 internal watchdogs confirmed; clone1 watchdog last confirmed 10:29 (next 10:37), PWA reachable idle, covered by shared agents-watch. Codex exec READY 12:43 (7376 tokens).",
     "SCORER RUN SESSIONS 2026-11-25T12:47:50+07:00: calibration sessions (dc7e0d0d, 4e2f52d4, 2e3ae678) completed and cannot resume, so the run uses fresh sessions briefed identically (same briefs + addendum, same independence declarations, received at run start). Pair A scorer 2 run session 8c0f267e; Pair B scorer 1 run session a5b74f37; Pair B scorer 2 run session ef2ebec6. Mochi unchanged (70cd99d1). Tiebreakers standby (97290681, df4defcc), spawned on demand; IDs updated then. thu-tu-chay.txt NOT edited (frozen, sha256 a759ad21); the state file is the live record of run scorer sessions.",
     "TASK_START FIX 2026-11-25T12:50:53+07:00 (timeout-watch 12:48 run): added explicit task_start 2026-11-25T12:46:09+07:00 (R3-001 brief file mtime on the laptop, handed to FCC right after) and runner_pid 22399 (fcc-claude, tmux r3-fcc-runner-L3) for the current task R3-001. Coordinator updates task_start + runner_pid at every task start from now on. 30-min deadline for R3-001 is 13:16:09+07:00.",
-    "R3-040 ATTEMPT 1 FAIL-CLOSED 2026-11-25T12:52:58+07:00: codex exec PID 288227 ran 12:48:54-12:50:02 +07 (68s), read the archive (BBC - Homepage, 2008-07-08, 3 headlines) but stopped before driving: hyprctl reported HYPRLAND_INSTANCE_SIGNATURE not set, could not verify Zen on ws2, fail-closed per F-04(e). Cause: SSH-launched codex exec had no Hyprland env. Fix: export XDG_RUNTIME_DIR/WAYLAND_DISPLAY/DBUS_SESSION_BUS_ADDRESS/HYPRLAND_INSTANCE_SIGNATURE in the launch command (now part of the Codex driver launch procedure). Partial evidence (ket-qua.txt, log.txt) moved to attempt1-failclosed/, NOT graded. Re-run ordered with fixed env (new driver session, new log /tmp/codex-R3-040-retry1.log); codex_task_start/runner_pid updated at re-run launch. Not a timeout, not a FAIL, not an INVALID."
+    "R3-040 ATTEMPT 1 FAIL-CLOSED 2026-11-25T12:52:58+07:00: codex exec PID 288227 ran 12:48:54-12:50:02 +07 (68s), read the archive (BBC - Homepage, 2008-07-08, 3 headlines) but stopped before driving: hyprctl reported HYPRLAND_INSTANCE_SIGNATURE not set, could not verify Zen on ws2, fail-closed per F-04(e). Cause: SSH-launched codex exec had no Hyprland env. Fix: export XDG_RUNTIME_DIR/WAYLAND_DISPLAY/DBUS_SESSION_BUS_ADDRESS/HYPRLAND_INSTANCE_SIGNATURE in the launch command (now part of the Codex driver launch procedure). Partial evidence (ket-qua.txt, log.txt) moved to attempt1-failclosed/, NOT graded. Re-run ordered with fixed env (new driver session, new log /tmp/codex-R3-040-retry1.log); codex_task_start/runner_pid updated at re-run launch. Not a timeout, not a FAIL, not an INVALID.",
+    "R3-040 ATTEMPT 2 FAIL-CLOSED 2026-11-25T12:59:04+07:00: codex exec PID 293714 ran 12:53:33-12:56:02 +07 (2m29s, 56184 tokens). Env fix worked (Zen verified on ws2, pill acquired visible 12:54:14). Failure 12:54:20-12:54:38: computer-use session-driver exited error 1, \"another automation session or plugin activation is active\", \"session recovery ownership changed; current owner must restore\". Cause: FCC was driving Zen on R3-001 at the same time (FCC session 12:46-12:57, ended 12:57). Single-driver rule violated by concurrent launch. Pill released 12:54:38 (holders {} visible false) but the grim ~7s after release still showed the pill (known stale-frame defect); runner stopped per fail-closed. No browser navigation, no doc, no comparison table. Partial evidence (ket-qua.txt, session.log, 2 pill pngs, manifest.sha256) preserved in attempt2-failclosed/, NOT graded. DECISION: serialize driving, one driver at a time. Session verified free after 12:57 (pill visible false, no holders, no lock holder, FCC idle). R3-040 attempt 3 launching now with the session free; R3-002 (FCC next) HELD until Codex finishes R3-040. codex_task_start/runner_pid updated again at attempt-3 launch. Not a timeout, not a FAIL, not an INVALID."
   ],
   "pass_count": 0,
   "plan_adaptations": [
@@ -131,6 +132,6 @@
   "task_start": "2026-11-25T12:46:09+07:00",
   "runner_pid": 22399,
   "codex_task": "R3-040",
-  "codex_task_start": "2026-11-25T12:48:43+07:00",
-  "codex_runner_pid": 288227
+  "codex_task_start": "2026-11-25T12:53:18+07:00",
+  "codex_runner_pid": 293714
 }
