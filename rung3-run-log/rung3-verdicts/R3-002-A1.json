@@ -1,0 +1,22 @@
+{
+  "scorer": "A1",
+  "task": "R3-002",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/20261125-194228-segment1-valid.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/20261125-194241-segment2-valid.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/20261125-194659-segment3-valid.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3-rerun/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-002 section only, lines 119-127, todolist-push c84097ad)",
+    "docs/rung3-answer-keys.json (R3-002 entry only, todolist-push c84097ad)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-002 task text only, todolist-push c84097ad)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T19:52:01+07:00",
+  "reason": "Re-run execution: all 3 error positions (line 1 col 27, col 50, col 26) are correctly recorded in ket-qua.txt and verified by character counting, and all 3 screenshots show real Valid JSON results with the correctly fixed JSON. The supplied Tier A checker output says FAIL (0 positions found), but that is a parsing issue: ket-qua.txt uses 'line 1, col N' (with comma) and 'Error column: N', while the checker appears to expect 'line 1 col N' without a comma. Scored on this execution's evidence only."
+}
