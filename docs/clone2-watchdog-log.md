@@ -2074,3 +2074,15 @@ Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit moi tren main v
 - PR va issue: gh pr list trong (0 dong, exit 0), gh issue list trong (0 dong, exit 0). PR 1 da merge, khong con PR mo.
 - Ghi chu: S2-LAND R1/R2/R3 van chua land nhung PAUSE order 16:32 dat campaign on hold nen khong flag stall. Clone2 het limit toi 02:38 25/11, khong nhan viec moi. Mochi bao cao /tmp 100% full trong B2-6 (4777441), can don truoc cac lane sau, mochi khong xoa scratch cua lane khac, ghi nhan o day, khong phai viec cua clone2.
 - Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit, PR, issue), khong thay danh sach subagent trong may cua Muse tong. Ket luan ve mochi va mei dua vao dau vet GitHub va tra loi cua lane va dieu phoi, khong phai quan sat truc tiep. Bai hoc tu flag sai 00:49: im lang tren GitHub tren 30 phut khong du de flag stall khi lane dang cho review hoac quyet dinh cua dieu phoi.
+
+## 21:58 ngay 25/11 - WATCHDOG
+- Dieu phoi song: todolist-push tip e73578c luc 21:57:59, R3-007 sealed (manifest 4be23546, gate PASS, Tier A checker PASS), chi 1 phut truoc vong nay; truoc do 07121da luc 21:56:03, R3-006 graded PASS (Pair A agree, 9 PASS / 0 FAIL). Khong co COORDINATOR UNRESPONSIVE: dieu phoi dang lam viec tich cuc tren R3-L3, va clone2 khong co viec trong run hien tai nen dieu phoi khong nhan clone2 la binh thuong.
+- Mochi song: commit moi nhat b99e894 luc 21:48 (branch mochi/verdict-R3-006-L3), R3-006-L3 scorer 1 verdict files da giao cho dieu phoi audit, im 10 phut, duoi nguong 30 phut.
+- Mei: commit moi nhat 1264e62 luc 20:20:26 (branch mei/coord-2119-r3004-pass, PR #617), R3-004 cham PASS, im 98 phut, vuot nguong 30 phut. Viec R3-004 cua mei da xong va dieu phoi da cham PASS luc 21:06, khong co bang chung viec chua xong nao cua mei, nen KHONG flag STALL, chi ghi nhan im lang vuot nguong de vong sau theo doi.
+- Clone1 song: watchdog 21:47 (ec42de1, branch clone1/watchdog-2147-nov25, PR #621), im 11 phut, duoi nguong 30 phut. Khong co viec chua xong, cho lenh chay.
+- Lane stall: KHONG CO STALL. Khong lane nao co viec chua xong va im hon 30 phut.
+- Subagent cua clone2: khong co subagent dang chay. Tat ca subagent clone2 deu done, khong co interrupted, failed, hay chay qua 30 phut khong hoat dong. Khong can prod hay resume.
+- Chi thi moi: khong co cho clone2. coord/clone2.md tren main khong doi, dung o nhan thong bao het limit 12:20 ngay 22/11 (db0ce6b). coord/clone2.md khong co tren todolist-push. Commit moi tren todolist-push ke tu vong 21:49: e73578c (21:57:59) va 07121da (21:56:03); commit moi tren main ke tu vong 21:49: 8f4a8d5 (merge PR #607 cua clone1, 21:51:25).
+- Thong bao chu repo: khong co thong bao moi. Khong co issue moi (gh issue list trong). PR #621, #620, #617 deu 0 comment.
+- Ghi chu: S2-LAND R1/R2/R3 van chua land nhung PAUSE order 16:32 dat campaign on hold nen khong flag stall.
+- Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit, PR, issue), khong thay danh sach subagent trong may cua Muse tong. Ket luan ve mochi, mei va clone1 dua vao dau vet GitHub, khong phai quan sat truc tiep.
