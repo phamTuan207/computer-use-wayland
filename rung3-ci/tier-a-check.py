@@ -93,8 +93,24 @@ def convert(value, from_unit, to_unit):
 
 
 def check_json_errors(text, key, reasons):
-    found = [(int(l), int(c)) for l, c in
-             re.findall(r"dong loi\s+(\d+)\s*,\s*cot loi\s+(\d+)", text)]
+    # Bilingual (owner order 2026-11-25): accept the Vietnamese form
+    # "dong loi N, cot loi M" AND English forms ("line N, col M",
+    # "line N column M", "Error line N ... Error column M").
+    # Union of all patterns: acceptance only broadens, a text that
+    # matched before still matches. Already-graded results are
+    # untouched; this applies to remaining tasks only.
+    patterns = [
+        r"dong loi\s+(\d+)\s*,\s*cot loi\s+(\d+)",
+        r"line\s+(\d+)\s*,\s*col(?:umn)?\s+(\d+)",
+        r"line\s+(\d+)\s+col(?:umn)?\s+(\d+)",
+        r"error\s+line\s*:?\s*(\d+)[^\d]{0,30}?error\s+col(?:umn)?\s*:?\s*(\d+)",
+    ]
+    found = []
+    for pat in patterns:
+        for l, c in re.findall(pat, text, re.IGNORECASE):
+            pair = (int(l), int(c))
+            if pair not in found:
+                found.append(pair)
     for want in key["rows"]:
         if (want["line"], want["col"]) not in found:
             reasons.append("missing JSON error at line %s col %s"
@@ -252,10 +268,16 @@ def check_report_consistency(ev_dir, key, reasons):
             return
         texts[name] = read_text(path)
     bao = texts["d42-bao-cao.txt"]
-    m = re.search(r"Dia con trong:\s*(\S+)", bao)
+    # Bilingual labels (owner order 2026-11-25): Vietnamese
+    # "Dia con trong:" / "RAM con trong:" and English
+    # "Disk free:" / "Free disk:" / "RAM free:" / "Free RAM:".
+    # Acceptance only broadens.
+    m = re.search(r"(?:Dia con trong|Disk free|Free disk)\s*:\s*(\S+)",
+                  bao, re.IGNORECASE)
     if not m or m.group(1) not in texts["d42-lenh-dia.txt"]:
         reasons.append("disk free value in bao-cao not found in lenh-dia")
-    m = re.search(r"RAM con trong:\s*(\S+)", bao)
+    m = re.search(r"(?:RAM con trong|RAM free|Free RAM)\s*:\s*(\S+)",
+                  bao, re.IGNORECASE)
     if not m or m.group(1) not in texts["d42-lenh-ram.txt"]:
         reasons.append("RAM free value in bao-cao not found in lenh-ram")
     proc_lines = [l for l in bao.splitlines()

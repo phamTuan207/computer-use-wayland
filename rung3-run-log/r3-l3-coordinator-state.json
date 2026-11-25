@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T21:06:23+07:00",
+  "last_updated": "2026-11-25T21:21:13+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -431,6 +431,26 @@
       "ts": "2026-11-25T21:06:23+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-004 GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 20:56:58 (branch mochi/verdict-R3-004-L3, copied to ~/workspace/rung3-verdicts/R3-004-A1.json), A2 43778a91 PASS 20:56:10 (R3-004-A2.json). Key hashes verified by both (json 5059f6c4, md 21f8b61a); allowlist clean; manifest 47f9d4f5. Original ledger row recorded (R3-L3-grades.jsonl now 8 rows). Run: 10 graded; under rule A banked count 7 PASS / 0 FAIL. Bar math: need 46/48 remaining (2 slack). R3-005 drive in progress (runner bfca7236, start_time 21:00:44, deadline 21:30:44)."
+    },
+    {
+      "ts": "2026-11-25T21:18:27+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER UPDATE 21:17 (via parent): continue the run; speed up a bit if possible ONLY if quality is assured; the team decides. Speed-lever review convened: council ed4bf113 + redteam 78aad3d8 (fresh subagents) assessing 8 candidate levers (brief-embedded skill instructions, pre-staging, Tier A format in brief, bookkeeping batching, backpressure 2->3, aux-file cap, cap 30->25, pre-spawn next runner) against the untouchables (evidence standards, scoring independence, manifest gates, one-driver rule, 30-min cap). Decision to be recorded here after both report; run continues meanwhile (R3-005 drive done 21:16:13, awaiting runner report)."
+    },
+    {
+      "ts": "2026-11-25T21:19:56+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER ORDER 21:19 (via parent): Zen has too many tabs; clean the ones not needed. At the NEXT task boundary (not mid-drive): list Zen tabs, close ONLY stale completed-task tabs. Never the active task tab, never owner-opened tabs, never ws3 agent windows. If unsure whether a tab is a stale task tab, leave it. Record closures in state notes. Coordinator plan: execute after the R3-005 runner (bfca7236) completes and before releasing R3-006. Close only tabs positively attributable to completed tasks (todomvc/jsonlint/articles/qrgen/zxing/go.dev pages from R3-001..R3-005, and Google Doc tabs whose URL exactly matches a completed task's ket-qua.txt doc URL)."
+    },
+    {
+      "ts": "2026-11-25T21:21:13+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER INSTRUCTION 21:20 #1 (Tier A checker English support) APPLIED: rung3-ci/tier-a-check.py broadened to accept BOTH Vietnamese and English formats. What changed: check_json_errors now unions 4 patterns (Vietnamese 'dong loi N, cot loi M'; English 'line N, col M', 'line N column M', 'Error line N ... Error column M', case-insensitive); check_report_consistency (R3-076, remaining) now accepts English labels 'Disk free:'/'Free disk:' and 'RAM free:'/'Free RAM:' alongside the Vietnamese labels. Why: the R3-002 re-run wrote English and the checker FAILed on parse (tiebreaker passed it on values); owner: AI is more native with English. Safety: union-style broadening only; a text that matched before still matches; it cannot turn a PASS into a FAIL (found-set only grows; membership/count checks only get easier). Verified: R3-002 re-run snapshot now checker-PASS (was parse-FAIL); R3-002 original snapshot still checker-FAIL (wrong values). Scope: REMAINING tasks only; already-graded results untouched (ledgers unchanged). Other remaining Tier A types (unit-conversion, regex-counts, color-rgb, sql-order-total, image-sizes, calculations) are language-neutral and were not changed. DP-02 keyword-counts not in the 55; left untouched. Scorers still read evidence themselves; the checker stays an aid, not the judge. Coordinator still runs the checker once per Tier A task and hands the output identically to both scorers."
+    },
+    {
+      "ts": "2026-11-25T21:21:13+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER INSTRUCTION 21:20 #2 (language rule, standing): agents communicating and working with each other use ENGLISH (briefs, reports, repo text, inter-agent messages). Vietnamese is only for messages to the owner. Applied from now on: all coordinator briefs (already English), daemon messages to Mochi (switching from Vietnamese to English), state/heartbeat/per-task records (already English), commit messages (already English)."
     }
   ],
   "pass_count": 3,
