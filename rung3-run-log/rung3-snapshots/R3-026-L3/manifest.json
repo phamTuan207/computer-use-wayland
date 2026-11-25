@@ -1,0 +1,32 @@
+{
+ "files": [
+  {
+   "mtime": 1795642692,
+   "name": "blocked-cloudflare-20261126-043521.png",
+   "sha256": "3b91000f708def507fbbaa696ce1bbca9f052b0c1efbff3ed8537a7e43aed619",
+   "size": 530329
+  },
+  {
+   "mtime": 1795642671,
+   "name": "end_time.txt",
+   "sha256": "fd0ecf52db2c8fa03688ed321a46e57bd732b30e4295dcf02c7b97e83999b042",
+   "size": 26
+  },
+  {
+   "mtime": 1795642680,
+   "name": "ket-qua.txt",
+   "sha256": "027d1ed66301d615588be9ab4740920775b8fe153551aa940cd8004eaf61f3e9",
+   "size": 2390
+  },
+  {
+   "mtime": 1795642661,
+   "name": "start_time.txt",
+   "sha256": "624d9ee1d3a0ce6a98ff2109a9bf88967532d8590c2fc7aee668e72d42b44016",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "59c32ec960f7cee94b55901f07d6360bf448a8dc8038ea3ef2095ac2da472263",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-026-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-026",
+ "task": "R3-026"
+}
