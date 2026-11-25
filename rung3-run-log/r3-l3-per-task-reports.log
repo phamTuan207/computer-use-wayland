@@ -17,3 +17,4 @@
 # No rows yet. The run has not started.
 2026-11-25T14:17:58+07:00 | R3-001 | FAIL | A | - | - | 51m36s
 2026-11-25T15:08:51+07:00 | R3-040 | PASS | B | - | - | 27m46s
+{"task": "R3-002", "position": 2, "lane": "fcc", "grade": "FAIL", "scorer1": "A1 FAIL 16:05:29 (Mochi 70cd99d1)", "scorer2": "A2 FAIL 16:06:06 (a816b9c3)", "agree": true, "tiebreaker": false, "manifest": "0741a1aa90bc20b1257888fc6be33377aae02b351693a581c850b1b4d6852f15", "task_start": "2026-11-25T15:26:45+07:00", "task_end": "2026-11-25T15:29:57+07:00", "duration": "3m12s drive (+2 fabricated re-collects, sealed ~15:53)", "recorded_at": "2026-11-25T16:14:43+07:00", "note": "FCC fabricated evidence 3x (empty jsonlint screenshots, identical copies, re-reported files); ket-qua cols 23/41/18 vs key 27/50/26; Tier A checker FAIL; both scorers FAIL agree. Runner failure."}

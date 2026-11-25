@@ -137,3 +137,21 @@ Worktree tip flag: git log tip is 0009ca87 ("R3-L3: publish R3-001-L3 snapshot f
 ## Conclusion
 
 G-38 PASS. The laptop is reachable via SSH (ssh-laptop.sh only, short commands), the FCC tmux session and pane PID 22399 are alive and at an idle prompt, codex exec 0.172.0 is present on the laptop, the state file parses with coordinator_active 9c8ad1a4-2916-4205-adf0-b67aebad66a8 epoch 4, and the scorer/tiebreaker session IDs are recorded in the state file with the R3-001 verdict files and snapshot present on disk. The takeover procedure is proven for this deputy session. One flag: the state file top-level ledger.rows field is stale (1 vs 2 rows on disk); one note: worktree tip 0009ca87. No failure to report.
+
+---
+
+## Deputy dry run, epoch 5, 2026-11-25 15:33:20-15:34:24 +07
+
+- Deputy session ID: 75531dbf-78ba-41ae-8cb8-59f625ccff4d
+- Coordinator: a10c8de0-c1b5-4a2d-81b1-1e1d8454cce3, epoch 5, state file last_updated 2026-11-25T15:32:17+07:00 (read before the dry run; declaration timestamped 15:33:53 +07, after it).
+- Live workers listed from the state file: FCC runner (tmux r3-fcc-runner-L3, pane PID 22399, fcc-claude 2.1.332, positions 1-28); Codex runner (codex exec 0.172.0, non-interactive, positions 29-55, no interactive session); Pair A scorer 1 Mochi (70cd99d1); Pair A scorer 2 run session d3757673 (calibration session 8c0f267e); Pair B scorer 1 run session a5b74f37; Pair B scorer 2 run session ef2ebec6; tiebreakers TB-A 97290681 and TB-B2 df4defcc (standby, spawned on demand).
+
+Results (PASS/FAIL per item):
+
+- (a) Laptop SSH via ~/workspace/ssh-laptop.sh: PASS, 15:33:20 +07. Short command returned hostname omarchy, laptop clock 15:33:20 +07. SSH session short, well under the ~30s death window.
+- (b) FCC tmux session r3-fcc-runner-L3 alive: PASS, 15:33:xx +07. `tmux ls` shows r3-fcc-runner-L3 (1 window, created Wed Nov 25 09:00:18 2026). `tmux capture-pane` shows the pane at a prompt (bypass permissions on, 2 agents). NOTE FOR THE COORDINATOR (observation only, no order issued): the pane content reports R3-002 drive done, start 15:26:44, end 15:29:57, pill acquire/release 15:26:45 / 15:29:57 with no pill gap, evidence files listed (ket-qua.txt, final.png, start_time.txt, end_time.txt, pill-verify-gone.png), and FCC "dang cho nhiem vu tiep theo" (waiting for the next task). The state file still records R3-002 as RUNNING (started 15:26:45, deadline ~15:56:45). The coordinator should verify the on-disk evidence and update the state file; I take no action on this while on standby.
+- (c) Codex exec version 0.172.0 reachable: PASS, 15:33:20 +07. `codex --version` via the same short SSH command returned `codex-cli 0.172.0`. No task was launched.
+- (d) State file parses: PASS, 15:33:12 +07. JSON parse OK: coordinator_active a10c8de0-c1b5-4a2d-81b1-1e1d8454cce3, epoch 5, last_updated 2026-11-25T15:32:17+07:00, status PHASE 1 - EXECUTION, RUN STARTED, current task R3-002, pass 1, fail 1, invalid 0.
+- (e) Scorer/tiebreaker paths exist: PASS, 15:33:12 +07. Snapshot dirs ~/workspace/rung3-snapshots/ present (61 entries, incl. R3-001-L3 and R3-040-L3). Verdict dir ~/workspace/rung3-verdicts/ present with R3-001-A1.json, R3-001-A2.json, R3-040-B1.json, R3-040-B2.json. Mochi's branch channel remotes/origin/mochi/verdict-R3-001-L3 exists (worktree HEAD d781b171, ledger push verified by the coordinator via ls-remote).
+
+Overall: PASS, all 5 items. G-24 and G-38 CLOSED for epoch 5. Deputy on STANDBY under section 7 fencing. Dry run recorded 2026-11-25 15:34:24 +07.
