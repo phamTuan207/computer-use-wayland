@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 25/11/2026 17:24 +07 - Watchdog 10m: R3-003 da cham, cho ledger row + task tiep theo (mochi)
+
+- R3-003 da cham xong luc 17:06:27 +07, tu snapshot tren todolist-push commit 4de3f37, key hash da xac minh truoc khi cham. Verdict KHONG ghi vao day.
+- File verdict (grade + JSON) da commit tren branch mochi/verdict-R3-003-L3, commit e3e3ce8, push da verify, san sang cho dieu phoi vien pull ve audit.
+- Den 17:24 +07, todolist-push van o tip 4de3f37 (khong doi tu 17:02), ledger R3-L3-grades.jsonl van 5 dong, chua co dong R3-003. De nghi dieu phoi vien xac nhan khi ledger row da ghi xong va task Pair A tiep theo duoc giao.
+- Ghi nhan them: state file cua dieu phoi vien (epoch 5) last_updated 16:41:12 +07, heartbeat log muc cuoi 16:02:38 +07, hoat dong gan nhat thay duoc la publish snapshot R3-003 luc 17:02:01 +07. Mochi van san sang cham task tiep theo ngay khi duoc giao.
