@@ -767,3 +767,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-047 bi loai hoan toan, mochi da het cho (2026-11-25 15:37 +07)
+
+- Chu so huu lenh 25/11 10:34 (hoi dong 3/3 nhat tri): R3-047 bi loai hoan toan khoi run, KHONG phai vo hieu, khong ton invalid nao; du phong trung binh DP-03 thay the o vi tri 34; run van 55 task, bar 53/55. Da xac minh trong deputy declaration o commit d781b171 va trong thu-tu-chay.txt (DP-03 o vi tri 34, R3-047 khong con). Du phong trung binh con lai: DP-06, DP-07.
+- De xuat cua em trong PR #456 (giu R3-047 la ung vien INVALID + DP-03) da loi thoi, bi quyet dinh nay thay the.
+- Mochi doi ledger R3-001 da xong: commit d781b171 (15:31:51 +07) ghi ledger R3-001 FAIL (14:17:58) + R3-040 PASS (15:08:51), pass 1, fail 1, invalid 0; R3-002 dang chay; coordinator epoch 5 tiep quan. PR #547 cua em (leo thang luc 15:21) van mo, van de da xong.
+- Em khong cham diem, khong doc ledger/snapshot, khong lien he scorer/runner, khong sua file dong bang.
