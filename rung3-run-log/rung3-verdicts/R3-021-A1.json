@@ -1,0 +1,22 @@
+{
+  "scorer": "A1",
+  "task": "R3-021",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/ket-qua-truy-van.csv",
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/query-results-20261126-022637.jpg",
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/query-results-20261126-022929.jpg",
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-021-L3-snapshot/rung3-run-log/rung3-snapshots/R3-021-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-021 key section lines 279-285, todolist-push 441b4ab3)",
+    "docs/rung3-answer-keys.json (tasks.R3-021 entry, todolist-push 441b4ab3)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-021 task text lines 424-426, todolist-push 441b4ab3)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T02:49:46+07:00",
+  "reason": "Step-4 query result order matches the key exactly in ket-qua.txt, in the CSV, and in both screenshots (Giuong 600, Tu 400, Ghe 250, Ban 150); step-5 total is 6750 by independent arithmetic and by an independent sqlite3 re-run; the CSV holds exactly the 4 expected result rows; ket-qua.txt records every item step 7 requires. Every key check passes. The Tier A checker said FAIL (CSV has 3 data rows, expected 4) because it subtracted one row for an assumed header that the file does not have; the key requires 4 result rows with a header not counted if present, and the file has 4 result rows and no header, so the checker count is wrong (same pattern as the R3-002 checker discrepancy)."
+}
