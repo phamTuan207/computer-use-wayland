@@ -2086,3 +2086,16 @@ Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit moi tren main v
 - PR va issue: PR moi nhat #594 (clone2 watchdog 19:08 status). Cac PR watchdog cua clone2 van OPEN chua merge, nen docs/clone2-watchdog-log.md tren main van dung o muc 09:48 ngay 23/11.
 - Ghi chu: R3-L3 da vuot qua HOLD o boundary nho quyet dinh rule A cua chu, epoch 8 dang chay Pair A scoring cho R3-001 re-run. S2-LAND R1/R2/R3 van chua land nhung PAUSE order 16:32 dat campaign on hold nen khong flag stall.
 - Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit, PR, issue), khong thay danh sach subagent trong may cua Muse tong. Ket luan ve mochi va mei dua vao dau vet GitHub va tra loi cua lane va dieu phoi, khong phai quan sat truc tiep.
+
+## 19:28 ngay 25/11 - WATCHDOG
+- Dieu phoi song: todolist-push commit moi 02adc6c luc 19:25, R3-001 re-run graded PASS (A1+A2 agree, audited), re-run ledger created, rule A supersedes original FAIL at closure. Chi 3 phut truoc vong nay. Khong co COORDINATOR UNRESPONSIVE: dieu phoi dang lam viec tich cuc tren R3-L3, va clone2 khong co viec trong run hien tai nen dieu phoi khong nhan clone2 la binh thuong.
+- Main tip van f91a278 luc 18:18 (clone1 watchdog 18:17). Khong co commit moi tren main ke tu vong 19:18.
+- Mei song tro lai: branch moi mei/coord-1918-replan-a, commit 453ef13 luc 19:19, PR #596 mo luc 19:20 (tac gia chu so huu): rule A da phe duyet, run tiep tuc, PR #579 da duoc thay the. Su im lang 99 phut cua mei ghi o vong 19:18 da dut. PR #579 van OPEN, chua dong.
+- Mochi song: commit moi nhat 0d0501a luc 19:15, R3-001-L3 re-run scorer 1 verdict files, chi 13 phut truoc vong nay. Mochi dang lam Pair A scoring cho R3-001 re-run.
+- Clone1 song: branch clone1/watchdog-1827-nov25 cap nhat b20de1c luc 19:17, chi 11 phut truoc vong nay, trong nhip watchdog 10 phut. Clone1 khong co viec chua xong, cho lenh chay.
+- Lane stall: KHONG CO STALL. Khong lane nao co viec chua xong va im hon 30 phut.
+- Subagent cua clone2: khong co subagent dang chay. Tat ca subagent clone2 deu done, khong co interrupted, failed, hay chay qua 30 phut khong hoat dong. Khong can prod hay resume.
+- Chi thi moi: khong co cho clone2. coord/clone2.md tren main khong doi, dung o nhan thong bao het limit 12:20 ngay 22/11 (db0ce6b). coord/clone2.md khong co tren todolist-push. Khong co comment moi tren PR #596, #595, #594, #589, #579 (0 comment). Khong co issue moi (gh issue list trong). PR #596 cua chu so huu chi ghi lai quyet dinh rule A da co trong commit 3511b06 (da ghi o vong 19:18), danh cho mei, khong phai chi thi moi cho clone2.
+- PR va issue: PR moi nhat #596 (mei coord rule A). Cac PR watchdog cua clone2 van OPEN chua merge, nen docs/clone2-watchdog-log.md tren main van dung o muc 09:48 ngay 23/11.
+- Ghi chu: R3-001 re-run da graded PASS, rule A supersede FAIL goc o luc dong. S2-LAND R1/R2/R3 van chua land nhung PAUSE order 16:32 dat campaign on hold nen khong flag stall.
+- Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit, PR, issue), khong thay danh sach subagent trong may cua Muse tong. Ket luan ve mochi va mei dua vao dau vet GitHub va tra loi cua lane va dieu phoi, khong phai quan sat truc tiep.
