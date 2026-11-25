@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-002 re-run: drive done, sealed + gate PASS, Tier A checker run, Pair A scoring next",
+  "current_task": "R3-002 re-run GRADED PASS (TB decided). R3-003 re-run driving (runner 12cd8ce7).",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T19:49:55+07:00",
+  "last_updated": "2026-11-25T20:11:43+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -356,6 +356,26 @@
       "ts": "2026-11-25T19:49:55+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-002 RE-RUN DRIVE COMPLETE (runner 9ee0083c): start_time 2026-11-25T19:36:44+07:00, end_time 2026-11-25T19:47:00+07:00 (~10m16s, inside timeout). Evidence: ket-qua.txt (893 B, records seg1 line 1 col 27, seg2 line 1 col 50, seg3 line 1 col 26, each with fixed Valid JSON), 3 distinct timestamped screenshots (266819/270299/282358 B, distinct sha256 d2d403fa/e3102a7e/9c3b0f35). Session clean after (no cursor.lock, pill released). Pulled 6 files sha256-verified. Sealed R3-002-L3-rerun manifest 4d70c26b674ac9033bf414201fa101a7a9d5973166a07988da1a67df36a046da, gate PASS. TIER A CHECKER (coordinator run once): verdict FAIL, reasons: missing JSON error at line 1 col 27 / col 50 / col 26, only 0 error positions found need 3. Checker parses ket-qua.txt with regex 'dong loi N, cot loi M' (Vietnamese); runner wrote English 'Error line/Error column' + 'line 1, col N' with values matching the key (27/50/26). Checker output handed IDENTICALLY to both Pair A scorers; scorers judge (Tier A = script + human evidence check). Coordinator does not interpret. task_start cleared. Next: publish snapshot to repo for Mochi, assign Pair A scoring."
+    },
+    {
+      "ts": "2026-11-25T19:50:24+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-002 RE-RUN SCORING ASSIGNED (Pair A): snapshot published at todolist-push c84097ad (manifest 4d70c26b, ls-remote verified). Mochi scorer 1 assigned via daemon run 208 at 19:50:09 (verified=True; verdict returns via branch mochi/verdict-R3-002-L3-rerun). Fresh scorer 2 (A2) 90a87566 spawned with VM-local snapshot; verdict to ~/workspace/rung3-verdicts/rerun/R3-002-A2.json. Tier A checker output (FAIL, 0 positions parsed) handed VERBATIM and IDENTICALLY to both scorers. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30/60 min. Coordinator audits both before any re-run ledger row."
+    },
+    {
+      "ts": "2026-11-25T20:01:09+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-002 RE-RUN PAIR A DISAGREEMENT: A1 Mochi PASS 19:52:01 (values 27/50/26 correct in ket-qua.txt, 3 real Valid JSON screenshots; checker FAIL is a parsing issue, ket-qua uses 'line 1, col N' / 'Error column: N' phrasing). A2 90a87566 FAIL 19:50:58 (Tier A checker FAIL, 0 parseable positions, deterministic script criterion fails even though human-readable values + screenshots present). Both process-audited clean (parse, sessions, key hashes 5059f6c4/21f8b61a, allowlist). Runner 9ee0083c report received, corroborates evidence. Per blind handoff rule, fresh tiebreaker TB 972e8fff spawned: snapshot + key + identical checker output (shared grading input, not a scorer verdict), never sees A1/A2 verdicts or reasons. Verdict to ~/workspace/rung3-verdicts/rerun/R3-002-TB.json. Whichever side TB agrees with stands; all 3 verdicts stay in the re-run ledger row (scorer3). No ledger row until TB audited."
+    },
+    {
+      "ts": "2026-11-25T20:02:08+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-003 RE-RUN RELEASED (position 3, Claude-run): fresh Muse runner 12cd8ce7, task_start 2026-11-25T20:02:08+07:00, released while R3-002 awaits tiebreaker (decoupled scoring; drive order preserved; unscored queue 1, inside backpressure max 2). Pre-release: original FAIL snapshot R3-003-L3 manifest e0d416d0 verified intact; 7 FCC leftover files archived to ~/rung3-chung-cu/R3-003/fcc-original/; Zen PID 578117 RSS ~868 MB; session free. Brief: locked event Nobel Peace Prize 2026 + 3 locked articles (Al Jazeera / CNA / NPR via WCBE, URLs from frozen key synthesis step); runner reads articles itself (announcement date, location, main person per paper), builds 4-col table + 3-line conclusion in a NEW Google Doc, reopens to verify; evidence ket-qua.txt (doc URL + table + conclusion) + timestamped screenshot of reopened doc. Google sign-in via account chooser only."
+    },
+    {
+      "ts": "2026-11-25T20:11:43+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-002 RE-RUN GRADED PASS (tiebreaker): TB 972e8fff PASS 20:01:55 (blind; ket-qua values 27/50/26 match key, 3 screenshots legible Valid JSON; checker FAIL is a parse-format miss, human evidence check confirms). TB agrees with A1; PASS stands. All 3 verdicts in re-run ledger row (scorer3), validate + cross-check to follow. Under rule A supersedes original R3-002 FAIL at closure. Run state: 6 original graded (3 PASS / 3 FAIL) + 2 re-run PASS. R3-003 re-run driving (runner 12cd8ce7, start_time 20:05:17)."
     }
   ],
   "pass_count": 3,
@@ -404,12 +424,12 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": null,
+  "task_start": "2026-11-25T20:02:08+07:00",
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
   "codex_runner_pid": null,
-  "graded_count": 7,
+  "graded_count": 8,
   "graded": 6,
   "pass": 3,
   "fail": 3,
@@ -504,5 +524,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "9ee0083c-be5b-49c9-ba7b-83fadb122740"
+  "claude_runner_session": "12cd8ce7-8de7-439d-9446-7e8ee976e922"
 }
