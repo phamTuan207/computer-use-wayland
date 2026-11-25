@@ -767,3 +767,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: R3-021 cham PASS (tiebreaker), R3-022 vo hieu, luc dong dau 21 rot 0 (2026-11-26 03:17 +07)
+
+- Commit 906d0921: R3-021 graded PASS via tiebreaker (rule-A 21 PASS / 0 FAIL + 1 INVALID replaced). Luu y: Tier A checker FAIL o luc seal (CSV header count), nguoi cham dau tren tiebreaker.
+- Commit 2375c259 (03:17:56): R3-022 graded INVALID (Google sorry block). Backup DP-02 (hard). Rule-A 21 PASS / 0 FAIL + 2 INVALID. Invalids 2/5.
+- Tinh luc dong: dau 21, rot 0, vo hieu 2 (R3-011 da thay bang DP-06 PASS; R3-022 thay bang DP-02, chua cham); con 34 task chua xac dinh (tren 56), toi da 56, bar 54 dat duoc voi 2 task du phong (bo goc: toi da 55, bar 53, cung 2 du phong). R3-024 sealed (b46e8c03, gate PASS), dang cham; DP-02 da release.
+- Em xac minh tu commit message, khong doc ledger/snapshot.
