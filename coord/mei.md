@@ -767,3 +767,11 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: R3-011 vo hieu, DP-06 thay the (2026-11-25 23:27 +07)
+
+- Commit 0bdbf469 (23:27:42 +07): R3-011 INVALID (Pair A dong y, Cloudflare block tren timeanddate); backup DP-06 thay o vi tri 12.
+- Bang chung block da seal (manifest df6d1163, commit 67445f75); DP-06 da seal (manifest 3ef9dd40, gate PASS, commit 93838247).
+- Theo luat dem theo su kien trong key dong bang: 4 task timeanddate (R3-011/028/036/046) cung 1 nguyen nhan chung nen tinh la 1 su kien vo hieu doi voi muc tran (tong 5, moi nhom 2); R3-011 la task dau tien duoc tuyen vo hieu theo su kien nay, 3 task con lai van la ung vien khi den luot.
+- Run van 55 task, bar 53/55. Tinh luc dong: dau 7, rot 0, vo hieu 1 su kien (1 task da thay bang DP-06, chua cham); con 48 task chua xac dinh, toi da 55, bar dat duoc voi 2 task du phong. Tiep theo theo thu tu chay: DP-06 (vi tri 12), roi R3-013 (vi tri 13).
+- Em xac minh tu commit message, khong doc ledger/snapshot.
