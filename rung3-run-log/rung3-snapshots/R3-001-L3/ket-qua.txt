@@ -1,0 +1,9 @@
+Danh sach viec:
+1. Tap the duc 45 phut - Active
+2. Viet bao cao tuan - Completed
+3. Goi dien cho me - Active
+4. Don dep phong - Active
+So luong:
+Active: 3
+Completed: 1
+All: 4
