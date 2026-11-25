@@ -1,0 +1,20 @@
+{
+  "scorer": "A1",
+  "task": "R3-003",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3-rerun/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3-rerun/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3-rerun/20261125-202145-doc-reopened.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3-rerun/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-rerun-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3-rerun/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-003 section only, lines 130-145, todolist-push 6b5f4e93)",
+    "docs/rung3-answer-keys.json (R3-003 entry only, todolist-push 6b5f4e93)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-003 task text only, todolist-push 6b5f4e93)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T20:28:47+07:00",
+  "reason": "Re-run execution: all 9 table cells match the key (date 9 October 2026, place Oslo, main figure Navi Pillay), the 3-line conclusion clearly states no contradiction, and the reopened Google Doc screenshot shows the table and conclusion visible in the document. Scored on this execution's evidence only."
+}
