@@ -1,0 +1,23 @@
+R3-025 ket-qua
+Task: Google search in Zen, 2 queries, record first 3 results each (title + URL), open 1 PDF result from query 2 in Brave PDF viewer and record page count, screenshots of both search result pages.
+
+Query 1: site:en.wikipedia.org photosynthesis
+Results page URL: https://www.google.com/search?q=site%3Aen.wikipedia.org+photosynthesis (Google search, Zen, 2026-11-26)
+First 3 results of query 1:
+1. Photosynthesis - https://en.wikipedia.org/wiki/Photosynthesis
+2. Evolution of photosynthesis - https://en.wikipedia.org/wiki/Evolution_of_photosynthesis
+3. File:C4 photosynthesis.svg - Wikimedia Commons - https://en.wikipedia.org/wiki/File:C4_photosynthesis.svg
+
+Screenshot query 1: search1-20261126-044358.png
+
+Query 2: filetype:pdf photosynthesis
+Results page URL: https://www.google.com/search?q=filetype%3Apdf+photosynthesis (Google search, Zen, 2026-11-26)
+First 3 results of query 2:
+1. What Is Photosynthesis? A Broader and Inclusive View - https://www.life.illinois.edu/govindjee/recent_papers_files/2023_What_is_Photosynthesis(2023).pdf
+2. PHOTOSYNTHESIS - https://digital.nios.ac.in/content/314en/Lesson-11.pdf
+3. Photosynthesis - https://educacao.jundiai.sp.gov.br/wp-content/uploads/2026/05/Photosynthesis.pdf
+
+Screenshot query 2: search2-20261126-044557.png
+
+PDF opened in Brave: result 2 of query 2, PHOTOSYNTHESIS - https://digital.nios.ac.in/content/314en/Lesson-11.pdf (opened in a new Brave tab, built-in PDF viewer; viewer title "Lesson-11.pmd", file opened OK)
+Page count: 20 (read from Brave PDF viewer: pagelength=20, pages 1-20; matches Google snippet "20 trang")

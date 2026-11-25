@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "PAUSED (re-plan pending): in-flight close-out - R3-025 fresh completion drive (runner 52e38de8); R3-026 Pair A scoring in progress",
+  "current_task": "PAUSED (re-plan pending): in-flight close-out - R3-025 fresh completion sealed, Pair A scoring next; then HOLD",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-26T04:48:26+07:00",
+  "last_updated": "2026-11-26T04:50:09+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1046,6 +1046,11 @@
       "ts": "2026-11-26T04:48:26+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-026 GRADED INVALID (both audited): A1 Mochi INVALID 04:40:50 (branch mochi/verdict-R3-026-L3, copied to ~/workspace/rung3-verdicts/R3-026-A1.json), A2 582ecc45 INVALID 04:39:33 (blind confirm). Coordinator co-signs per list section 1. Original ledger row recorded (R3-L3-grades.jsonl now 28 rows; invalid.is_invalid true, backup_task null). Run: 30 graded; rule-A count 23 PASS / 0 FAIL + 4 INVALID (R3-011 replaced by DP-06 PASS, R3-022 by DP-02 PASS, R3-024 by DP-07 PASS, R3-026 NO replacement). Invalid count 4/5 total; per difficulty medium 3 (OVER the per-group cap of 2: R3-011, R3-024, R3-026), hard 1/2 (R3-022). No medium backup remains, so R3-026 drops from the denominator per section 1: valid count 54, bar recomputes to 52/54 (96% rounded up); with task 56: valid 55, bar 53/55. The over-cap consequence is for the owner/re-plan to decide; the run is already paused. Causes distinct, no shared-cause merging. du-phong.txt entry recorded (repo mirror; laptop canonical to sync). R3-025 fresh completion drive in progress (started 04:41:03; both queries + screenshots done by 04:48, Brave PDF step pending)."
+    },
+    {
+      "ts": "2026-11-26T04:50:09+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-025 FRESH COMPLETION DRIVE DONE (runner 52e38de8): start 2026-11-26T04:41:03+07:00, end 2026-11-26T04:48:50+07:00 (7m47s). Both queries recorded with 3 results + URLs each, both search screenshots saved, PDF (query 2 result 2, digital.nios.ac.in Lesson-11.pdf) opened in Brave PDF viewer, page count 20 recorded. Session clean after. Prior attempt files archived on laptop (archive-prior-20261126-0440). Pulled 5 files sha256-verified. Sealed R3-025-L3-fresh manifest 40f661b31f974d869f569d3f682700642a55dc0309b61a078230dfbab1c701ad, gate PASS. Next: publish to repo for Mochi, Pair A scoring, ONE ledger row for R3-025 from this attempt (attempt-1 snapshot 13d5004b + FAIL verdicts preserved, no ledger row). After this scoring + ledger, in-flight work is complete and the run HOLDS at the pause point."
     }
   ],
   "pass_count": 3,
@@ -1094,7 +1099,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": "2026-11-26T04:39:00+07:00",
+  "task_start": null,
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,

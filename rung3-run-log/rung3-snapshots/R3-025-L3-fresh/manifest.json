@@ -1,0 +1,38 @@
+{
+ "files": [
+  {
+   "mtime": 1795643363,
+   "name": "end_time.txt",
+   "sha256": "e619282734b33dab481ff119a03ad5681bbfe87a9261ff45c256ab5517e476b6",
+   "size": 26
+  },
+  {
+   "mtime": 1795643374,
+   "name": "ket-qua.txt",
+   "sha256": "b8a204476ed4d6959450b7ae7a8ac6e93e96d926f5ab56e5a924c09973e1c290",
+   "size": 1599
+  },
+  {
+   "mtime": 1795643388,
+   "name": "search1-20261126-044358.png",
+   "sha256": "bbc04aec5b8df92468a8f0a0fe06abb41bc6e49cc6bc34860b3b4cbdd783015f",
+   "size": 935850
+  },
+  {
+   "mtime": 1795643401,
+   "name": "search2-20261126-044557.png",
+   "sha256": "8113860c7e262b6102c03bb6432e134eab85aeae526ee72913327f278313da53",
+   "size": 817686
+  },
+  {
+   "mtime": 1795643352,
+   "name": "start_time.txt",
+   "sha256": "dd9f8216e21a3c18d7306a8e5e5fc8ea34be789eed76fd4920d1a25f13791344",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "40f661b31f974d869f569d3f682700642a55dc0309b61a078230dfbab1c701ad",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-025-L3-fresh",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-025-fresh",
+ "task": "R3-025-fresh"
+}
