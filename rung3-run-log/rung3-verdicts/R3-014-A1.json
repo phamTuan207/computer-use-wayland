@@ -1,0 +1,23 @@
+{
+  "scorer": "A1",
+  "task": "R3-014",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/20261126-002359-FF0000.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/20261126-002424-008080.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/20261126-002446-FFD700.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-014-L3-snapshot/rung3-run-log/rung3-snapshots/R3-014-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-014 key section lines 237-243, todolist-push 38cd6c95)",
+    "docs/rung3-answer-keys.json (R3-014 entry only, tasks.R3-014, todolist-push 38cd6c95)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-014 task text lines 387-389, todolist-push 38cd6c95)",
+    "Tier A checker output supplied by coordinator (aid only, verdict PASS, no reasons)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T00:35:47+07:00",
+  "reason": "All 3 lines in ket-qua.txt match the key on hex and RGB, and the HSL values match the page display in the screenshots and independent computation. The 3 screenshots each show a different hex code on the color picker (FF0000 red, 008080 teal, FFD700 gold), each with the correct RGB and HSL shown, so the runner did not reuse one color. The Tier A checker said PASS; independent verification agrees, with no discrepancy."
+}
