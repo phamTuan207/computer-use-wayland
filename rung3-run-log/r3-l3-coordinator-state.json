@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-024 (position 21, Claude-run): released; R3-022 Pair A scoring in progress (INVALID candidate, unscored queue 2 = at backpressure cap)",
+  "current_task": "R3-024 (position 21, Claude-run): fresh runner 32a3d8da spawned; R3-022 Pair A scoring in progress (INVALID candidate, unscored queue 2 = at backpressure cap)",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-26T03:07:33+07:00",
+  "last_updated": "2026-11-26T03:17:41+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -886,6 +886,21 @@
       "ts": "2026-11-26T03:07:33+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-024 RELEASED (position 21, Tier B, Class S, Claude-run): openverse.org image search, reuse-only filter, 3 locked keywords in order (mountain lake, city bicycle, old library); per image record name, author, specific license, original link; 3 detail-page screenshots; ket-qua.txt 3 rows. Record links only, do NOT download images. Evidence requirements: files [ket-qua.txt], screenshots_min 3 (per key). Drive overlaps R3-022 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule."
+    },
+    {
+      "ts": "2026-11-26T03:08:06+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-022 SCORING ASSIGNED (Pair A, INVALID candidate): snapshot published at todolist-push 906d0921 (manifest f457c5c4, ls-remote verified). Mochi scorer 1 assigned via daemon run 226 at 03:07:45 (verified=True; verdict returns via branch mochi/verdict-R3-022-L3). Fresh scorer 2 (A2) 71e835e7 spawned with VM-local snapshot, blind confirm; verdict to ~/workspace/rung3-verdicts/R3-022-A2.json. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30/60 min. If INVALID confirmed by both: ledger INVALID row + DP-07 backup per re-plan."
+    },
+    {
+      "ts": "2026-11-26T03:08:06+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-024 RUNNER SPAWNED: fresh Muse subagent 32a3d8da-27cb-4f80-900b-dff1cd2a4a3e (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns). Brief includes the 21:31 tab-close standing rule and the M2 end-of-drive self-check. Keywords in order: mountain lake, city bicycle, old library."
+    },
+    {
+      "ts": "2026-11-26T03:17:41+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-022 GRADED INVALID (both audited): A1 Mochi INVALID 03:10:09 (branch mochi/verdict-R3-022-L3, copied to ~/workspace/rung3-verdicts/R3-022-A1.json), A2 71e835e7 INVALID 03:08:18 (blind confirm). Coordinator co-signs per list section 1. Original ledger row recorded (R3-L3-grades.jsonl now 24 rows; invalid.is_invalid true, backup_task DP-02). Run: 26 graded; rule-A count 21 PASS / 0 FAIL + 2 INVALID (R3-011 replaced by DP-06 PASS; R3-022 to be replaced by DP-02). Invalid count 2/5 total; per difficulty medium 1/2, hard 1/2 (R3-022 is kho/hard per list line 431; backup = DP-02, first unused same difficulty per section 1/8; CORRECTION to my 03:07 note which said DP-07, that was the medium backup, wrong group). Causes distinct (Cloudflare timeanddate vs Google sorry), no shared-cause merging. Pair recorded in du-phong.txt (repo mirror; laptop canonical to sync). DP-02 (terminal grep task, fixture ~/rung3/dp02-code, 5 keywords from key section 8) inherits position 20, runs next after R3-024 drive. Bar math with DP-02 replacement: valid count stays 55, bar 53/55; need 32/34 remaining original-set (2 slack); with task 56 need 33/35."
     }
   ],
   "pass_count": 3,
@@ -1034,5 +1049,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "40e991f8-5462-4e1b-af1f-a49ac28e3bb4"
+  "claude_runner_session": "32a3d8da-27cb-4f80-900b-dff1cd2a4a3e"
 }
