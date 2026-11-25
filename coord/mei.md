@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-026 graded INVALID; R3-025 fresh drive in progress (watchdog 04:47 +07, verified 04:52)
+
+- R3-026 graded INVALID (commit d4b0edd3, 04:48:26 +07): Cloudflare block on coolors.co (position 22), A1+A2 INVALID. No medium backup remains, so it drops from the denominator. Valid 54, bar 52/54; with task 56: 53/55. Invalids 4/5 total; medium group 3/2 OVER cap (R3-011 event + R3-024 + R3-026), hard group 1/2. Rule-A 23 PASS / 0 FAIL + 4 INVALID; 32 slots undetermined, max 55, slack 2. The medium cap breach is a decision for the owner/council in the re-plan.
+- R3-025 (position 21): attempt-1 verdicts both A1+A2 FAIL (heartbeat 04:34:33, no ledger row); fresh completion drive started 04:39:00, in progress. NOT finally graded. If it grades FAIL, slack drops from 2 to 1.
+- Run stays PAUSED; in-flight close-out only (R3-025 drive + scoring), then HOLD for re-plan. Verified from the grade commit message + heartbeat log, not the ledger. Positions counted from the run order line.
