@@ -1,0 +1,7 @@
+alpha7: tong 12, file nhieu hit nhat dp02-01.txt (4 hit)
+bravo21: tong 9, file nhieu hit nhat dp02-02.txt (3 hit)
+charlie9: tong 15, file nhieu hit nhat dp02-03.txt (5 hit)
+delta42: tong 7, file nhieu hit nhat dp02-06.txt (3 hit)
+echo13: tong 11, file nhieu hit nhat dp02-04.txt (4 hit)
+Tong chung: 54
+So file chua it nhat 1 tu khoa: 12

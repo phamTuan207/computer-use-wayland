@@ -1,0 +1,98 @@
+{
+ "files": [
+  {
+   "mtime": 1795639234,
+   "name": "bao-cao.txt",
+   "sha256": "09675916b74f19c6dfa2d7e80d2a0234d1046146771baa4766e61a2614436f50",
+   "size": 337
+  },
+  {
+   "mtime": 1795639243,
+   "name": "dp02-code/dp02-01.txt",
+   "sha256": "05b0e165024b20c3a2eca98b324d79bc0ba49445e2268532a86b53db7bee3388",
+   "size": 1842
+  },
+  {
+   "mtime": 1795639252,
+   "name": "dp02-code/dp02-02.txt",
+   "sha256": "7bbf757c368eef598016267e271f2f619f415b9cf964530f782c9db242818e16",
+   "size": 1614
+  },
+  {
+   "mtime": 1795639261,
+   "name": "dp02-code/dp02-03.txt",
+   "sha256": "602d901bf45c69d040df5da0abe78e327c1c6d0585b934d876632fe36536ca26",
+   "size": 2065
+  },
+  {
+   "mtime": 1795639271,
+   "name": "dp02-code/dp02-04.txt",
+   "sha256": "5ae99d5b2c70ee94245e4f87df9ea1aa1b859a31dd63c42b0c03d37f9711b310",
+   "size": 1389
+  },
+  {
+   "mtime": 1795639280,
+   "name": "dp02-code/dp02-05.txt",
+   "sha256": "f4c78004eb4532640122841f376c5eb6604dff3228b6a5373cc0a91808772286",
+   "size": 2271
+  },
+  {
+   "mtime": 1795639289,
+   "name": "dp02-code/dp02-06.txt",
+   "sha256": "1feb1c9fe93a587c43d959f6765ba09c4ee5070bd1beac2e7cb344e8bcdb2248",
+   "size": 1148
+  },
+  {
+   "mtime": 1795639298,
+   "name": "dp02-code/dp02-07.txt",
+   "sha256": "19a06d429abe980bd88e96285f712b9397509bc3f176945782afd799add111f5",
+   "size": 2707
+  },
+  {
+   "mtime": 1795639308,
+   "name": "dp02-code/dp02-08.txt",
+   "sha256": "69d7798ed74cc434e77a0f3ab454da01d5f682545c40be92352353a3915dc94d",
+   "size": 901
+  },
+  {
+   "mtime": 1795639317,
+   "name": "dp02-code/dp02-09.txt",
+   "sha256": "599ae2930dec796841f81159d5efb339b6ea546ac2c1986b5f860c6d1e9dfe41",
+   "size": 2491
+  },
+  {
+   "mtime": 1795639326,
+   "name": "dp02-code/dp02-10.txt",
+   "sha256": "66bc1a2d849a16fa645b914a717c243329615de15b7b3361b0f88e3f137bc5f2",
+   "size": 1732
+  },
+  {
+   "mtime": 1795639335,
+   "name": "dp02-code/dp02-11.txt",
+   "sha256": "285ed775d3ec3981b48ae896cbcd5c1ed8ce75703a82250f30d01e6c6d723e3b",
+   "size": 1271
+  },
+  {
+   "mtime": 1795639344,
+   "name": "dp02-code/dp02-12.txt",
+   "sha256": "80544a89f3a9df04fdd04e0c02aeb20c54e992f71460a3ff9ae5cddb092e59d8",
+   "size": 2153
+  },
+  {
+   "mtime": 1795639225,
+   "name": "end_time.txt",
+   "sha256": "20d9d20d5799f5890fe5104ea084b728e47f2265c3e4ae160bab39adc2583135",
+   "size": 26
+  },
+  {
+   "mtime": 1795639215,
+   "name": "start_time.txt",
+   "sha256": "f185a8ec81dbe67cb37c868c9596c913b9ff5c50d6086b83ad36039550712a9b",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "fe58d4235f88a1870611239dfa3ca3d8584cf62cd8fb3a968ce3500da931da39",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/DP-02-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/DP-02",
+ "task": "DP-02"
+}

@@ -1,0 +1,20 @@
+Tu khoa delta42 xuat hien trong dong ghi chep nay.
+Dong ghi chep so 2 ve may chu va dich vu.
+Dong ghi chep so 3 ve du lieu va sao luu.
+Tu khoa bravo21 xuat hien trong dong ghi chep nay.
+Dong ghi chep so 5 ve kiem tra va bo nho.
+Dong ghi chep so 6 ve ghi chep va ket qua.
+Dong ghi chep so 7 ve van hanh va may chu.
+Dong ghi chep so 8 ve dich vu va nguoi dung.
+Dong ghi chep so 9 ve nguoi dung va phuc hoi.
+Dong ghi chep so 10 ve cong viec va huong dan.
+Dong ghi chep so 11 ve ke hoach va o cung.
+Dong ghi chep so 12 ve bao mat va da xong.
+Dong ghi chep so 13 ve mang luoi va du lieu.
+Dong ghi chep so 14 ve luu tru va cong viec.
+Dong ghi chep so 15 ve sao luu va cau hinh.
+Dong ghi chep so 16 ve phuc hoi va quy trinh.
+Dong ghi chep so 17 ve cau hinh va tien trinh.
+Dong ghi chep so 18 ve phien ban va dang chay.
+Dong ghi chep so 19 ve cap nhat va bao cao.
+Dong ghi chep so 20 ve theo doi va ke hoach.
