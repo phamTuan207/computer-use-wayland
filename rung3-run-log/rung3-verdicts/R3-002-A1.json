@@ -1,0 +1,24 @@
+{
+  "scorer": "A1",
+  "task": "R3-002",
+  "verdict": "FAIL",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/20261125-154500-json1.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/20261125-154600-json2.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/20261125-154700-json3.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/final.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/pill-verify-gone.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/pill-verify-gone-2.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-002-L3-snapshot/rung3-run-log/rung3-snapshots/R3-002-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-002 section only, lines 119-127, todolist-push 3f06b1f7)",
+    "docs/rung3-answer-keys.json (R3-002 entry only, todolist-push 3f06b1f7)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T16:05:29+07:00",
+  "reason": "Runner's recorded error positions (line 1 col 23, 41, 18) match none of the key positions (line 1 col 27, 50, 26), 0/3, verified by character counting. The 3 required Valid JSON screenshots are one identical copy of an empty jsonlint editor with no validation result. Runner failure, not a key error or service block."
+}
