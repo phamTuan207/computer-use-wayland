@@ -42,7 +42,7 @@
   "trung_binh": 3
  },
  "invalid_count": 4,
- "last_updated": "2026-11-26T06:51:00+07:00",
+ "last_updated": "2026-11-26T06:55:21+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1113,7 +1113,8 @@
    "text": "DEPUTY CONFIRMED, EPOCH 10: fresh deputy 4e4c8de2-9955-4075-a1e9-bb98335624d8. Declaration 2026-11-26T06:34:53+07:00 (after state last_updated 06:34:15, G-24 freshness satisfied). Dry run 5/5 PASS: laptop SSH, FCC tmux r3-fcc-runner-L3 alive, codex-cli 0.172.0, state parse (epoch 10, coordinator_active f1dac71f), ledgers 29+3 rows rule-A 24 PASS / 0 FAIL, scorer/tiebreaker paths present. G-24 and G-38 CLOSED for epoch 10. Deputy on STANDBY under section 7 fencing. Epoch 9 deputy 8aef68b3 superseded."
   },
   "2026-11-26T06:45:23+07:00 epoch 10 resume checks: 1,2 DONE (synthesis); 3 PASS (holder hashes verified on laptop); 4 PASS (FCC dry start 06:41:31, probe ok, clean end, pill released with grim proof); 5 ARMED (probe rule in runner briefs); 6 PARTIAL (cookie state read 06:35:50 matches F3 section 9; chatgpt sign-in restore running, worker 53d76e83); 7 SEALED 06:40:19 (R3-001/007/011/014, verifier 5134a515 regrade 4/4; clone2 dispatched 06:44, scoring waits for sign-off); 8 PASS (pii-scan.py v1 committed 3b292108; test push R3-041-L3 32b05152; pull audit 8/8 hashes + scanner clean; R3-042 blocked by scanner, R3-040 manual-review); 9 PASS (spot-check grep 06:39 on 4 briefs). R3-027 drive releases when check 6 closes; R3-027 runner brief on laptop (sha256 8962022c). Evidence: rung3-run-log/r3-l3-resume-checks-20261126.md. Tips pushed: 3b292108, c2bb1cb6, 32b05152, 0564bac5, 985e2da2.",
-  "2026-11-26T06:51:00+07:00 RESUME: checks 3,4,5,6,8,9 PASS (6 = logged out with reason, hygiene only). R3-027 DRIVE released to FCC (tmux r3-fcc-runner-L3, pane PID 22399, brief ~/rung3-task-briefs/R3-027-brief.md sha256 8962022c). Check 7 (clone2 calibration) still open; R3-027 SCORING with clone2 waits for verifier sign-off. R3-027 scorers: Mochi A1 + Clone2 A2. Next after R3-027: R3-028 (Muse lane, check 10 first)."
+  "2026-11-26T06:51:00+07:00 RESUME: checks 3,4,5,6,8,9 PASS (6 = logged out with reason, hygiene only). R3-027 DRIVE released to FCC (tmux r3-fcc-runner-L3, pane PID 22399, brief ~/rung3-task-briefs/R3-027-brief.md sha256 8962022c). Check 7 (clone2 calibration) still open; R3-027 SCORING with clone2 waits for verifier sign-off. R3-027 scorers: Mochi A1 + Clone2 A2. Next after R3-027: R3-028 (Muse lane, check 10 first).",
+  "2026-11-26T06:55:21+07:00 R3-027 drive actually started: FCC found the session busy at 06:53 (check-6 holder PID 2321252 lingered after its drive ended 06:49:24; worker stopped it cleanly 06:54:00 on coordinator order; FCC correctly held, one-driver rule worked). FCC signaled at 2026-11-26T06:55:21+07:00; its 30-min deadline runs from its holder sequence start. Clone2 calibration filed (branch clone2/calibration-sealed-20261126, 5af45214); sign-off verifier spawned (d2cd5fd0). Check 10 PASS (R3-028 briefs pushed cc265891)."
  ],
  "pass_count": 21,
  "plan_adaptations": [
@@ -1161,7 +1162,7 @@
  "status": "PAUSED at pause point, RESUME GATE PASSED with conditions (owner 04:31 pause, 04:53 delegated gate, redteam reconvene 06:30 YES/YES with 12 checks). Ledger: 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 24 PASS / 0 FAIL. Bars (N-2): 52/54 original, 53/55 with task 56, slack 2. Next: R3-027 frozen position 23 after checks 3-9.",
  "coordinator_active": "f1dac71f-f10f-4d18-adb2-6e6ed0732dea (epoch 10, takeover 2026-11-26T06:34:15+07:00)",
  "epoch": 10,
- "task_start": "2026-11-26T06:51:00+07:00",
+ "task_start": "2026-11-26T06:55:21+07:00",
  "runner_pid": 22399,
  "codex_task": "R3-042",
  "codex_task_start": null,
