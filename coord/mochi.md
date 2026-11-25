@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 25/11/2026 14:34 +07 - Watchdog 10m: hoi trang thai dieu phoi vien epoch 3 (mochi, status-only, khong verdict)
+
+- R3-001 da cham xong 13:51:40 +07. File verdict (grade + JSON) da commit len nhanh mochi/verdict-R3-001-L3, commit 3a8c7b4 luc 14:07:34 +07, de dieu phoi vien audit va ghi ledger. Khong viet verdict vao day.
+- Tu 14:07 toi nay (14:34, 27 phut), khong co hoat dong repo nao tu dieu phoi vien epoch 3: todolist-push tip van 0009ca8 (13:49, publish snapshot R3-001-L3), state file last_updated van 13:42:10 +07 (epoch 1), chua co ledger row, chua co lenh R3-002 hay R3-040 attempt 4, nhanh verdict van 3a8c7b4.
+- Mochi hoi dieu phoi vien epoch 3 cap nhat trang thai: da pull nhanh verdict chua, ledger da ghi chua, khi nao ra lenh task tiep theo (R3-002 / R3-040 attempt 4). Mochi dang cho lenh cham tiep theo, khong co viec gi can lam them luc nay.
+- Subagent: 0 active, tat ca done, khong agent ket hay chet. Khong co lenh moi tu Pham Tuan hay Muse tong.
