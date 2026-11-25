@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-019: drive done, sealed + gate PASS, Pair A scoring next; R3-021 to release",
+  "current_task": "R3-021 (position 19, Claude-run): FRESH runner 2f0073f3 spawned after coordinator interrupt of a0d7e026 for owner-ordered tab cleanup; R3-019 graded PASS",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-26T02:09:02+07:00",
+  "last_updated": "2026-11-26T02:17:37+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -801,6 +801,41 @@
       "ts": "2026-11-26T02:09:02+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-019 DRIVE COMPLETE (runner cab9b69a): start 2026-11-26T01:37:02+07:00, end 2026-11-26T02:03:09+07:00 (26m07s, inside timeout). Evidence: ket-qua.txt (466 B, doc link + both dates + difference + conclusion), 2 Kiwi price screenshots, doc-reopened screenshot, start/end times. Session clean after (no cursor.lock, pill released). Pulled 6 files sha256-verified. Sealed R3-019-L3 manifest c21f3909933a08204c615d647dcfcde4bbaf3b30002d49d07ab1133f3b81da62, gate PASS. task_start cleared. Tab check (02:08 list, 25 tabs): 1 kiwi tab remains (runner left it; goes to the next cleanup batch), 2 google docs tabs (one may be the owner's). Next: publish to repo for Mochi, Pair A scoring, release R3-021 (Tier A SQL)."
+    },
+    {
+      "ts": "2026-11-26T02:09:35+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-019 SCORING ASSIGNED (Pair A): snapshot published at todolist-push 21fc43f8 (manifest c21f3909, ls-remote verified). Mochi scorer 1 assigned via daemon run 224 at 02:09:15 (verified=True; verdict returns via branch mochi/verdict-R3-019-L3). Fresh scorer 2 (A2) b963638b spawned with VM-local snapshot; verdict to ~/workspace/rung3-verdicts/R3-019-A2.json. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Deadline 30/60 min."
+    },
+    {
+      "ts": "2026-11-26T02:09:35+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-021 RELEASED (position 19, Tier A, Class S, Claude-run): sqliteonline.com (SQLite) - create table san_pham (id INTEGER PRIMARY KEY, ten TEXT, gia INTEGER, so_luong INTEGER), insert 5 locked rows, run SELECT ten, gia WHERE gia > 100 ORDER BY gia DESC, run SELECT SUM(gia*so_luong), export the step-4 result to ket-qua-truy-van.csv, ket-qua.txt. ket-qua.txt format stated in brief (Tier A checker reads first 'name value' occurrences in file order: step-4 result lines first, inserted rows comma-formatted; total must appear; CSV 4 data rows). Evidence requirements: files [ket-qua.txt, ket-qua-truy-van.csv], screenshots_min 0 (query-result screenshot still required by pass criteria). Tier A checker after sealing (coordinator, once, identical to both scorers). Drive overlaps R3-019 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule."
+    },
+    {
+      "ts": "2026-11-26T02:09:52+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-021 RUNNER SPAWNED: fresh Muse subagent a0d7e026-fe37-4acb-ab4f-bcd8f7212611 (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns). Brief includes the 21:31 tab-close standing rule, the M2 end-of-drive self-check, and the Tier A ket-qua.txt ordering (query-1 lines first, comma-formatted inserts)."
+    },
+    {
+      "ts": "2026-11-26T02:17:37+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-019 GRADED PASS (Pair A agree, both audited): A1 Mochi PASS 02:10:01 (branch mochi/verdict-R3-019-L3, copied to ~/workspace/rung3-verdicts/R3-019-A1.json), A2 b963638b PASS 02:10:17 (R3-019-A2.json). Key hashes verified by both; allowlist clean (snapshot + key + task section only, no log.txt, no other verdict); manifest c21f3909. Original ledger row recorded (R3-L3-grades.jsonl now 22 rows). Run: 24 graded; under rule A banked count 20 PASS / 0 FAIL + 1 INVALID (replaced by DP-06 PASS). Bar math: need 33/35 remaining (2 slack)."
+    },
+    {
+      "ts": "2026-11-26T02:17:37+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "TAB CLEANUP BATCH 2 EXECUTED (owner orders 02:11, hardened 02:14, interrogation 02:15; correction 02:17 acknowledged, STOPPING, nothing more will be closed, nothing reopened). Method: coordinator interrupted R3-021 runner a0d7e026 (see next note), verified session free (no cursor.lock holder, pill holders {} at 02:15:03), pill acquire 2026-11-26T02:15:57.217+07:00 (CLAUDE/CLAUDE), ran /tmp/zen-cleanup-batch2.py via ZenSession WebDriver (switch_to_handle + DELETE window per tab), pill release 02:15:59.714, grim /tmp/zen-cleanup2-pill-gone.png (pulled to staging, sha256 verified), final zen_dom list /tmp/zen-tabs-after-cleanup2.json. Tabs before: 25. Tabs closed: 24, all at 02:15:58-02:15:59: (1) YouTube youtube.com; (2) Problem loading page reddit.com; (3) Today - Todoist app.todoist.com; (4) Gmail inbox mail.google.com; (5) Google Calendar week calendar.google.com; (6) PCCV CF26 sheet docs.google.com/spreadsheets/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY; (7) Free Claude Code Admin 127.0.0.1:8082; (8) Welcome! zen-browser.app; (9) Chat - Muse muse.ai/thread/750c8dae; (10) Hanoi-Ho Chi Minh City kiwi.com (R3-019); (11) Color Picker htmlcolorcodes.com (R3-014); (12) TodoMVC ES5 todomvc.com/examples/javascript-es5/dist/#/ (R3-001); (13) So sanh giay phep MIT doc docs.google.com/document/d/1SY_lewX7wFFZ5-3x216OHy9WBcLQ_cHkmaY0NFYzijY (R3-042); (14) GNU GPL opensource.org/license/gpl-3.0; (15) Apache License opensource.org/license/apache-2.0; (16) MIT License opensource.org/license/mit; (17) JavaScript Browser Info browserleaks.com (R3-041); (18) Application error file:///tmp/bbc-current-vm.html (R3-040); (19) Problem loading page bbc.com/news (R3-040); (20) TodoMVC ES5 todomvc.com/examples/javascript-es5/dist/; (21) TodoMVC ES5 same URL again; (22) Page not found GitHub todomvc.com/examples/vanillajs/; (23) Problem loading page bbc.com/news again; (24) Page not found GitHub todomvc.com/examples/vanillajs/ again. FINAL TAB COUNT: 1 (about:blank placeholder handle 3173d059; no sqliteonline task tab existed yet). Full log: ~/workspace/rung3-evidence-staging/zen-cleanup-batch2.log (laptop /tmp/zen-cleanup-batch2.log). WHY TABS NOT IN THE 02:14 LIST (YouTube, Todoist, Gmail, Calendar, Reddit) WERE CLOSED: the 02:14 hardened order as relayed to me said close EVERY Zen tab except the active R3-021 tab, owner confirms none are his to keep, and it explicitly listed PCCV/FCC Admin/Welcome/Chat-Muse as included. I implemented that wording literally (keep sqliteonline.com only, close all else, no owner-tab exclusion list). The 02:11 order had named owner tabs never to touch; the 02:14 order superseded it. Result: pinned/essentials tabs the owner actually uses were closed. That over-close is recorded here without excuse; per 02:17 order I will NOT reopen anything (owner reverts pinned/essentials himself tomorrow) and will close nothing further."
+    },
+    {
+      "ts": "2026-11-26T02:17:37+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-021 RUNNER a0d7e026 STATUS (02:17 demand item 3): session NOT preserved - I interrupted it with subagent.send interrupt=true at ~02:15 so it would not fail-closed abort when it saw my cleanup pill (its brief says STOP if cursor.lock held). It then COMPLETED (terminal) without driving: at interrupt time it had written only start_time.txt (2026-11-26T02:13:35+07:00), had NOT opened any sqliteonline tab (evidence dir held start_time.txt + previous/ only, no evidence files), so NO task tab was closed by cleanup and NO page state or evidence was lost. Recovery: fresh runner 2f0073f3-97aa-4e70-acc6-359da2f7e8c4 spawned with a fresh 30-min clock from its own start_time.txt (attempt 1 archived to previous/attempt1-interrupted/ by the new runner); task_start reset to fresh spawn time. Attempt 1 is not graded, not a runner failure (coordinator interruption for owner-ordered cleanup before any driving, R3-001 attempt-2 fresh-clock precedent)."
+    },
+    {
+      "ts": "2026-11-26T02:17:37+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "ANSWER TO 02:15 INTERROGATION (cleanup batches between 21:19 and 02:14): YES, batch 1 WAS executed, batch 2 was NOT. Batch 1: 2026-11-25 21:23-21:24, 27 tabs closed (59 to 32): jsonlint x7 (R3-002), zxing x4 + qr-code-generator x3 (R3-005), Go-install Google Docs x8 + go.dev x1 (R3-004), untitled Google Doc 114AIDyrr x1 + Nobel articles x3 (R3-003); method pill + /tmp/zen-cleanup-batch1.py URL allowlist, log /tmp/zen-cleanup-batch1.log. Plus per-task runner self-close under the 21:31 rule from R3-007 on, verified at boundaries (R3-009, R3-010, R3-013, R3-016, R3-017, R3-018 each 0 own task tabs remaining). Batch 2 (todomvc x5, bbc x3, browserleaks x1, opensource x3 + doc, htmlcolorcodes x1, kiwi x1) was identified at 02:08 list but NOT executed before 02:14. Why not: every task boundary was consumed by the seal/score/release pipeline (pull, seal, gate, publish, scoring assignment, next release) and batch 2 kept deferring to the next boundary; no dedicated cleanup slot was ever scheduled. That deferral is why the tab pile was still visible in the owner photo. Blocker named: coordinator scheduling priority, not tooling (batch 1 proved the tooling works)."
     }
   ],
   "pass_count": 3,
@@ -849,7 +884,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": null,
+  "task_start": "2026-11-26T02:17:37+07:00",
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
@@ -949,5 +984,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "cab9b69a-c017-42bd-b201-add32150f143"
+  "claude_runner_session": "2f0073f3-97aa-4e70-acc6-359da2f7e8c4"
 }
