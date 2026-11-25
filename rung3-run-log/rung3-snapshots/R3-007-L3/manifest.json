@@ -1,0 +1,56 @@
+{
+ "files": [
+  {
+   "mtime": 1795618620,
+   "name": "20261125-214834-convert-1.png",
+   "sha256": "b0e7c60bae2a9561d7a43f96602a872a55d2f6d6ad0b7d0b5e8c29c773314ff4",
+   "size": 724005
+  },
+  {
+   "mtime": 1795618631,
+   "name": "20261125-214842-convert-2.png",
+   "sha256": "bc12df8f2f043102dee70560411fc4f4ecd044cdeaacf4a1b50ccb36a7f75754",
+   "size": 727486
+  },
+  {
+   "mtime": 1795618643,
+   "name": "20261125-214850-convert-3.png",
+   "sha256": "cd7d8d49e123d1bbcaf6fb2bfb630ca3dc736b3dd996ac7d1ef8c0c3e699bcf4",
+   "size": 743990
+  },
+  {
+   "mtime": 1795618655,
+   "name": "20261125-214858-convert-4.png",
+   "sha256": "39fce2c52722cc5ae0f0785730faa6bc4a78b3fc0ca5094f7c828b5c422ba0c8",
+   "size": 714018
+  },
+  {
+   "mtime": 1795618667,
+   "name": "20261125-214906-convert-5.png",
+   "sha256": "245e5853853ca8349dfdbfd12df30282c5e70df81e5a0d4650c9dd5d1f2eab69",
+   "size": 885348
+  },
+  {
+   "mtime": 1795618599,
+   "name": "end_time.txt",
+   "sha256": "afcc7de0587452d65d6a8ce4163a7b0114c84bea00829457cb819d3ac5564857",
+   "size": 26
+  },
+  {
+   "mtime": 1795618608,
+   "name": "ket-qua.txt",
+   "sha256": "74ca8d14d5884c951cb744a03b50b523830ae591a1acd9dc4574b43fb022b0cb",
+   "size": 115
+  },
+  {
+   "mtime": 1795618590,
+   "name": "start_time.txt",
+   "sha256": "11b67ffbd78c9e4578375fa9400d037e3985b6ade818594135fc258ecb43d275",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "4be235466584890828e249224f0a8700a0f5f2eb783eaa4c609ac90c9d87a7c2",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-007-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-007",
+ "task": "R3-007"
+}
