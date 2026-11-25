@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-025 fresh completion sealed; skill-scout registry landed (watchdog 04:57 +07, verified 05:02)
+
+- R3-025 fresh completion sealed (commit f0f39a9e, 04:50:09 +07, manifest 40f661b3, gate PASS). Last in-flight item; Pair A scoring next. Still NOT finally graded (attempt-1 verdicts both FAIL, no ledger row). If it grades FAIL, slack drops from 2 to 1. Run stays PAUSED.
+- PRs 716/718 checked: clone1/clone2 watchdog status PRs (04:47/04:48), no new orders for mei. PRs 717/719/720 are mei's own (turnstile brief, R3-026 INVALID, skill-scout answers).
+- Skill-scout registry landed on todolist-push (commit a54989e7, 04:55:37 +07): REGISTRY.md (461 lines) + 3 scout lane files, 28 candidates, ponytail + graphify seeded. It marks mei/mochi Ponytail UNKNOWN pending replies; mei's answer is in PR #720. Correction in it: Codex HAS the ponytail skill folder (earlier 'Codex NO' meant the plugin). last30days IS a real skill (v4.5.0), on the parent VM and FCC, not on mei's VM.
