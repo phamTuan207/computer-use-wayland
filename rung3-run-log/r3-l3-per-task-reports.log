@@ -15,3 +15,5 @@
 #   or "BACKUP:<backup>" when a backup ran, else "-".
 # ELAPSED: task wall time, e.g. 14m22s (from task start to graded).
 # No rows yet. The run has not started.
+2026-11-25T14:17:58+07:00 | R3-001 | FAIL | A | - | - | 51m36s
+2026-11-25T15:08:51+07:00 | R3-040 | PASS | B | - | - | 27m46s
