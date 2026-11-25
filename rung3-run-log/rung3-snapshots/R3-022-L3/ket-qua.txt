@@ -1,0 +1,29 @@
+R3-022 ket-qua
+Task: Google Translate website translation of https://en.wikipedia.org/wiki/Computer to Vietnamese.
+
+Steps done in Zen:
+- Opened translate.google.com in a new tab (loaded as Google Dich, sl=en tl=vi).
+- Clicked "Trang web" (Websites, aria-label "Dich trang web"); page switched to op=websites.
+- Verified languages: source Anh (English) selected, target Viet (Vietnamese) selected.
+- Clicked URL input, cleared it, typed https://en.wikipedia.org/wiki/Computer (read-back verified exact value).
+- Clicked the translate submit button (button.zhBWDc, aria-label "Dich trang web").
+
+Result: BLOCKED by Google unusual-traffic check. The translated page never loaded.
+- Attempt 1 (UI flow): new tab went to https://www.google.com/sorry/index?continue=https://translate.google.com/translate%3Fsl%3Den%26tl%3Dvi%26hl%3Dvi%26u%3Dhttps://en.wikipedia.org/wiki/Computer%26client%3Dwebapp&hl=vi (reCAPTCHA page). Page text: "He thong cua chung toi da phat hien thay luu luong truy cap bat thuong tu mang may tinh cua ban..." (Our systems have detected unusual traffic from your computer network). Time shown on page: 2026-11-25T19:53:35Z.
+- Attempt 2 (direct proxy URL in a new tab): https://en-wikipedia-org.translate.goog/wiki/Computer?_x_tr_sl=en&_x_tr_tl=vi&_x_tr_hl=vi also redirected to https://www.google.com/sorry/index (same unusual-traffic message, English). Time shown on page: 2026-11-25T19:58:22Z.
+Per drive rules (stop on bot check, do not hammer), no further attempts were made.
+
+Translated page title: NOT OBTAINED (translated page blocked, never loaded).
+
+Five term pairs (English original + Vietnamese translation shown on translated page):
+- central processing unit: NOT OBTAINED (translated page blocked)
+- random-access memory: NOT OBTAINED (translated page blocked)
+- motherboard: NOT OBTAINED (translated page blocked)
+- operating system: NOT OBTAINED (translated page blocked)
+- hard disk drive: NOT OBTAINED (translated page blocked)
+
+Back-translation results (2 terms, Vietnamese to English via Google Translate text translation): NOT OBTAINED. No Vietnamese translations were obtained from the translated page, so there was nothing to back-translate as specified. No substitute translations were fabricated.
+
+Screenshots in this folder:
+- translated-page-blocked-20261126-025929.png (Google sorry/block page for the translated-page URL)
+- websites-mode-20261126-030003.png (Google Translate Websites mode with the Wikipedia URL entered, en to vi)
