@@ -1,0 +1,26 @@
+{
+  "scorer": "A1",
+  "task": "R3-013",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/explanation5.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/20261125-235731-regex-1.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/20261125-235741-regex-2.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/20261125-235750-regex-3.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/20261125-235759-regex-4.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/20261125-235808-regex-5.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-013-L3-snapshot/rung3-run-log/rung3-snapshots/R3-013-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (R3-013 key section lines 225-233 and pattern-3 escaped-form ruling line 17, todolist-push 9edd5dcd)",
+    "docs/rung3-answer-keys.json (R3-013 entry only, tasks.R3-013, todolist-push 9edd5dcd)",
+    "docs/rung3-list-100-tasks.md (section 6, R3-013 task text lines 380-382, todolist-push 9edd5dcd)",
+    "Tier A checker output supplied by coordinator (aid only, verdict PASS, no reasons)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T00:08:53+07:00",
+  "reason": "All 5 lines in ket-qua.txt match the key exactly on pattern, count, and matched strings; pattern 3 uses the escaped form the key requires; the explanation for pattern 5 is recorded in ket-qua.txt and matches the regex101 Explanation panel in the screenshot; all 5 result screenshots are present and each shows the correct pattern, match count, and matches on regex101.com. The Tier A checker said PASS; independent verification agrees, with no discrepancy."
+}
