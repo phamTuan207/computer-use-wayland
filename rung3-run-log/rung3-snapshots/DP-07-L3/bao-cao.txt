@@ -1,0 +1,9 @@
+DP-07 bao cao kiem tra sha256
+Thu muc: ~/rung3/dp07-tap
+
+Ten tap | Kich thuoc (byte) | sha256 | Ket qua kiem tra
+dp07-01.txt | 69 | f830f594f7cd7a442b93fda84fe76aa02e62156fd60dcb1c42315424f8b7ede7 | OK
+dp07-02.txt | 69 | 26030358212becda0e3e1395761db3f3d0e9620ae67047a0e1ab12e605c25b0c | OK
+dp07-03.txt | 69 | 07c80615e134615320fa0b196b978c329375046a4aff622e013ad86602be9e1a | OK
+
+Tong kich thuoc 3 tap: 207 byte

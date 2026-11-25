@@ -1,0 +1,44 @@
+{
+ "files": [
+  {
+   "mtime": 1795640029,
+   "name": "bang-kiem.txt",
+   "sha256": "a809cee9738cf4a43c3e6fded10d1c03dd10550c30202d088b6d80256cfad0af",
+   "size": 234
+  },
+  {
+   "mtime": 1795640019,
+   "name": "bao-cao.txt",
+   "sha256": "58308a1e3bac8b7cbfa1afcbc30a3e4b3e6e6f00cad05e69af514b7f785ec708",
+   "size": 413
+  },
+  {
+   "mtime": 1795640041,
+   "name": "dp07-report-20261126-034647.png",
+   "sha256": "79c73442b08f0a077c8b87ad47b2c90734af466053b454e934c42aa1d3c89372",
+   "size": 2047982
+  },
+  {
+   "mtime": 1795640054,
+   "name": "dp07-terminal-20261126-034642.png",
+   "sha256": "c4fcd514c8c77e9fc722c97145c3e17c98329749bd663c671794f51bfd091000",
+   "size": 2041938
+  },
+  {
+   "mtime": 1795640010,
+   "name": "end_time.txt",
+   "sha256": "21c54d702f1501f83af15937c91addc25399dab9a48410db9462a62c95891c26",
+   "size": 26
+  },
+  {
+   "mtime": 1795640001,
+   "name": "start_time.txt",
+   "sha256": "909ebc558f26d17d4f55b892a581525865c460bdebe206f398a735636e7ce6cb",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "7f19b9072e87353c3a3063cb161989d739119209936faab7dcf04c51dfd11382",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/DP-07-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/DP-07",
+ "task": "DP-07"
+}

@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "DP-07 (backup for R3-024, inherits position 21, Claude-run): released; DP-02 Pair A scoring in progress (unscored queue 2 = at backpressure cap)",
+  "current_task": "R3-025 (position 22, Claude-run): released; DP-07 Pair A scoring in progress (unscored queue 2 = at backpressure cap)",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-26T03:42:47+07:00",
+  "last_updated": "2026-11-26T03:54:25+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -936,6 +936,31 @@
       "ts": "2026-11-26T03:42:47+07:00",
       "by": "coordinator-epoch-8",
       "text": "DP-07 RELEASED (backup for R3-024, inherits position 21, Class S, Claude-run): task text from list section 8 (DP-07 entry) + key section 8. Evidence requirements per evidence-requirements.json DP-07. Drive overlaps DP-02 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Cross-check note: DP-07 inherits position 21 (ledger-cross-check DP_REPLACEMENT_POSITION to be extended to {DP-06: 11, DP-02: 20, DP-07: 21} when graded)."
+    },
+    {
+      "ts": "2026-11-26T03:43:40+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-02 SCORING ASSIGNED (Pair A): snapshot published at todolist-push 1cdbe8ff (manifest fe58d423, ls-remote verified). Mochi scorer 1 assigned via daemon run 228 at 03:43:17 (verified=True; verdict returns via branch mochi/verdict-DP-02-L3). Fresh scorer 2 (A2) a1a076b1 spawned with VM-local snapshot; verdict to ~/workspace/rung3-verdicts/DP-02-A2.json. Both blind, key hashes json 5059f6c4 / md 21f8b61a. Tier A checker output (FAIL, per-file detail lines missing) handed verbatim to both. Deadline 30/60 min."
+    },
+    {
+      "ts": "2026-11-26T03:43:40+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-07 RUNNER SPAWNED: fresh Muse subagent f6fc6f5c-5e6e-4b67-a66b-f74b6b8d9456 (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns). Brief includes the M2 end-of-task self-check and cleanup of its own terminal window (task files in ~/rung3/dp07-tap stay). du-phong.txt laptop canonical synced byte-identical (sha256 9c8762bb both)."
+    },
+    {
+      "ts": "2026-11-26T03:54:25+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-02 GRADED PASS (both audited): A1 Mochi PASS 03:44:48 (branch mochi/verdict-DP-02-L3, copied to ~/workspace/rung3-verdicts/DP-02-A1.json), A2 a1a076b1 PASS 03:43:49. Both verified key hashes, manifest fe58d423, blind; both independently re-ran grep on the sealed fixture; both judged the checker per-file-detail requirement beyond the task Pass criteria. Original ledger row recorded (R3-L3-grades.jsonl now 26 rows). Run: 28 graded; rule-A count 22 PASS / 0 FAIL + 3 INVALID (R3-011 replaced by DP-06 PASS, R3-022 replaced by DP-02 PASS, R3-024 to be replaced by DP-07). Bar math: need 31/33 remaining original-set (2 slack); with task 56 need 32/34. ledger-cross-check.py DP_REPLACEMENT_POSITION extended to {DP-06: 11, DP-02: 20, DP-07: 21}."
+    },
+    {
+      "ts": "2026-11-26T03:54:25+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-07 DRIVE DONE (runner f6fc6f5c): start 2026-11-26T03:43:58+07:00, end 2026-11-26T03:47:06+07:00 (3m08s). 3 files created in ~/rung3/dp07-tap (69 bytes each), sha256sum bang-kiem written, sha256sum -c verified 3 OK, bao-cao.txt 3-row table + total 207 bytes, 2 timestamped screenshots. Pulled 6 files sha256-verified. Sealed DP-07-L3 manifest 7f19b9072e87353c3a3063cb161989d739119209936faab7dcf04c51dfd11382, gate PASS. Next: publish to repo for Mochi, Pair A scoring, release R3-025."
+    },
+    {
+      "ts": "2026-11-26T03:54:25+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "R3-025 RELEASED (position 22, Tier B, Class S, Claude-run): task text list section 6 R3-025 + key section. Drive overlaps DP-07 scoring (decoupled; drive order preserved; unscored queue = 2 = at backpressure cap). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule."
     }
   ],
   "pass_count": 3,
@@ -984,7 +1009,7 @@
   "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
   "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
   "epoch": 8,
-  "task_start": "2026-11-26T03:42:47+07:00",
+  "task_start": "2026-11-26T03:54:25+07:00",
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
@@ -1084,5 +1109,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "13d0423e-af80-441b-820d-707aa5413577"
+  "claude_runner_session": "f6fc6f5c-5e6e-4b67-a66b-f74b6b8d9456"
 }
