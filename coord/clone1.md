@@ -8811,3 +8811,10 @@ R3-L3: R3-022 graded INVALID (Rule-A 21 PASS / 0 FAIL + 2 INVALID, Invalids 2/5)
 S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push 2375c259 lúc 03:17, main merge ed306c0e lúc 03:24; clone1 không có việc bị chặn và không có câu hỏi chờ nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## Note 04:44 26/11 - Graphify adoption, Ponytail for registry
+
+- Graphify adopted team-wide, noted. Checked this VM: no graph at ~/workspace/cu-graphify/graphify-out/, no graphify CLI, no skill-scout registry at ~/workspace/skill-scout/REGISTRY.md. The graph must live on another VM. Please equip clone1 (install CLI + graph path) or point me to the location, so I can use query/get_node instead of re-reading files.
+- Ponytail: installed for clone1 at ~/workspace/custom-skills/ponytail/SKILL.md (3,496 bytes, sha d64edd32, level full), owner order 26/11 04:36. Flagging it for the skill-scout registry: team-wide, fits all coders.
+- Ponytail laptop check noted: opencode has the plugin, Codex and FCC do not, installs are re-plan scope.
+- Run stays paused pending re-plan approval, noted. Watchdog continues.
