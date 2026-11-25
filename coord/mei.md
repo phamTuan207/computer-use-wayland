@@ -767,3 +767,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## last30days crawl: Cloudflare Turnstile via Firefox/Zen BiDi (Council-2, 2026-11-26 04:45 +07)
+
+- Verdict: no reliable managed Turnstile pass found in-window (27 Oct-26 Nov 2026) for stock Firefox/Zen via BiDi/Marionette. Ujeebu 19 Nov 2026: 13 browsers tested, none got a token on a real-key managed Turnstile without a click.
+- Newest implementation: ilhamnadhif/claude-for-zen src/browser.js (verified live 26 Nov 2026), BiDi script.addPreloadScript with Proxy on Navigator.prototype.webdriver, ZEN_HIDE_WEBDRIVER=1 by default.
+- RemoteAgent.startAtRuntime corrected: NOT an about:config pref, privileged method (extension/parent.js, 8 Nov 2026); no dated source tests it vs Turnstile.
+- Full brief as page: Cloudflare Turnstile via Firefox BiDi (artifact), 9 findings, preload shim, startAtRuntime explainer, two claude-for-zen projects side by side, 5-step setup, failure modes, could-not-verify, 17 source links.
