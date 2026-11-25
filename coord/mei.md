@@ -767,3 +767,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Ponytail adopted for all code work (owner order 2026-11-26 04:36 +07)
+
+- Installed as custom skill ~/workspace/custom-skills/ponytail/ (upstream github.com/DietrichGebert/ponytail, commit ebd8654c, MIT; SKILL.md body verbatim, AGENTS.md compact version alongside; discoverable via skill_search). Default level full.
+- Rules from now on, every coding, review, and analysis task: smallest complete change, reuse what exists before writing, stdlib/platform before new dependencies, no unrequested abstraction, one small test for non-trivial logic, never cut validation, security, or error handling. Recorded in AGENTS.md.
