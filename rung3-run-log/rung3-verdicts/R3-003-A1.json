@@ -1,0 +1,22 @@
+{
+  "scorer": "A1",
+  "task": "R3-003",
+  "verdict": "FAIL",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/ket-qua.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/20261125-165118-final.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/pill-verify-gone-final.png",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/end_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/start_time_supplement.txt",
+    "/home/hatch/workspace/rung3-scorer1-R3-003-L3-snapshot/rung3-run-log/rung3-snapshots/R3-003-L3/end_time_supplement.txt",
+    "docs/rung3-answer-keys.md (R3-003 section only, lines 130-145, todolist-push 4de3f377)",
+    "docs/rung3-answer-keys.json (R3-003 hybrid_keys entry only, todolist-push 4de3f377)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-25T17:06:27+07:00",
+  "reason": "Table place row is South Africa in all 3 columns instead of Oslo, Norway, so only 6/9 cells match the key, which requires 9/9. Both screenshots show the Google Doc blank, so the required document is not evidenced. Runner failure, not a key error or service block."
+}
