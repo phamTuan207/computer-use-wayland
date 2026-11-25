@@ -1,0 +1,32 @@
+{
+ "files": [
+  {
+   "mtime": 1795613240,
+   "name": "20261125-202145-doc-reopened.png",
+   "sha256": "f301a87a4d0d831cb503f8aa1761ae098fd47d8f312d29b4459ec92b5ec51402",
+   "size": 639401
+  },
+  {
+   "mtime": 1795613220,
+   "name": "end_time.txt",
+   "sha256": "5ddb83701cc716825b865aa6e96f7a0340c6ad33f539384f4bcac5b1dce5aaad",
+   "size": 26
+  },
+  {
+   "mtime": 1795613229,
+   "name": "ket-qua.txt",
+   "sha256": "cbbecff5f02a65423e1e930c66eecffb24e759eff4e1895bd7d83333ed399f27",
+   "size": 584
+  },
+  {
+   "mtime": 1795613211,
+   "name": "start_time.txt",
+   "sha256": "83fe7aaad1d23bb023c4e06bac78ea9f68e7ca66653394cad11c5ffb4b5d8cde",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "8ffe9217f18a52fe6c92006110bbfb30e811a24af97e0d97ab5d133fb68e49cf",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-003-L3-rerun",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging-rerun/R3-003",
+ "task": "R3-003"
+}
