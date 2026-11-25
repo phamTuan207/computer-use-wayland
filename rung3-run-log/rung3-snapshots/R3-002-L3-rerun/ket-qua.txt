@@ -1,0 +1,46 @@
+Segment 1
+Broken JSON: {"ten": "Lan", "tuoi": 30,}
+Error (as reported by jsonlint):
+E008
+trailing comma in object
+line 1, col 27
+Error line: 1
+Error column: 27
+Fixed Valid JSON:
+{
+  "ten": "Lan",
+  "tuoi": 30
+}
+Screenshot: 20261125-194228-segment1-valid.png
+
+Segment 2
+Broken JSON: {"ten": "Lan", "tuoi": 30, "thanh_pho": "Ha Noi" "so_tien": 100}
+Error (as reported by jsonlint):
+E009
+expected ',' or '}' between object members, found a string
+line 1, col 50
+Error line: 1
+Error column: 50
+Fixed Valid JSON:
+{
+  "ten": "Lan",
+  "tuoi": 30,
+  "thanh_pho": "Ha Noi",
+  "so_tien": 100
+}
+Screenshot: 20261125-194241-segment2-valid.png
+
+Segment 3
+Broken JSON: {"ten": "Lan", "tuoi": 30
+Error (as reported by jsonlint):
+E006
+unclosed object, expected '}'
+line 1, col 26
+Error line: 1
+Error column: 26
+Fixed Valid JSON:
+{
+  "ten": "Lan",
+  "tuoi": 30
+}
+Screenshot: 20261125-194659-segment3-valid.png
