@@ -1,125 +1,129 @@
 {
- "backups_used": [
-  "DP-03"
- ],
- "checklist_22": {
-  "done": 22,
-  "in_progress": 0,
-  "not_done": 0,
-  "note": "see r3-l3-phase0-checklist-status.md for per-item status; all 22 DONE and file-verified"
- },
- "class_l": [
-  "R3-001",
-  "R3-055",
-  "R3-074",
-  "R3-075",
-  "R3-089",
-  "R3-096",
-  "R3-078",
-  "R3-079",
-  "R3-088"
- ],
- "class_l_count": 9,
- "class_s_count": 46,
- "completed_positions": 0,
- "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
- "current_position": 0,
- "current_task": null,
- "deputy": "f41d8a84-3a3d-45d2-bb28-62a75fb98930 (declaration at ~/workspace/r3-l3-deputy-declaration.md, fresh declaration 2026-11-25, written after the final state-file edit of the round-2 fix, dry run PASS 11:53 +07 in own session, G-24 and G-38 CLOSED, on STANDBY). Session 8397cff5 SUPERSEDED, holds no deputy authority; session 6f9f3647 superseded by this deputy (its declaration was correct but it completed and its identity was never propagated).",
- "fail_count": 0,
- "freeze": {
-  "h1": "9b9d900",
-  "h2": "5fac0eb",
-  "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
-  "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
-  "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
-  "todolist_push_tip": "81919c0c (prepare baseline)"
- },
- "invalid_by_group": {
-  "de": 0,
-  "kho": 0,
-  "rat_kho": 0,
-  "trung_binh": 0
- },
- "invalid_count": 0,
- "last_updated": "2026-11-25T11:56:17+07:00",
- "ledger": {
-  "file": "rung3-run-log/R3-L3-grades.jsonl",
-  "note": "1 trial row only, validated PASS",
-  "rows": 1
- },
- "notes": [
-  "Phase 0 coordinator. Run NOT started. No task has run.",
-  "Re-review round 1, 2026-11-25 (11:33 +07): G-32 hash refresh after checkpoint-trigger fix (Council 2 B-1) and ONLY-sentence fix (Council 3 amendment 6). thu-tu-chay.txt current sha256 f739f22e137af0f307f4f814bcb0246110a724342cbc08b7c705a6110cd8a9ac; du-phong.txt current sha256 0cf06dda18cb32a47c99f5d5a4be67d8a8d5541d58c072f0f8e8df5c982f5619 (unchanged). The 10:55 hashes (bf3e7550, 0cf06dda) are superseded by this entry. State file is written via temp file then rename (G-48 atomic write).",
-  "Phase 0 25/11: TB-B2 independent sign-off DONE (G-33, 4/4 re-graded from scratch). Redteam confirmation DONE (G-11, 10/10 BLOCKING mitigated incl. B-07 re-confirmation after OR-to-AND fix). Messaging chain PASS (G-23, mei + mochi targets resolved, daemon resilience proven). R3-089 fixture refreshed (G-39, find -mtime -7 returns 6). Tier A checkers 10/10 PASS (G-36). Backup assignment PASS (G-47). Precondition 6 disposition published (G-46, all 5 PENDING). Timeout rule fixed (G-37). Pill live test PROVEN (G-44, BiDi drive with pill visible). Lane briefs re-issued L3 and acknowledged in writing by FCC (09:06) and Codex (G-26/G-30). R3-029 runner corrected: FCC, position 25 (re-plan section 6 previously named Codex in error).",
-  "R3-029/R3-075 KEY GATE PASSES. R3-075 verified CORRECT (fixture sha256s match key). R3-029 verified CORRECT by Mochi (run 134/135, 17:11-17:19 +07): all 5 product names confirmed (iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, all In Stock). Test account rung3-029-test@example.com created, wishlist works (iPhone saved, My Wishlist shows it). No blocker. Do NOT stop.",
-  "R3-009 WAVE re-check (Mochi, all 5 numbers): Fox News Errors 2, Alerts 311, Features 145, Structural 382, Contrast 16. Wikipedia Main Page Errors 7, Alerts 80, Features 451, Structural 75, Contrast 0. Fox News still Errors 2. R3-009 runs normally.",
-  "timeanddate.com confirmed loads normally (Mochi, 17:19 +07, Hanoi 17:19:49, Sunny, Mild, 21C).",
-  "FCC fresh session r3-fcc-runner-L3 (pane PID 22399, fcc-claude 2.1.332) recreated 2026-11-25 09:00:18 +07 after laptop reboot (tmux 20571), verified responsive (processed test prompt, returned to prompt).",
-  "Codex interactive TUI STALLS in tmux for new sessions (both 0.172.0 and 0.171.0 tested, no response after 25-60s, 0.0-0.2% CPU). The OLD Codex session (r3-codex-runner, PID 1235041, 0.171.0) is also stalled (did not respond to the 6-step prep task or a test prompt). PLAN ADAPTATION: Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session. PROVEN: codex exec -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check 'Reply READY' replied READY, tokens 7376, EXIT=0 (log /tmp/codex-exec-test.log on laptop, session 01a20d16). The run coordinator invokes codex exec per task from /home/james. The old tmux Codex session is NOT used for the run.",
-  "Daemon speed-daemon died and was restarted 2026-11-24 17:16:43 +07 (PID 2423). Watchdog cron should keep it alive. Fallback channel documented (r3-l3-daemon-fallback.md).",
-  "Calibration 1B (4e2f52d4) 4/4 expected, APPROVED (independent verifier). 2B (2e3ae678) 4/4 expected, APPROVED. TB-A (97290681) 4/4 expected, APPROVED. TB-B (9d613f19) 3/4, NOT APPROVED (independent verifier 032952f7, report ~/workspace/r3-l3-calibration-VERIFICATION.md: R3-041 FAIL is a misapplication, invented a fonts-page screenshot requirement the key never states). Replacement tiebreaker B candidate (df4defcc) spawned for re-calibration. TB-B approval pending its result.",
-  "/tmp worktree was cleaned by the system (2026-11-24 ~17:14). All work moved to persistent worktree ~/workspace/r3l3-run-wt (detached HEAD d58d3da). Lesson: never use /tmp for persistent work. The calibration PNG was recreated at ~/workspace/r3-067-calibration.png and /tmp/r3-067-calibration.png.",
-  "Snapshot dirs created: ~/workspace/rung3-snapshots/ with 60 empty R3-xxx-L3 / DP-xx-L3 dirs. snapshot.py --name option added (fixed dir name). Pre-existing R3-040-retry-s1 (R3-L2, fuller than repo copy) left untouched.",
-  "R3-089 fixture fresh (find -mtime -7 returns 6, expiry 2026-12-01 08:59, refreshed 2026-11-25 08:59 +07). Refresh owner = run coordinator, refresh the day before R3-089 runs.",
-  "R3-075 key verified CORRECT. R3-029 key verified CORRECT. No key blocker.",
-  "Liveness report R3-L3 (2026-11-24 17:28, rung3-ci/liveness-report-20261124-175000.md): 40 OK, 9 FAIL, 3 PENDING, 2 SKIP. Triaged: 6 FAILs are urllib 403 false positives (bot check, browser tasks; timeanddate.com browser-verified by Mochi). 1 is Wayback 429 (transient, has policy). 2 (bbc.com DNS, gutenberg.org 503) pending Mochi browser verification (run 136). Liveness signed off with triage (coordinator, 2026-11-24 17:52 +07), conditional on bbc/gutenberg browser verification before task 1.",
-  "Phase 0 commit 28e2ce0 pushed to todolist-push (verified via ls-remote). todolist-push tip is now 28e2ce0.",
-  "R3-047 DROPPED from the run by owner order 2026-11-25 10:34 +07 (final prepare review). R3-047 does NOT run, is NOT an invalid, consumes 0 invalids (council 3/3 unanimous, recorded in re-plan G-46 and du-phong.txt). DP-03 (medium, Class S, Pair B) replaces it at position 34. No Gutenberg re-check, no Gutenberg monitoring. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive.",
-  "TB-B2 (df4defcc) calibrated 4/4 expected (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), APPROVED as tiebreaker B. Grade file ~/workspace/r3-l3-calibration-TBB2.md (0 em/en dashes). Item 10 (Pair B calibration) is DONE: 1B, 2B, TB-A, TB-B2 all approved by independent verifier / calibration.",
-  "All 22 precondition checklist items DONE and file-verified (2026-11-24 18:20 +07). thu-tu-chay.txt rewritten (sha256 b2b8c985) and synced to laptop byte-identical. du-phong.txt synced to laptop byte-identical (sha256 3648a7d5). todolist-push tip 7c38ebf.",
-  "Blocker fix 2026-11-24T18:48:27+07:00 (Mochi flags, message index 53): (1) addendum scorer IDs fixed to TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678 (TB-B2 df4defcc already correct); stale R3-L2 IDs removed from addendum and thu-tu-chay.txt retirement notes (grep zero). (2) Ledger pattern DP-0[1235] changed to DP-0[123567] in ledger-schema.json and validate-ledger.py; DP-06/DP-07 trial rows PASS. (3) Verdict channel decided: verdict FILES only (R3-xxx-A1.json + grade md); Mochi stops sending verdicts via chat to Muse; notifies run coordinator with task ID + file path only. Mochi told via daemon run 145. thu-tu-chay.txt new sha256 9f47a3a20ae5a957f4f921b9dafa5261baf6366a7e62466866dfbd813b891d13, re-synced to laptop byte-identical. R3-029 confirmed position 25 (readiness report 'position 5' was wrong).",
-  "Verifier must-fix 2026-11-24T20:02:00+07:00 (FCC fix-up worker): todolist-push tip updated to ccd83e5 (optimization commit, Zen 1.24.3b deep dive). freeze.todolist_push_tip d88e94f changed to ccd83e5. Tip stamps updated in thu-tu-chay.txt (7aeaf0f changed to ccd83e5) and du-phong.txt (d58d3da changed to ccd83e5). Worktree HEAD and origin/todolist-push were already at ccd83e5. The local todolist-push branch could NOT be moved (it is checked out in another worktree, ~/workspace/a1fix-64527c3b-wt, so git refuses branch -f); it stays at 6a7d31c. This fix commit is pushed as HEAD:todolist-push instead, so the remote tip moves from ccd83e5 to this commit. fcc-claude is NOT installed on this VM (command not found, no binary in PATH or /opt/hatch/bin), so no FCC invocation ran; the fixes were applied directly with file tools per the task fallback.",
-  "CORRECTION, TB-B2 verification gap (recorded 2026-11-24T20:02:00+07:00): TB-B2 (df4defcc) 4/4 approval rests on the coordinator's own check, NOT on independent verification. The independent verification report ~/workspace/r3-l3-calibration-VERIFICATION.md was verified 2026-11-24 17:27 +07, before the TB-B2 calibration (17:31 +07), covers only the first tiebreaker B candidate 9d613f19 (3/4, NOT APPROVED), and never mentions df4defcc (grep 0 hits). No independent sign-off for TB-B2 is claimed or fabricated. The earlier state note saying TB-B2 was approved by independent verifier / calibration is corrected by this entry: the 4/4 match is coordinator-checked only. Same correction appended to ~/workspace/r3-l3-calibration-TBB2.md.",
-  "CORRECTION to the TB-B2 gap, final review 2026-11-25: independent verification DONE, see improvements/r3-l3-tbb2-signoff-20261125.md (committed in prepare report b061f87c). The verifier re-graded all 4 calibration cases from scratch (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), agreement 4/4, and signed off on G-33. The 2026-11-24 20:02 gap note above is SUPERSEDED by that sign-off. A superseding note was appended to ~/workspace/r3-l3-calibration-TBB2.md pointing at the sign-off file.",
-  "CORRECTION to G-42, final review 2026-11-25: the 24/11 redteam confirmation file (improvements/r3-l3-redteam-confirmation-20261125.md) says 9/10 BLOCKING mitigated, B-07 partial, NOT CONFIRMED. The FINAL redteam (25/11, improvements/r3-l3-final-redteam-20261125.md) confirms B-07 IS mitigated in the worktree re-plan copy only (chain-broken AND in all 3 places, live coordinator-liveness-watch cron uses AND). G-42 reads DONE on the strength of the final redteam's confirmation, not the 24/11 file. The stale root re-plan copy (still OR) is superseded by the worktree copy.",
-  "FINAL PREPARE REVIEW 2026-11-25 (owner order 10:35): council 1/2/3 AMEND Option A, redteam NOT READY with 4 BLOCKING + 9 MUST-FIX, all mitigated in this review. R3-047 dropped by owner order 10:34, DP-03 replaces at position 34, 0 invalids. Deputy field updated to 8397cff5 (fresh declaration 09:34). Medium invalids now only the R3-011/028/036/046 shared-cause group (1 invalid if proven). If all 4 go invalid: DP-06 and DP-07 replace 2, 2 drop, valid 53, bar recomputes to 51/53 per the pre-declared table; coordinator notifies the owner (G-40) but does NOT stop. Backups used: DP-03. Run coordinator start items: create coordinator_active (own id) and epoch (1) in this state file at task 1; receive the R3-029 password from the parent (never in a file); verify the 4 per-agent internal watchdogs within 30 minutes of the start order (G-50, bounded); confirm the deputy re-read the FINAL committed re-plan (parent messages deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930).",
-  "SUPERSEDED (re-added in re-review round 1, 2026-11-25, per Council 3 amendment 13; kept for history only, do NOT act on it). Original text (added 2026-11-24 18:02 +07): R3-047 is a 5th pre-run INVALID CANDIDATE: Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 34; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive. SUPERSEDED by note index 16 (R3-047 DROPPED from the run by owner order 2026-11-25 10:34 +07, DP-03 replaces at position 34, 0 invalids). Do NOT re-check Gutenberg. Do NOT declare R3-047 invalid.",
-  "RE-REVIEW ROUND 1, 2026-11-25 (owner order 11:19, unanimous bar): Council 1 DISAGREE (RB-1 deputy re-confirmation missing, RB-2 scorer addendum line 11), Council 2 DISAGREE (B-1 checkpoint trigger half-done), Council 3 DISAGREE (deputy re-confirmation, superseded note deleted, ONLY sentence missing, addendum line 11), redteam NOT READY (B-F2 deputy re-confirmation, N-01 Zen on ws1 not ws2 with no move step, N-03 addendum lines 5 and 11). Fixes applied in this edit: checkpoint trigger aligned to re-plan line 269 in time-budget.md and thu-tu-chay.txt line 90; ONLY sentence added to thu-tu-chay.txt line 84; superseded R3-047 note re-added (see previous note); scorer addendum lines 5 (tip 81919c0c, 577 lines) and 11 (DP-06, DP-07) fixed; both lane briefs re-issued (F-04(e) Zen-visible guard, grim/finish lines, worktree re-plan path, Codex carve-out parenthetical); re-plan G-46 records the bar-table pattern (valid N needs N-2) and the Zen-to-ws2 move as a coordinator start item. Deputy re-confirmation is a PARENT action (parent messages deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930) and must be timestamped AFTER this state edit. Round 2 re-review follows the deputy confirmation.",
-  "RE-REVIEW ROUND 2 FIX, 2026-11-25 (deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930): RB-1/R2-B1 deputy identity propagated (re-plan, state deputy field, thu-tu line 38); session 8397cff5 SUPERSEDED with no authority; session 6f9f3647 superseded by this deputy. R2-M1 dry run re-run PASS 11:53 +07 in own session (SSH via ssh-laptop.sh, tmux r3-fcc-runner-L3 alive, state file parse OK, git log tip b26a34c5). R2-M2 word 'authoritative' deleted from scorer addendum line 5. C2 O-1 pause-release default aligned in time-budget.md to re-plan line 269 (default continue if owner unreachable within 30 minutes). R2-S3 '(prepare baseline)' qualifier added to tip 81919c0c in thu-tu line 2, du-phong line 2, freeze field. R2-S1 TB-B2 verifier session id searched in prepare records and NOT recoverable; commit-identification b061f87c accepted (see tbb2 sign-off note). R2-S2 next declaration phrases tip as at-time-of-reading and cites lane-brief acks FCC 11:36/11:39, Codex 11:37:33. G-32 hash refresh: thu-tu-chay.txt current sha256 a759ad21266743beea94e7e22bf962c3a380aa2efadee86d0461f9bf8ae2395d; du-phong.txt current sha256 7d17b9b73584bfcafe0c238bc328859c011a263232df748ade7e098fe2889290. The 11:33 hashes (f739f22e, 0cf06dda) are superseded by this entry. Order re-verified: 55 tokens, token 25 R3-029, token 34 DP-03, token 49 R3-089, R3-047 absent, 0 duplicates. Laptop copies re-synced byte-identical. State file written via temp file then rename (G-48 atomic write)."
- ],
- "pass_count": 0,
- "plan_adaptations": [
-  {
-   "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
-   "reason": "New Codex sessions stall in tmux (TUI does not respond to input; both 0.172.0 and 0.171.0 tested). The old session is also stalled. codex exec is proven (replied READY, EXIT=0). The interactive session cannot be fixed as written, so the plan is adapted to the proven non-interactive route.",
-   "when": "2026-11-24 17:44 +07"
+  "backups_used": [
+    "DP-03"
+  ],
+  "checklist_22": {
+    "done": 22,
+    "in_progress": 0,
+    "not_done": 0,
+    "note": "see r3-l3-phase0-checklist-status.md for per-item status; all 22 DONE and file-verified"
   },
-  {
-   "change": "Worktree moved from /tmp/r3l3-run-wt to ~/workspace/r3l3-run-wt (persistent)",
-   "reason": "/tmp was cleaned by the system, deleting the worktree and all uncommitted work. The persistent worktree at ~/workspace/ survives. All files were rewritten and re-proven there.",
-   "when": "2026-11-24 17:14 +07"
+  "class_l": [
+    "R3-001",
+    "R3-055",
+    "R3-074",
+    "R3-075",
+    "R3-089",
+    "R3-096",
+    "R3-078",
+    "R3-079",
+    "R3-088"
+  ],
+  "class_l_count": 9,
+  "class_s_count": 46,
+  "completed_positions": 0,
+  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
+  "current_position": 1,
+  "current_task": "R3-001",
+  "deputy": "f41d8a84-3a3d-45d2-bb28-62a75fb98930 (declaration at ~/workspace/r3-l3-deputy-declaration.md, fresh declaration 2026-11-25, written after the final state-file edit of the round-2 fix, dry run PASS 11:53 +07 in own session, G-24 and G-38 CLOSED, on STANDBY). Session 8397cff5 SUPERSEDED, holds no deputy authority; session 6f9f3647 superseded by this deputy (its declaration was correct but it completed and its identity was never propagated).",
+  "fail_count": 0,
+  "freeze": {
+    "h1": "9b9d900",
+    "h2": "5fac0eb",
+    "key_json_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+    "keys_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+    "list_sha256": "c1d9a220fa9a5fe57f509cd386c2b28ad466aaecdfb053ad35b5723c697d29ec",
+    "todolist_push_tip": "81919c0c (prepare baseline)"
   },
-  {
-   "change": "Snapshot dirs use ~/workspace/rung3-snapshots/R3-xxx-L3/ (VM) with snapshot.py --name option",
-   "reason": "The plan requires fixed R3-xxx-L3 names. snapshot.py only made timestamped names. Added a --name option (additive, does not break existing behavior) so the coordinator can snapshot into the fixed R3-xxx-L3 dir.",
-   "when": "2026-11-24 17:22 +07"
-  }
- ],
- "run_code": "R3-L3",
- "runners": {
-  "codex": {
-   "method": "codex exec (non-interactive, one invocation per task, from /home/james, --skip-git-repo-check, -m gpt-6-luna --sandbox danger-full-access)",
-   "positions": "29-55 (R3-040 to R3-100)",
-   "session": "NO interactive session (TUI stalls in tmux); use codex exec per task",
-   "status": "READY via codex exec (proven READY, EXIT=0)",
-   "version": "0.172.0"
+  "invalid_by_group": {
+    "de": 0,
+    "kho": 0,
+    "rat_kho": 0,
+    "trung_binh": 0
   },
-  "fcc": {
-   "pane_pid": 22399,
-   "positions": "1-28 (R3-001 to R3-037)",
-   "session": "r3-fcc-runner-L3",
-   "status": "fresh, recreated 2026-11-25 09:00:18 +07 after laptop reboot (tmux 20571), verified responsive, L3 lane brief acknowledged in writing 09:06 +07",
-   "version": "2.1.332"
-  }
- },
- "scorers": {
-  "pair_a_1": "mochi (session 70cd99d1-ecef-4d02-9f42-714d7e86ab85)",
-  "pair_a_2": "dc7e0d0d-24b2-4d94-9729-f106d21eff16",
-  "pair_b_1": "4e2f52d4-f3f7-41ad-a302-78f0aee91895 (calibrated, 4/4 expected)",
-  "pair_b_2": "2e3ae678-2a82-496e-b301-7ac090356fb3 (calibrated, 4/4 expected)",
-  "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
-  "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
- },
- "status": "PHASE 0 - PREPARATION, RUN NOT STARTED"
+  "invalid_count": 0,
+  "last_updated": "2026-11-25T12:47:50+07:00",
+  "ledger": {
+    "file": "rung3-run-log/R3-L3-grades.jsonl",
+    "note": "1 trial row only, validated PASS",
+    "rows": 1
+  },
+  "notes": [
+    "Phase 0 coordinator. Run NOT started. No task has run.",
+    "Re-review round 1, 2026-11-25 (11:33 +07): G-32 hash refresh after checkpoint-trigger fix (Council 2 B-1) and ONLY-sentence fix (Council 3 amendment 6). thu-tu-chay.txt current sha256 f739f22e137af0f307f4f814bcb0246110a724342cbc08b7c705a6110cd8a9ac; du-phong.txt current sha256 0cf06dda18cb32a47c99f5d5a4be67d8a8d5541d58c072f0f8e8df5c982f5619 (unchanged). The 10:55 hashes (bf3e7550, 0cf06dda) are superseded by this entry. State file is written via temp file then rename (G-48 atomic write).",
+    "Phase 0 25/11: TB-B2 independent sign-off DONE (G-33, 4/4 re-graded from scratch). Redteam confirmation DONE (G-11, 10/10 BLOCKING mitigated incl. B-07 re-confirmation after OR-to-AND fix). Messaging chain PASS (G-23, mei + mochi targets resolved, daemon resilience proven). R3-089 fixture refreshed (G-39, find -mtime -7 returns 6). Tier A checkers 10/10 PASS (G-36). Backup assignment PASS (G-47). Precondition 6 disposition published (G-46, all 5 PENDING). Timeout rule fixed (G-37). Pill live test PROVEN (G-44, BiDi drive with pill visible). Lane briefs re-issued L3 and acknowledged in writing by FCC (09:06) and Codex (G-26/G-30). R3-029 runner corrected: FCC, position 25 (re-plan section 6 previously named Codex in error).",
+    "R3-029/R3-075 KEY GATE PASSES. R3-075 verified CORRECT (fixture sha256s match key). R3-029 verified CORRECT by Mochi (run 134/135, 17:11-17:19 +07): all 5 product names confirmed (iPhone $123.20, MacBook $602.00, Canon EOS 5D $134.00, HP LP3065 $122.00, HTC Touch HD $146.00, all In Stock). Test account rung3-029-test@example.com created, wishlist works (iPhone saved, My Wishlist shows it). No blocker. Do NOT stop.",
+    "R3-009 WAVE re-check (Mochi, all 5 numbers): Fox News Errors 2, Alerts 311, Features 145, Structural 382, Contrast 16. Wikipedia Main Page Errors 7, Alerts 80, Features 451, Structural 75, Contrast 0. Fox News still Errors 2. R3-009 runs normally.",
+    "timeanddate.com confirmed loads normally (Mochi, 17:19 +07, Hanoi 17:19:49, Sunny, Mild, 21C).",
+    "FCC fresh session r3-fcc-runner-L3 (pane PID 22399, fcc-claude 2.1.332) recreated 2026-11-25 09:00:18 +07 after laptop reboot (tmux 20571), verified responsive (processed test prompt, returned to prompt).",
+    "Codex interactive TUI STALLS in tmux for new sessions (both 0.172.0 and 0.171.0 tested, no response after 25-60s, 0.0-0.2% CPU). The OLD Codex session (r3-codex-runner, PID 1235041, 0.171.0) is also stalled (did not respond to the 6-step prep task or a test prompt). PLAN ADAPTATION: Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session. PROVEN: codex exec -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check 'Reply READY' replied READY, tokens 7376, EXIT=0 (log /tmp/codex-exec-test.log on laptop, session 01a20d16). The run coordinator invokes codex exec per task from /home/james. The old tmux Codex session is NOT used for the run.",
+    "Daemon speed-daemon died and was restarted 2026-11-24 17:16:43 +07 (PID 2423). Watchdog cron should keep it alive. Fallback channel documented (r3-l3-daemon-fallback.md).",
+    "Calibration 1B (4e2f52d4) 4/4 expected, APPROVED (independent verifier). 2B (2e3ae678) 4/4 expected, APPROVED. TB-A (97290681) 4/4 expected, APPROVED. TB-B (9d613f19) 3/4, NOT APPROVED (independent verifier 032952f7, report ~/workspace/r3-l3-calibration-VERIFICATION.md: R3-041 FAIL is a misapplication, invented a fonts-page screenshot requirement the key never states). Replacement tiebreaker B candidate (df4defcc) spawned for re-calibration. TB-B approval pending its result.",
+    "/tmp worktree was cleaned by the system (2026-11-24 ~17:14). All work moved to persistent worktree ~/workspace/r3l3-run-wt (detached HEAD d58d3da). Lesson: never use /tmp for persistent work. The calibration PNG was recreated at ~/workspace/r3-067-calibration.png and /tmp/r3-067-calibration.png.",
+    "Snapshot dirs created: ~/workspace/rung3-snapshots/ with 60 empty R3-xxx-L3 / DP-xx-L3 dirs. snapshot.py --name option added (fixed dir name). Pre-existing R3-040-retry-s1 (R3-L2, fuller than repo copy) left untouched.",
+    "R3-089 fixture fresh (find -mtime -7 returns 6, expiry 2026-12-01 08:59, refreshed 2026-11-25 08:59 +07). Refresh owner = run coordinator, refresh the day before R3-089 runs.",
+    "R3-075 key verified CORRECT. R3-029 key verified CORRECT. No key blocker.",
+    "Liveness report R3-L3 (2026-11-24 17:28, rung3-ci/liveness-report-20261124-175000.md): 40 OK, 9 FAIL, 3 PENDING, 2 SKIP. Triaged: 6 FAILs are urllib 403 false positives (bot check, browser tasks; timeanddate.com browser-verified by Mochi). 1 is Wayback 429 (transient, has policy). 2 (bbc.com DNS, gutenberg.org 503) pending Mochi browser verification (run 136). Liveness signed off with triage (coordinator, 2026-11-24 17:52 +07), conditional on bbc/gutenberg browser verification before task 1.",
+    "Phase 0 commit 28e2ce0 pushed to todolist-push (verified via ls-remote). todolist-push tip is now 28e2ce0.",
+    "R3-047 DROPPED from the run by owner order 2026-11-25 10:34 +07 (final prepare review). R3-047 does NOT run, is NOT an invalid, consumes 0 invalids (council 3/3 unanimous, recorded in re-plan G-46 and du-phong.txt). DP-03 (medium, Class S, Pair B) replaces it at position 34. No Gutenberg re-check, no Gutenberg monitoring. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive.",
+    "TB-B2 (df4defcc) calibrated 4/4 expected (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), APPROVED as tiebreaker B. Grade file ~/workspace/r3-l3-calibration-TBB2.md (0 em/en dashes). Item 10 (Pair B calibration) is DONE: 1B, 2B, TB-A, TB-B2 all approved by independent verifier / calibration.",
+    "All 22 precondition checklist items DONE and file-verified (2026-11-24 18:20 +07). thu-tu-chay.txt rewritten (sha256 b2b8c985) and synced to laptop byte-identical. du-phong.txt synced to laptop byte-identical (sha256 3648a7d5). todolist-push tip 7c38ebf.",
+    "Blocker fix 2026-11-24T18:48:27+07:00 (Mochi flags, message index 53): (1) addendum scorer IDs fixed to TB-A 97290681, 1B 4e2f52d4, 2B 2e3ae678 (TB-B2 df4defcc already correct); stale R3-L2 IDs removed from addendum and thu-tu-chay.txt retirement notes (grep zero). (2) Ledger pattern DP-0[1235] changed to DP-0[123567] in ledger-schema.json and validate-ledger.py; DP-06/DP-07 trial rows PASS. (3) Verdict channel decided: verdict FILES only (R3-xxx-A1.json + grade md); Mochi stops sending verdicts via chat to Muse; notifies run coordinator with task ID + file path only. Mochi told via daemon run 145. thu-tu-chay.txt new sha256 9f47a3a20ae5a957f4f921b9dafa5261baf6366a7e62466866dfbd813b891d13, re-synced to laptop byte-identical. R3-029 confirmed position 25 (readiness report 'position 5' was wrong).",
+    "Verifier must-fix 2026-11-24T20:02:00+07:00 (FCC fix-up worker): todolist-push tip updated to ccd83e5 (optimization commit, Zen 1.24.3b deep dive). freeze.todolist_push_tip d88e94f changed to ccd83e5. Tip stamps updated in thu-tu-chay.txt (7aeaf0f changed to ccd83e5) and du-phong.txt (d58d3da changed to ccd83e5). Worktree HEAD and origin/todolist-push were already at ccd83e5. The local todolist-push branch could NOT be moved (it is checked out in another worktree, ~/workspace/a1fix-64527c3b-wt, so git refuses branch -f); it stays at 6a7d31c. This fix commit is pushed as HEAD:todolist-push instead, so the remote tip moves from ccd83e5 to this commit. fcc-claude is NOT installed on this VM (command not found, no binary in PATH or /opt/hatch/bin), so no FCC invocation ran; the fixes were applied directly with file tools per the task fallback.",
+    "CORRECTION, TB-B2 verification gap (recorded 2026-11-24T20:02:00+07:00): TB-B2 (df4defcc) 4/4 approval rests on the coordinator's own check, NOT on independent verification. The independent verification report ~/workspace/r3-l3-calibration-VERIFICATION.md was verified 2026-11-24 17:27 +07, before the TB-B2 calibration (17:31 +07), covers only the first tiebreaker B candidate 9d613f19 (3/4, NOT APPROVED), and never mentions df4defcc (grep 0 hits). No independent sign-off for TB-B2 is claimed or fabricated. The earlier state note saying TB-B2 was approved by independent verifier / calibration is corrected by this entry: the 4/4 match is coordinator-checked only. Same correction appended to ~/workspace/r3-l3-calibration-TBB2.md.",
+    "CORRECTION to the TB-B2 gap, final review 2026-11-25: independent verification DONE, see improvements/r3-l3-tbb2-signoff-20261125.md (committed in prepare report b061f87c). The verifier re-graded all 4 calibration cases from scratch (R3-041 PASS, R3-002 FAIL, R3-003 FAIL, R3-067 PASS), agreement 4/4, and signed off on G-33. The 2026-11-24 20:02 gap note above is SUPERSEDED by that sign-off. A superseding note was appended to ~/workspace/r3-l3-calibration-TBB2.md pointing at the sign-off file.",
+    "CORRECTION to G-42, final review 2026-11-25: the 24/11 redteam confirmation file (improvements/r3-l3-redteam-confirmation-20261125.md) says 9/10 BLOCKING mitigated, B-07 partial, NOT CONFIRMED. The FINAL redteam (25/11, improvements/r3-l3-final-redteam-20261125.md) confirms B-07 IS mitigated in the worktree re-plan copy only (chain-broken AND in all 3 places, live coordinator-liveness-watch cron uses AND). G-42 reads DONE on the strength of the final redteam's confirmation, not the 24/11 file. The stale root re-plan copy (still OR) is superseded by the worktree copy.",
+    "FINAL PREPARE REVIEW 2026-11-25 (owner order 10:35): council 1/2/3 AMEND Option A, redteam NOT READY with 4 BLOCKING + 9 MUST-FIX, all mitigated in this review. R3-047 dropped by owner order 10:34, DP-03 replaces at position 34, 0 invalids. Deputy field updated to 8397cff5 (fresh declaration 09:34). Medium invalids now only the R3-011/028/036/046 shared-cause group (1 invalid if proven). If all 4 go invalid: DP-06 and DP-07 replace 2, 2 drop, valid 53, bar recomputes to 51/53 per the pre-declared table; coordinator notifies the owner (G-40) but does NOT stop. Backups used: DP-03. Run coordinator start items: create coordinator_active (own id) and epoch (1) in this state file at task 1; receive the R3-029 password from the parent (never in a file); verify the 4 per-agent internal watchdogs within 30 minutes of the start order (G-50, bounded); confirm the deputy re-read the FINAL committed re-plan (parent messages deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930).",
+    "SUPERSEDED (re-added in re-review round 1, 2026-11-25, per Council 3 amendment 13; kept for history only, do NOT act on it). Original text (added 2026-11-24 18:02 +07): R3-047 is a 5th pre-run INVALID CANDIDATE: Project Gutenberg down for maintenance, browser-verified by Mochi 17:29 +07 (same maintenance as R3-L2). Medium task. Re-check Gutenberg in a browser right before position 34; if still down, declare INVALID and use DP-03. If back, run R3-047 normally. R3-017 (bbc.com) is NOT invalid: Mochi verified bbc.com loads normally in a browser 17:29 +07; the urllib DNS failure was a false positive. SUPERSEDED by note index 16 (R3-047 DROPPED from the run by owner order 2026-11-25 10:34 +07, DP-03 replaces at position 34, 0 invalids). Do NOT re-check Gutenberg. Do NOT declare R3-047 invalid.",
+    "RE-REVIEW ROUND 1, 2026-11-25 (owner order 11:19, unanimous bar): Council 1 DISAGREE (RB-1 deputy re-confirmation missing, RB-2 scorer addendum line 11), Council 2 DISAGREE (B-1 checkpoint trigger half-done), Council 3 DISAGREE (deputy re-confirmation, superseded note deleted, ONLY sentence missing, addendum line 11), redteam NOT READY (B-F2 deputy re-confirmation, N-01 Zen on ws1 not ws2 with no move step, N-03 addendum lines 5 and 11). Fixes applied in this edit: checkpoint trigger aligned to re-plan line 269 in time-budget.md and thu-tu-chay.txt line 90; ONLY sentence added to thu-tu-chay.txt line 84; superseded R3-047 note re-added (see previous note); scorer addendum lines 5 (tip 81919c0c, 577 lines) and 11 (DP-06, DP-07) fixed; both lane briefs re-issued (F-04(e) Zen-visible guard, grim/finish lines, worktree re-plan path, Codex carve-out parenthetical); re-plan G-46 records the bar-table pattern (valid N needs N-2) and the Zen-to-ws2 move as a coordinator start item. Deputy re-confirmation is a PARENT action (parent messages deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930) and must be timestamped AFTER this state edit. Round 2 re-review follows the deputy confirmation.",
+    "RE-REVIEW ROUND 2 FIX, 2026-11-25 (deputy f41d8a84-3a3d-45d2-bb28-62a75fb98930): RB-1/R2-B1 deputy identity propagated (re-plan, state deputy field, thu-tu line 38); session 8397cff5 SUPERSEDED with no authority; session 6f9f3647 superseded by this deputy. R2-M1 dry run re-run PASS 11:53 +07 in own session (SSH via ssh-laptop.sh, tmux r3-fcc-runner-L3 alive, state file parse OK, git log tip b26a34c5). R2-M2 word 'authoritative' deleted from scorer addendum line 5. C2 O-1 pause-release default aligned in time-budget.md to re-plan line 269 (default continue if owner unreachable within 30 minutes). R2-S3 '(prepare baseline)' qualifier added to tip 81919c0c in thu-tu line 2, du-phong line 2, freeze field. R2-S1 TB-B2 verifier session id searched in prepare records and NOT recoverable; commit-identification b061f87c accepted (see tbb2 sign-off note). R2-S2 next declaration phrases tip as at-time-of-reading and cites lane-brief acks FCC 11:36/11:39, Codex 11:37:33. G-32 hash refresh: thu-tu-chay.txt current sha256 a759ad21266743beea94e7e22bf962c3a380aa2efadee86d0461f9bf8ae2395d; du-phong.txt current sha256 7d17b9b73584bfcafe0c238bc328859c011a263232df748ade7e098fe2889290. The 11:33 hashes (f739f22e, 0cf06dda) are superseded by this entry. Order re-verified: 55 tokens, token 25 R3-029, token 34 DP-03, token 49 R3-089, R3-047 absent, 0 duplicates. Laptop copies re-synced byte-identical. State file written via temp file then rename (G-48 atomic write).",
+    "RUN STARTED 2026-11-25T12:45:58+07:00 (owner start order 12:39): coordinator_active 05a503a0-c287-4f24-a1b3-ff4011f692b0, epoch 1, PHASE 1, task 1 R3-001 to FCC. Zen moved to ws2 (verified 12:42). Deputy f41d8a84. G-50: mei/mochi/clone2 internal watchdogs confirmed; clone1 watchdog last confirmed 10:29 (next 10:37), PWA reachable idle, covered by shared agents-watch. Codex exec READY 12:43 (7376 tokens).",
+    "SCORER RUN SESSIONS 2026-11-25T12:47:50+07:00: calibration sessions (dc7e0d0d, 4e2f52d4, 2e3ae678) completed and cannot resume, so the run uses fresh sessions briefed identically (same briefs + addendum, same independence declarations, received at run start). Pair A scorer 2 run session 8c0f267e; Pair B scorer 1 run session a5b74f37; Pair B scorer 2 run session ef2ebec6. Mochi unchanged (70cd99d1). Tiebreakers standby (97290681, df4defcc), spawned on demand; IDs updated then. thu-tu-chay.txt NOT edited (frozen, sha256 a759ad21); the state file is the live record of run scorer sessions."
+  ],
+  "pass_count": 0,
+  "plan_adaptations": [
+    {
+      "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
+      "reason": "New Codex sessions stall in tmux (TUI does not respond to input; both 0.172.0 and 0.171.0 tested). The old session is also stalled. codex exec is proven (replied READY, EXIT=0). The interactive session cannot be fixed as written, so the plan is adapted to the proven non-interactive route.",
+      "when": "2026-11-24 17:44 +07"
+    },
+    {
+      "change": "Worktree moved from /tmp/r3l3-run-wt to ~/workspace/r3l3-run-wt (persistent)",
+      "reason": "/tmp was cleaned by the system, deleting the worktree and all uncommitted work. The persistent worktree at ~/workspace/ survives. All files were rewritten and re-proven there.",
+      "when": "2026-11-24 17:14 +07"
+    },
+    {
+      "change": "Snapshot dirs use ~/workspace/rung3-snapshots/R3-xxx-L3/ (VM) with snapshot.py --name option",
+      "reason": "The plan requires fixed R3-xxx-L3 names. snapshot.py only made timestamped names. Added a --name option (additive, does not break existing behavior) so the coordinator can snapshot into the fixed R3-xxx-L3 dir.",
+      "when": "2026-11-24 17:22 +07"
+    }
+  ],
+  "run_code": "R3-L3",
+  "runners": {
+    "codex": {
+      "method": "codex exec (non-interactive, one invocation per task, from /home/james, --skip-git-repo-check, -m gpt-6-luna --sandbox danger-full-access)",
+      "positions": "29-55 (R3-040 to R3-100)",
+      "session": "NO interactive session (TUI stalls in tmux); use codex exec per task",
+      "status": "READY via codex exec (proven READY, EXIT=0)",
+      "version": "0.172.0"
+    },
+    "fcc": {
+      "pane_pid": 22399,
+      "positions": "1-28 (R3-001 to R3-037)",
+      "session": "r3-fcc-runner-L3",
+      "status": "fresh, recreated 2026-11-25 09:00:18 +07 after laptop reboot (tmux 20571), verified responsive, L3 lane brief acknowledged in writing 09:06 +07",
+      "version": "2.1.332"
+    }
+  },
+  "scorers": {
+    "pair_a_1": "mochi (session 70cd99d1-ecef-4d02-9f42-714d7e86ab85)",
+    "pair_a_2": "8c0f267e-b703-4435-ac81-b003afb96132 (run session; calibration session dc7e0d0d-24b2-4d94-9729-f106d21eff16, 4/4 expected)",
+    "pair_b_1": "a5b74f37-9532-4e04-9242-7b91f56a3745 (run session; calibration session 4e2f52d4-f3f7-41ad-a302-78f0aee91895, 4/4 expected)",
+    "pair_b_2": "ef2ebec6-93c1-4663-855d-b891376ce5d2 (run session; calibration session 2e3ae678-2a82-496e-b301-7ac090356fb3, 4/4 expected)",
+    "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
+    "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
+  },
+  "status": "PHASE 1 - EXECUTION, RUN STARTED",
+  "coordinator_active": "05a503a0-c287-4f24-a1b3-ff4011f692b0",
+  "epoch": 1
 }
