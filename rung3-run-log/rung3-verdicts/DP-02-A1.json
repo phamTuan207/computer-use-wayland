@@ -1,0 +1,31 @@
+{
+  "scorer": "A1",
+  "task": "DP-02",
+  "verdict": "PASS",
+  "keyfile_sha256": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8",
+  "keyfile_md_sha256": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "files_read": [
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/manifest.json",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/bao-cao.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-01.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-02.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-03.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-04.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-05.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-06.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-07.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-08.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-09.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-10.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-11.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/dp02-code/dp02-12.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/start_time.txt",
+    "/home/hatch/workspace/rung3-scorer1-DP-02-L3-snapshot/rung3-run-log/rung3-snapshots/DP-02-L3/end_time.txt",
+    "docs/rung3-answer-keys.md (DP-02 key section lines 619-646, todolist-push 1cdbe8ff)",
+    "docs/rung3-answer-keys.json (tasks.DP-02 entry, todolist-push 1cdbe8ff)",
+    "docs/rung3-list-100-tasks.md (section 8, DP-02 task text and Pass/Fail criteria, todolist-push 1cdbe8ff)"
+  ],
+  "session": "70cd99d1-ecef-4d02-9f42-714d7e86ab85",
+  "scored_at": "2026-11-26T03:44:48+07:00",
+  "reason": "The report has all 5 keyword rows with correct totals (12, 9, 15, 7, 11), correct most-hit files (dp02-01, dp02-02, dp02-03, dp02-06, dp02-04), correct grand total (54), and correct file count (12), and an independent grep -r -o -F re-run matches the key's per-file matrix 12/12, so every Pass criterion is met. The Tier A checker's FAIL expects per-file detail in the report, which the key's Pass criteria do not require; the discrepancy is documented in full in the grade file."
+}
