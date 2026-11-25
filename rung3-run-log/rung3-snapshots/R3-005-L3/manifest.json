@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "mtime": 1795616754,
+   "name": "20261125-211611-decode.png",
+   "sha256": "3e828aa0a3cfd731936f0ce2b7b6c8749f5287fa9f4c8a282104890dbae1ad4e",
+   "size": 590752
+  },
+  {
+   "mtime": 1795616705,
+   "name": "end_time.txt",
+   "sha256": "11a29eee12b477d07d81160363a7213e671710eae52353134fb342fef05e08c5",
+   "size": 33
+  },
+  {
+   "mtime": 1795616714,
+   "name": "ket-qua.txt",
+   "sha256": "587e2cd96cc278a765bcaf1c71f1d1d8d894ab04235857c4860ee3090e8173c1",
+   "size": 252
+  },
+  {
+   "mtime": 1795616724,
+   "name": "qr-1.jpg",
+   "sha256": "36a922ac973e84c9606fd5b3e39752222e0a93e25eecbed32c074db20b6c23b3",
+   "size": 22946
+  },
+  {
+   "mtime": 1795616733,
+   "name": "qr-2.jpg",
+   "sha256": "ccf2e8264d5b152d8203e6c09df7ecfc25e8ccad11d833876ddb93dbf37d58d8",
+   "size": 33611
+  },
+  {
+   "mtime": 1795616743,
+   "name": "qr-3.jpg",
+   "sha256": "484015bf73fee4dac5cb102d321c8aaaa1416e5b768909ec5a1f9d14966c6e59",
+   "size": 23265
+  },
+  {
+   "mtime": 1795616696,
+   "name": "start_time.txt",
+   "sha256": "91916f18e219945af8a125cc2c49031d4a4bbc08bcf6d04197b70e3fcc1eab0c",
+   "size": 33
+  }
+ ],
+ "manifest_sha256": "f4f7fa95e08d6a63e2f6544d77cf73bbdac9272dd64a64f4b7003a0d155ae4ed",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-005-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/R3-005",
+ "task": "R3-005"
+}

@@ -1,0 +1,11 @@
+Link 1
+Original: https://example.com
+Decoded: https://example.com
+
+Link 2
+Original: https://en.wikipedia.org/wiki/Computer
+Decoded: https://en.wikipedia.org/wiki/Computer
+
+Link 3
+Original: https://go.dev/doc/install
+Decoded: https://go.dev/doc/install
