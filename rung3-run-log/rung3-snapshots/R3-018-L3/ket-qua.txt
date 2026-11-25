@@ -1,0 +1,10 @@
+R3-018 Namecheap domain lookup (lookup only, nothing purchased)
+Captured: 2026-11-26 (Asia/Ho_Chi_Minh), results pages /domains/registration/results/
+Tool: https://www.namecheap.com domain search (search box submitted per domain)
+
+Domain | Status | First-year price
+rung3khaosat01.com | available | $12.08/yr
+rung3khaosat02.com | available | $12.08/yr
+rung3khaosat03.com | available | $12.08/yr
+
+Notes: each result shows "Add to cart" with Retail $15.98/yr; new customers can get $6.48 first year with promo code NEWCOM648 (T&Cs apply). No domain was taken, so no alternatives needed. Suggested other extensions shown by the site (not needed): .to $39.98/yr, .org $8.48/yr, .ai $89.98/yr, .net $12.48/yr.
