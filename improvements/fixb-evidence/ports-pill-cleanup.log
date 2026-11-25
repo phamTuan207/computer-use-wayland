@@ -1,0 +1,28 @@
+== ports ==
+LISTEN 0      1                                   127.0.0.1:2828       0.0.0.0:*
+LISTEN 0      37                                  127.0.0.1:9222       0.0.0.0:*
+== bidi status ==
+The handshake request has incorrect Upgrade header: undefined
+== marionette tcp ==
+2828 tcp open
+== pill ==
+{
+  "holders": {},
+  "owner": "none",
+  "visible": false
+}
+== computer-use ==
+{"ok":true,"cancelled":false}
+== windows ==
+[{"address":"0x5614f0354cc0","class":"org.omarchy.herdrdrop","title":"omarchy: ~","at":[2637,926],"size":[1574,816],"workspace":{"address":"special:herdrdrop","type":"special","name":"special:herdrdrop"}},{"address":"0x5614f0713e70","class":"brave-origin","title":"Muse - Brave Origin","at":[2509,1509],"size":[925,581],"workspace":{"address":"3","id":3,"type":"normal","name":"3"}},{"address":"0x5614f06f9850","class":"chromium","title":"Muse - Chromium","at":[3448,1509],"size":[924,581],"workspace":{"address":"3","id":3,"type":"normal","name":"3"}},{"address":"0x5614f0647b20","class":"chrome-hichoggbhebpgpgcbcgfpkjmohpcflhh-Default","title":"Muse","at":[3448,914],"size":[924,581],"workspace":{"address":"3","id":3,"type":"normal","name":"3"}},{"address":"0x5614f03b7e50","class":"brave-hichoggbhebpgpgcbcgfpkjmohpcflhh-Default","title":"Muse","at":[2509,914],"size":[925,581],"workspace":{"address":"3","id":3,"type":"normal","name":"3"}},{"address":"0x5614f01a0e20","class":"zen","title":"Zen Browser","at":[2514,914],"size":[1853,1176],"workspace":{"address":"2","id":2,"type":"normal","name":"2"}}]
+
+== fixb procs ==
+james    2255478  0.0  0.0   4980  3492 ?        Ss   05:59   0:00 bash -c node /tmp/fixb-runner/probe-fixb.mjs cookies openverse.org 2>&1
+james    2255479  0.1  0.2 9892400 74048 ?       Sl   05:59   0:00 /home/james/.local/share/mise/installs/node/latest/bin/node /tmp/fixb-run
+(empty = clean)
+== fixb procs after wait ==
+james    2255478  0.0  0.0   4980  3492 ?        Ss   05:59   0:00 bash -c node /tmp/fixb-runner/probe-fixb.mjs cookies openverse.org 2>&1
+james    2255479  0.1  0.2 9892400 74048 ?       Sl   05:59   0:00 /home/james/.local/share/mise/installs/node/latest/bin/node /tmp/fixb-run
+(empty = clean)
+== tabs (read-only) ==
+554d5c5f | about:blank

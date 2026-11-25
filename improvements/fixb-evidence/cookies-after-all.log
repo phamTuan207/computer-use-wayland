@@ -1,0 +1,8 @@
+{"wall":"2026-11-25T22:58:52.879Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T22:58:52.909Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"daa4ded3-de98-407d-8136-9817f7260c9f"}
+{"wall":"2026-11-25T22:58:52.922Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"coolors.co","cookies":[{"name":"__Secure-PHPSESSID","domain":"coolors.co"},{"name":"_ga","domain":".coolors.co"},{"name":"_ga_T3MQ5E34JM","domain":".coolors.co"},{"name":"_ga_423NSNB2VH","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"}]}
+{"wall":"2026-11-25T22:58:52.923Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+{"wall":"2026-11-25T22:59:30.290Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T22:59:30.320Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"10da4db1-241c-4d3c-9db3-9f898c7ad334"}
+{"wall":"2026-11-25T22:59:30.343Z","elapsed_s":"0.1","mode":"cookies","step":"cookies","domain":"openverse.org","cookies":[{"name":"cf_clearance","domain":".openverse.org"},{"name":"cf_clearance","domain":".openverse.org"},{"name":"ui","domain":"openverse.org"},{"name":"ui","domain":"openverse.org"}]}
+{"wall":"2026-11-25T22:59:30.344Z","elapsed_s":"0.1","mode":"cookies","step":"done"}

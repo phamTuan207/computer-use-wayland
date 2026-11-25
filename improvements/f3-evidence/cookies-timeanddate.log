@@ -1,0 +1,27 @@
+F3 prover cookie clear, timeanddate.com, wall-clock Asia/Ho_Chi_Minh.
+Raw probe output lines below are verbatim tool output (site and tool text exempt from dash rule).
+
+[2026-11-26 06:14:20 +07] probe cookies timeanddate.com (before)
+{"wall":"2026-11-25T23:14:24.515Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:14:24.545Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"a9860e89-998d-4c9f-a06d-c6b93ae0fc39"}
+{"wall":"2026-11-25T23:14:24.563Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"timeanddate.com","cookies":[{"name":"__Host-Http-TADAN","domain":"www.timeanddate.com"},{"name":"_sharedID","domain":".timeanddate.com"},{"name":"_sharedID_cst","domain":".timeanddate.com"},{"name":"hb_insticator_uid","domain":"www.timeanddate.com"},{"name":"cto_bundle","domain":".timeanddate.com"},{"name":"cto_bidid","domain":".timeanddate.com"},{"name":"__gads","domain":".timeanddate.com"},{"name":"__gpi","domain":".timeanddate.com"},{"name":"__eoi","domain":".timeanddate.com"},{"name":"cf_clearance","domain":".timeanddate.com"},{"name":"cf_clearance","domain":".timeanddate.com"}]}
+{"wall":"2026-11-25T23:14:24.564Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Before count 11. cf_clearance present, 2 entries, domain .timeanddate.com.
+
+[2026-11-26 06:14:25 +07] probe delete timeanddate.com
+{"wall":"2026-11-25T23:14:29.827Z","elapsed_s":"0.0","mode":"delete","step":"start"}
+{"wall":"2026-11-25T23:14:29.856Z","elapsed_s":"0.0","mode":"delete","step":"session","sessionId":"62737176-5ae9-4822-93c5-2d0e09b7e7b7"}
+{"wall":"2026-11-25T23:14:29.869Z","elapsed_s":"0.0","mode":"delete","step":"delete_before","domain":"timeanddate.com","count":11,"cookies":[{"name":"__Host-Http-TADAN","domain":"www.timeanddate.com"},{"name":"_sharedID","domain":".timeanddate.com"},{"name":"_sharedID_cst","domain":".timeanddate.com"},{"name":"hb_insticator_uid","domain":"www.timeanddate.com"},{"name":"cto_bundle","domain":".timeanddate.com"},{"name":"cto_bidid","domain":".timeanddate.com"},{"name":"__gads","domain":".timeanddate.com"},{"name":"__gpi","domain":".timeanddate.com"},{"name":"__eoi","domain":".timeanddate.com"},{"name":"cf_clearance","domain":".timeanddate.com"},{"name":"cf_clearance","domain":".timeanddate.com"}]}
+{"wall":"2026-11-25T23:14:29.884Z","elapsed_s":"0.1","mode":"delete","step":"delete_after","domain":"timeanddate.com","count":0,"cookies":[]}
+{"wall":"2026-11-25T23:14:29.885Z","elapsed_s":"0.1","mode":"delete","step":"done"}
+RC=0
+Delete 11 to 0.
+
+[2026-11-26 06:14:29 +07] probe cookies timeanddate.com (independent re-read)
+{"wall":"2026-11-25T23:14:33.564Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:14:33.592Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"6c0f7688-f864-42a1-9ef6-38eb12c2cbd1"}
+{"wall":"2026-11-25T23:14:33.604Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"timeanddate.com","cookies":[]}
+{"wall":"2026-11-25T23:14:33.605Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Re-read count 0. Clear PASS.

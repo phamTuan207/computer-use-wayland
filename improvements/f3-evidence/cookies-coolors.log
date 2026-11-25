@@ -1,0 +1,27 @@
+F3 prover cookie clear, coolors.co, wall-clock Asia/Ho_Chi_Minh.
+Raw probe output lines below are verbatim tool output (site and tool text exempt from dash rule).
+
+[2026-11-26 06:08:03 +07] probe cookies coolors.co (before)
+{"wall":"2026-11-25T23:08:07.270Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:08:07.300Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"6f8a4842-aca7-4bbb-8622-6a2031057d87"}
+{"wall":"2026-11-25T23:08:07.319Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"coolors.co","cookies":[{"name":"__Secure-PHPSESSID","domain":"coolors.co"},{"name":"_ga","domain":".coolors.co"},{"name":"_ga_T3MQ5E34JM","domain":".coolors.co"},{"name":"_ga_423NSNB2VH","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"}]}
+{"wall":"2026-11-25T23:08:07.320Z","elapsed_s":"0.1","mode":"cookies","step":"done"}
+RC=0
+Before count 6. cf_clearance present, 2 entries, domain .coolors.co.
+
+[2026-11-26 06:08:08 +07] probe delete coolors.co
+{"wall":"2026-11-25T23:08:12.175Z","elapsed_s":"0.0","mode":"delete","step":"start"}
+{"wall":"2026-11-25T23:08:12.206Z","elapsed_s":"0.0","mode":"delete","step":"session","sessionId":"eca610e0-7100-4ca6-85ee-2b7a4ddce8d8"}
+{"wall":"2026-11-25T23:08:12.221Z","elapsed_s":"0.0","mode":"delete","step":"delete_before","domain":"coolors.co","count":6,"cookies":[{"name":"__Secure-PHPSESSID","domain":"coolors.co"},{"name":"_ga","domain":".coolors.co"},{"name":"_ga_T3MQ5E34JM","domain":".coolors.co"},{"name":"_ga_423NSNB2VH","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"}]}
+{"wall":"2026-11-25T23:08:12.243Z","elapsed_s":"0.1","mode":"delete","step":"delete_after","domain":"coolors.co","count":0,"cookies":[]}
+{"wall":"2026-11-25T23:08:12.244Z","elapsed_s":"0.1","mode":"delete","step":"done"}
+RC=0
+Delete 6 to 0.
+
+[2026-11-26 06:08:13 +07] probe cookies coolors.co (independent re-read)
+{"wall":"2026-11-25T23:08:17.474Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:08:17.503Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"34756fc1-b0b8-4ec1-8137-6274ffbefcb9"}
+{"wall":"2026-11-25T23:08:17.515Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"coolors.co","cookies":[]}
+{"wall":"2026-11-25T23:08:17.516Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Re-read count 0. Clear PASS.

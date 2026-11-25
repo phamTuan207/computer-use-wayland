@@ -1,0 +1,35 @@
+F3 prover setup and baseline, wall-clock Asia/Ho_Chi_Minh.
+Raw tool output lines below are verbatim (site and tool text exempt from dash rule).
+
+Coordinator state: rung3-run-log/r3-l3-coordinator-state.json, current_task PAUSED at pause point (in-flight complete), epoch 9 deputy recorded. Pause holds.
+
+SSH note: first SSH attempts at 06:03 to 06:04 failed with proxy closed connection (5 consecutive). Retries at 06:05:49 and 06:06:38 succeeded (hello, omarchy). Transient outage, recorded honestly. All later SSH calls used short commands only.
+
+[2026-11-26 06:07 +07] computer-use status: {"ok":true,"cancelled":false}
+Zen window: address 0x5614f01a0e20, class zen, workspace 2 (verified live, re-verified before coolors drive).
+Ports: 127.0.0.1:2828 LISTEN zen-bin pid 578117, 127.0.0.1:9222 LISTEN zen-bin pid 578117.
+Overlay status: holders {}, owner none, visible false.
+Cursor lock: free by /proc fd scan for cursor.lock.
+Leftover procs: no holder-fixb, drive-fixb, probe-fixb processes.
+Zen environ keys present: WAYLAND_DISPLAY, HYPRLAND_INSTANCE_SIGNATURE, XDG_RUNTIME_DIR, DBUS_SESSION_BUS_ADDRESS. DISPLAY absent in Zen environ.
+
+Laptop /tmp/fixb-runner sha256 readback:
+6af74f2a4e03745504e9e9520019a9e5e097e943707ad01fe226c43e90d79f45  drive-fixb.py
+70bfe8abbed9fdbec30a2cf323c61150322048ce2736dfe26186a1c075d4f213  holder-fixb.mjs
+5329a574c7c7de6b003ad967d9706e75e589ce60c388f7a07f39f12dcf15c1f9  probe-fixb.mjs
+All match runbook section 7 step 2. No transfer needed for these three files.
+
+Shim verify (VM copy of holder-fixb.mjs): SHIM length 316 bytes, sha256 bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8. Matches pinned hash.
+
+Prover driver: drive-prover.py, sha256 14348b3b5e5692e1706f83e1ae893e5839d3fec89fc6d4cb930e1016db85c712 on VM and laptop after base64 transfer, py_compile OK on both. Modeled on drive-fixb.py, see file header for differences.
+
+Image transfer test: laptop observe image d54d853ec646.jpg via base64 over SSH, VM sha256 43645f4a94b5dc3e1d13d016c8199bd1e7febecf398979780acf18e5f26d50c8 matches laptop. One call per image.
+
+[2026-11-26 06:07:03 +07] baseline probe start, node probe-fixb.mjs probe (no shim)
+{"wall":"2026-11-25T23:07:07.166Z","elapsed_s":"0.0","mode":"probe","step":"start"}
+{"wall":"2026-11-25T23:07:07.197Z","elapsed_s":"0.0","mode":"probe","step":"session","sessionId":"5a5698e3-3d42-4123-ae1d-2c2a4d14f0b1"}
+{"wall":"2026-11-25T23:07:09.038Z","elapsed_s":"1.9","mode":"probe","step":"descriptor","info":{"webdriver":true,"own_on_navigator":false,"own_on_proto":true,"get_name":"get webdriver","get_tostring":"function webdriver() {\n    [native code]\n}","title":"wdprobe","url":"data:text/html,<title>wdprobe</title><body>probe</body>"}}
+{"wall":"2026-11-25T23:07:09.063Z","elapsed_s":"1.9","mode":"probe","step":"done"}
+PROBE_RC=0
+[2026-11-26 06:07:08 +07] baseline probe end. Elapsed about 5s wall including SSH.
+Baseline PASS: webdriver true, own_on_proto true, own_on_navigator false, get_name get webdriver, native toString form.

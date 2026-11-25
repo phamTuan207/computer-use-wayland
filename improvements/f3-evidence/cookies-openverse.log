@@ -1,0 +1,27 @@
+F3 prover cookie clear, openverse.org, wall-clock Asia/Ho_Chi_Minh.
+Raw probe output lines below are verbatim tool output (site and tool text exempt from dash rule).
+
+[2026-11-26 06:17:13 +07] probe cookies openverse.org (before)
+{"wall":"2026-11-25T23:17:17.978Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:17:18.008Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"b2c7d7ee-bb11-4d51-8719-9b38886e17ac"}
+{"wall":"2026-11-25T23:17:18.026Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"openverse.org","cookies":[{"name":"cf_clearance","domain":".openverse.org"},{"name":"cf_clearance","domain":".openverse.org"},{"name":"ui","domain":"openverse.org"},{"name":"ui","domain":"openverse.org"}]}
+{"wall":"2026-11-25T23:17:18.027Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Before count 4. cf_clearance present, 2 entries, domain .openverse.org.
+
+[2026-11-26 06:17:19 +07] probe delete openverse.org
+{"wall":"2026-11-25T23:17:23.252Z","elapsed_s":"0.0","mode":"delete","step":"start"}
+{"wall":"2026-11-25T23:17:23.282Z","elapsed_s":"0.0","mode":"delete","step":"session","sessionId":"789b2793-798c-4144-9c0e-bb5c297e66d2"}
+{"wall":"2026-11-25T23:17:23.295Z","elapsed_s":"0.0","mode":"delete","step":"delete_before","domain":"openverse.org","count":4,"cookies":[{"name":"cf_clearance","domain":".openverse.org"},{"name":"cf_clearance","domain":".openverse.org"},{"name":"ui","domain":"openverse.org"},{"name":"ui","domain":"openverse.org"}]}
+{"wall":"2026-11-25T23:17:23.310Z","elapsed_s":"0.1","mode":"delete","step":"delete_after","domain":"openverse.org","count":0,"cookies":[]}
+{"wall":"2026-11-25T23:17:23.310Z","elapsed_s":"0.1","mode":"delete","step":"done"}
+RC=0
+Delete 4 to 0.
+
+[2026-11-26 06:17:22 +07] probe cookies openverse.org (independent re-read)
+{"wall":"2026-11-25T23:17:26.725Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:17:26.756Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"5d6f5a7e-5689-43d3-8619-3601aba04820"}
+{"wall":"2026-11-25T23:17:26.768Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"openverse.org","cookies":[]}
+{"wall":"2026-11-25T23:17:26.769Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Re-read count 0. Clear PASS.

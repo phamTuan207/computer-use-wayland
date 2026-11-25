@@ -1,0 +1,27 @@
+F3 prover cookie clear, coolors.co fresh-session repeat, wall-clock Asia/Ho_Chi_Minh.
+Raw probe output lines below are verbatim tool output (site and tool text exempt from dash rule).
+
+[2026-11-26 06:20:14 +07] probe cookies coolors.co (before repeat)
+{"wall":"2026-11-25T23:20:18.367Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:20:18.397Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"7ff879fc-95aa-46aa-b329-fd4fa86a65bd"}
+{"wall":"2026-11-25T23:20:18.416Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"coolors.co","cookies":[{"name":"__Secure-PHPSESSID","domain":"coolors.co"},{"name":"_ga","domain":".coolors.co"},{"name":"generator_settings","domain":"coolors.co"},{"name":"_ga_T3MQ5E34JM","domain":".coolors.co"},{"name":"_ga_423NSNB2VH","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"}]}
+{"wall":"2026-11-25T23:20:18.417Z","elapsed_s":"0.1","mode":"cookies","step":"done"}
+RC=0
+Before count 6. cf_clearance present, 1 entry (minted during first coolors drive).
+
+[2026-11-26 06:20:19 +07] probe delete coolors.co
+{"wall":"2026-11-25T23:20:23.907Z","elapsed_s":"0.0","mode":"delete","step":"start"}
+{"wall":"2026-11-25T23:20:23.937Z","elapsed_s":"0.0","mode":"delete","step":"session","sessionId":"4feedba7-ba65-41fc-9cd0-b6eb15644ca7"}
+{"wall":"2026-11-25T23:20:23.950Z","elapsed_s":"0.0","mode":"delete","step":"delete_before","domain":"coolors.co","count":6,"cookies":[{"name":"__Secure-PHPSESSID","domain":"coolors.co"},{"name":"_ga","domain":".coolors.co"},{"name":"generator_settings","domain":"coolors.co"},{"name":"_ga_T3MQ5E34JM","domain":".coolors.co"},{"name":"_ga_423NSNB2VH","domain":".coolors.co"},{"name":"cf_clearance","domain":".coolors.co"}]}
+{"wall":"2026-11-25T23:20:23.969Z","elapsed_s":"0.1","mode":"delete","step":"delete_after","domain":"coolors.co","count":0,"cookies":[]}
+{"wall":"2026-11-25T23:20:23.970Z","elapsed_s":"0.1","mode":"delete","step":"done"}
+RC=0
+Delete 6 to 0.
+
+[2026-11-26 06:20:23 +07] probe cookies coolors.co (independent re-read)
+{"wall":"2026-11-25T23:20:27.249Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:20:27.279Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"d24e001b-8d74-43f1-9e87-1ccf452846fe"}
+{"wall":"2026-11-25T23:20:27.291Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"coolors.co","cookies":[]}
+{"wall":"2026-11-25T23:20:27.292Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Re-read count 0. Clear PASS. Drive result FAIL (Cloudflare challenge, see drive-coolors2.log).

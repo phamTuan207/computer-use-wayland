@@ -1,0 +1,26 @@
+{"wall": "2026-11-26T05:03:06+07:00", "step": "runner2_start"}
+{"wall": "2026-11-26T05:03:06+07:00", "step": "pill_acquired", "visible": true, "label": "Computer use active"}
+{"wall": "2026-11-26T05:03:06+07:00", "step": "cmd_start", "tag": "uw-baseline"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-baseline", "line": "{\"wall\":\"2026-11-25T22:03:07.021Z\",\"elapsed_s\":\"0.0\",\"mode\":\"baseline\",\"step\":\"start\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-baseline", "line": "{\"wall\":\"2026-11-25T22:03:07.054Z\",\"elapsed_s\":\"0.0\",\"mode\":\"baseline\",\"step\":\"session\",\"sessionId\":\"e03e692d-adae-4f3e-9de0-7639674c2db7\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-baseline", "line": "{\"wall\":\"2026-11-25T22:03:07.369Z\",\"elapsed_s\":\"0.3\",\"mode\":\"baseline\",\"step\":\"context_created\",\"context\":\"97b7ffab-402b-4357-9a1c-51d427176bbf\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-baseline", "line": "{\"wall\":\"2026-11-25T22:03:07.370Z\",\"elapsed_s\":\"0.3\",\"mode\":\"baseline\",\"step\":\"userway_start\",\"tag\":\"baseline-uw-coolors\",\"query\":\"coolors color palette generator\",\"expectHost\":\"coolors.co\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-baseline", "line": "{\"wall\":\"2026-11-25T22:03:11.007Z\",\"elapsed_s\":\"4.0\",\"mode\":\"baseline\",\"step\":\"search_box\",\"tag\":\"baseline-uw-coolors\",\"box\":[[\"x\",{\"type\":\"number\",\"value\":705}],[\"y\",{\"type\":\"number\",\"value\":402}]]}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-baseline", "line": "{\"wall\":\"2026-11-25T22:03:11.008Z\",\"elapsed_s\":\"4.0\",\"mode\":\"baseline\",\"step\":\"fatal\",\"error\":\"Error: input.performActions: \\\"invalid argument\\\"\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_done", "tag": "uw-baseline", "rc": 1, "elapsed_s": 4.0}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_start", "tag": "uw-preload"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-preload", "line": "{\"wall\":\"2026-11-25T22:03:11.037Z\",\"elapsed_s\":\"0.0\",\"mode\":\"preload\",\"step\":\"start\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_out", "tag": "uw-preload", "line": "{\"wall\":\"2026-11-25T22:03:11.069Z\",\"elapsed_s\":\"0.0\",\"mode\":\"preload\",\"step\":\"fatal\",\"error\":\"Error: session.new: \\\"session not created\\\"\"}"}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "cmd_done", "tag": "uw-preload", "rc": 1, "elapsed_s": 0.1}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "zen_env", "pid": "578117", "keys": ["DBUS_SESSION_BUS_ADDRESS", "HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR"]}
+{"wall": "2026-11-26T05:03:11+07:00", "step": "stock_launch", "tag": "probe", "url": "data:text/html,<title>wdprobe</title><body><h1 id=w>?</h1><script>document.getEl"}
+{"wall": "2026-11-26T05:03:26+07:00", "step": "stock_screenshot", "tag": "probe", "file": "/tmp/council2-evidence/stock2-probe.png", "bytes": 703953, "grim_rc": 0, "grim_err": ""}
+{"wall": "2026-11-26T05:03:26+07:00", "step": "stock_done", "tag": "probe", "profile_deleted": true}
+{"wall": "2026-11-26T05:03:26+07:00", "step": "stock_launch", "tag": "coolors", "url": "https://coolors.co"}
+{"wall": "2026-11-26T05:03:56+07:00", "step": "stock_screenshot", "tag": "coolors", "file": "/tmp/council2-evidence/stock2-coolors.png", "bytes": 703964, "grim_rc": 0, "grim_err": ""}
+{"wall": "2026-11-26T05:03:56+07:00", "step": "stock_done", "tag": "coolors", "profile_deleted": true}
+{"wall": "2026-11-26T05:03:56+07:00", "step": "stock_launch", "tag": "chatgpt", "url": "https://chatgpt.com"}
+{"wall": "2026-11-26T05:04:26+07:00", "step": "stock_screenshot", "tag": "chatgpt", "file": "/tmp/council2-evidence/stock2-chatgpt.png", "bytes": 703895, "grim_rc": 0, "grim_err": ""}
+{"wall": "2026-11-26T05:04:26+07:00", "step": "stock_done", "tag": "chatgpt", "profile_deleted": true}
+{"wall": "2026-11-26T05:04:26+07:00", "step": "pill_released", "error": null, "visible_after": false}
+{"wall": "2026-11-26T05:04:26+07:00", "step": "runner2_done"}

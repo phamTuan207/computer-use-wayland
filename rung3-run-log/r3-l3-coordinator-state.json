@@ -24,8 +24,8 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "PAUSED at pause point (in-flight complete). Holding for re-plan coordinator resume word (council+redteam unanimous incl. Cloudflare fix proven live).",
-  "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
+  "current_task": "RESUME GATE PASSED (council+redteam unanimous with conditions, redteam reconvene 06:30). Epoch 9: complete redteam section 6.4 checks 3-9, then release R3-027 (frozen position 23, FCC lane). Checks 10-12 before touched tasks. Full plan: improvements/r3-l3-replan-total-20261126.md.",
+  "deputy": "8aef68b3-a324-4159-aba5-493fdfe304e4 (epoch 9 deputy; declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T05:05:22+07:00, after state last_updated 2026-11-26T05:04:58+07:00, G-24 freshness satisfied; dry run PASS: state file epoch 9 + coordinator_active verified, ledgers 29 rows 21 PASS/4 INVALID/3 FAIL/1 TEST + 3 re-run PASS, rule-A 24 PASS / 0 FAIL; on STANDBY under re-plan section 7 fencing)",
   "fail_count": 3,
   "freeze": {
     "h1": "9b9d900",
@@ -37,12 +37,12 @@
   },
   "invalid_by_group": {
     "de": 0,
-    "kho": 0,
+    "kho": 1,
     "rat_kho": 0,
-    "trung_binh": 0
+    "trung_binh": 3
   },
-  "invalid_count": 0,
-  "last_updated": "2026-11-26T05:01:36+07:00",
+  "invalid_count": 4,
+  "last_updated": "2026-11-26T06:31:21+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1076,9 +1076,34 @@
       "ts": "2026-11-26T05:01:36+07:00",
       "by": "coordinator-epoch-8",
       "text": "PAUSE POINT REACHED (in-flight work complete per 04:31 order): last graded task R3-025 PASS (ledger row recorded this note). Unscored queue: EMPTY. No runner alive; no drive in progress; Zen session free. Next position to run when resumed: R3-027 (position 24 in frozen order; FCC in the current split; subject to the re-plan redistribution). Remaining frozen order after R3-026: R3-027, R3-028, R3-029 (credential re-verification owed before it), R3-035, R3-036, R3-037, then positions 29-55 (R3-040/041/042 already graded PASS), then task 56 (restore pinned/essentials, brief at improvements/r3-l3-task56-restore-tabs-20261126.md). Repo tip at pause: to be set by this push. Holding for the re-plan coordinator's resume word (council + redteam unanimous incl. Cloudflare fix proven live, per 04:53 delegation). No new tasks released, no new runners/scorers spawned."
+    },
+    {
+      "ts": "2026-11-26T05:03:51+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER HARD RULE (26/11 05:01, via parent; owner asleep, work continues): TEST LIKE A NORMAL USER. Every test involving users follows normal user behavior, never the AI way (a user searches on the web and clicks; an AI opens by direct command; users do not use things the way AIs do). Extends the human-way navigation rule (2026-11-09 limio discovery). When the run resumes, task drives already follow human-way navigation; keep it that way and treat any AI-shortcut test as invalid evidence. Standing rule for all runner briefs on resume. Holding the pause."
+    },
+    {
+      "ts": "2026-11-26T05:03:51+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "OWNER ORDER (26/11 05:03, via parent; owner asleep, work continues): MASTER EVENT LOG. A worker is building one master chronological event log on the laptop at ~/agent-event-log/events.log, backfilled from project start from all existing logs (including rung3 run logs and coordinator state notes, read-only). From now on, log in even more detail: keep state notes and per-task reports complete (the harvest script pulls from them); once the append helper ~/workspace/agent-event-log/log-event.sh is confirmed by the parent, append key run events through it too. Holding the pause. NOTE: this coordinator session holds no direct access to ~/agent-event-log/ on the laptop right now; will use the helper once the parent confirms it exists."
+    },
+    {
+      "ts": "2026-11-26T05:04:58+07:00",
+      "by": "coordinator-epoch-9",
+      "text": "EPOCH 9 TAKEOVER: epoch 8 completed cleanly at the pause point (05:03). Epoch 9 takes over as run coordinator. Inherited state (parent-verified 05:04, epoch 9 re-verifying against ledgers): run PAUSED at pause point; in-flight work complete; unscored queue EMPTY; no runner alive; Zen session free. Ledger 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run rows (all PASS); rule-A counted 24 PASS / 0 FAIL. Last graded R3-025 fresh completion PASS (manifest 40f661b3). R3-026 INVALID (coolors.co Cloudflare; medium invalid count 3 over per-group cap 2; consequence + bar recompute = re-plan decision). Bar was 54/56. Next position on resume: R3-027 (position 24). Task 56 counted at end of run. R3-029 password parent-held, notify parent as position 25 approaches. RESUME GATE: hold until re-plan coordinator (e8b8ad3a) gives the word (council+redteam unanimous incl. Cloudflare fix proven live, tested the user way). Release nothing, drive nothing until then. Fresh deputy being spawned + confirmed next (G-24/G-38)."
+    },
+    {
+      "ts": "2026-11-26T05:05:38+07:00",
+      "by": "coordinator-epoch-9",
+      "text": "EPOCH 9 STARTUP COMPLETE: (1) takeover record written 05:04:58 before any order. (2) Fresh deputy 8aef68b3 spawned, dry run PASS, declaration appended 05:05:22 (G-24 freshness), on standby under section 7 fencing. (3) Inherited state verified by epoch 9 directly from ledgers: R3-L3-grades.jsonl 29 rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST; INVALIDs R3-011/DP-06, R3-022/DP-02, R3-024/DP-07, R3-026 dropped no backup) + R3-L3-reruns.jsonl 3 rows all PASS; rule-A 24 PASS / 0 FAIL. Numbers match parent brief exactly, no mismatch. Heartbeat appended (epoch 9, 05:05:19); note pre-existing glued JSONL line 23 in heartbeat log (two objects, old epoch append hazard, left untouched; ledgers parse clean). Stale top-level counters in state file refreshed to ledger truth this write. Holding pause; releasing nothing until re-plan coordinator resume word."
+    },
+    {
+      "ts": "2026-11-26T06:31:21+07:00",
+      "by": "replan-coordinator",
+      "text": "RE-PLAN SYNTHESIS: final plan improvements/r3-l3-replan-total-20261126.md. Council-1/2/3 + redteam (DISAGREE) + fix A/B + F3 proof + redteam reconvene (AGREE with conditions). State updated: invalid_by_group repaired (trung_binh 3, kho 1, total 4), heartbeat line 23 split + parse verified, gate decisions + lanes + cap/bars recorded in replan_total_20261126. RESUME ORDER to epoch 9: pass redteam 6.4 checks 3-9, then release R3-027 (frozen position 23, FCC). R3-089 guard refresh 2026-11-30 12:00 stands even if not reached (fixture expiry 2026-12-01 08:59). Events logged via log-event.sh (source replan-coordinator)."
     }
   ],
-  "pass_count": 3,
+  "pass_count": 21,
   "plan_adaptations": [
     {
       "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
@@ -1121,19 +1146,19 @@
     "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
     "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
   },
-  "status": "PHASE 1 EXECUTION - EXECUTING OWNER-APPROVED MID-RUN RE-PLAN (owner approved 2026-11-25 18:46 +07, counting rule A supersede at closure). 6 graded (3 PASS Codex R3-040/041/042, 3 FAIL FCC fabrication R3-001/002/003, 0 INVALID). Re-runs of R3-001/002/003 by Muse first (separate re-run ledger R3-L3-reruns.jsonl, originals preserved), then positions 4-28, then 32-55. Split: Muse 25 / Codex 24 / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0. Bar 53/55 reachable under rule A if re-runs pass. HOLD lifted.",
-  "coordinator_active": "e2bc09c6-864c-4e39-8375-7cd8076f4349",
-  "epoch": 8,
+  "status": "PAUSED at pause point, RESUME GATE PASSED with conditions (owner 04:31 pause, 04:53 delegated gate, redteam reconvene 06:30 YES/YES with 12 checks). Ledger: 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 24 PASS / 0 FAIL. Bars (N-2): 52/54 original, 53/55 with task 56, slack 2. Next: R3-027 frozen position 23 after checks 3-9.",
+  "coordinator_active": "1a1a1188-9be6-45dc-ae75-9c7bfbe96894 (epoch 9, label e8ee3f83-4124-d1bd-d443-1fe9a499f973, takeover 2026-11-26T05:04:58+07:00)",
+  "epoch": 9,
   "task_start": null,
   "runner_pid": null,
   "codex_task": "R3-042",
   "codex_task_start": null,
   "codex_runner_pid": null,
-  "graded_count": 8,
+  "graded_count": 29,
   "graded": 6,
-  "pass": 3,
+  "pass": 21,
   "fail": 3,
-  "invalid": 0,
+  "invalid": 4,
   "runner_split": {
     "approved_by": "owner 2026-11-25 18:46 +07 (counting rule A)",
     "source": "improvements/r3-l3-replan-midrun-20261125.md section 2",
@@ -1224,5 +1249,21 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": null
+  "claude_runner_session": null,
+  "replan_total_20261126": {
+    "file": "improvements/r3-l3-replan-total-20261126.md",
+    "gate": "DELEGATED TEAM GATE (owner 04:53): council + redteam unanimous. Redteam reconvene 06:30: tools sufficient YES with conditions, plan good enough YES with conditions. Checks 1-9 (redteam section 6.4) must pass before R3-027 releases; checks 1-2 done by replan coordinator at synthesis (this write).",
+    "ratio_weights": {
+      "clone2": 100,
+      "mei": 100,
+      "mochi": 85,
+      "clone1": 50,
+      "total": 335,
+      "reason": "plain reading of owner order 04:33: clone1 50 percent fewer than the other three = half of a full share (clone2/mei); mochi 15 percent fewer than clone2/mei = 85. Ratios govern post-resume WU; in-flight + calibration load reported separately."
+    },
+    "cap_decision": "Drop R3-026 (INVALID coolors Cloudflare, no medium backup). Bars recomputed N minus 2: 52 of 54 original set, 53 of 55 with task 56, slack 2. Superseded bars 53 of 55 and 54 of 56 stated at closure (both-ways counting). Banked rule-A 24 PASS / 0 FAIL. Need 28 more PASS from 30 remaining original positions, 29 from 31 with task 56. Medium invalid 3 over per-group cap 2, total invalid 4 of 5, one slot left; sixth invalid event needs new recorded decision before further releases. At valid 50: pause releases, reconvene council + redteam (no owner escalation unless team cannot agree).",
+    "lanes": "FCC: R3-027, R3-037. Muse subagents: R3-028, R3-029, R3-035, R3-036, task 56 default. Codex exec: remaining 24. R3-027 = frozen position 23 (recount; earlier 24 was R3-028). R3-029 password: parent holds, brief at release only, never in file, epoch 9 notifies parent as position 25 approaches, brief copy destroyed after, destruction logged without value.",
+    "cloudflare": "Shim: session-scoped BiDi preload Proxy variant sha256 bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8, integrated zen_cli.py BidiSession.start() L484 via holder-fixb.mjs, probe fail-loud per drive. F3 cookie-cleared user-way: timeanddate PASS (only remaining-task site), chatgpt x2 PASS, openverse PASS, coolors repeat FAIL (known cold limit, zero remaining exposure, stock cold also walls). Warm-profile rule: no cookie clears mid-run without coordinator approval; cf_clearance is run state. Fallback default INVALID path; Chromium/Brave lane only with coordinator + both scorers agreement recorded before drive. Re-proof trigger: any bot-wall invalid on shimmed drive = council+redteam re-check before further releases on that site class.",
+    "resume_order": "RESUME when redteam section 6.4 checks 3-9 pass (holder hash verify, FCC holder dry start, probe per drive, warm-profile + sign-in record, clone2 calibration sign-off before scoring, pii-scan.py + test push, brief fields). Checks 10-12 before touched tasks (R3-028 fallback brief, re-proof trigger armed, R3-079/089/100 guards; R3-089 guard refresh 2026-11-30 12:00 even if not reached)."
+  }
 }

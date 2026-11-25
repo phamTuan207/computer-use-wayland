@@ -288,3 +288,17 @@ I am on STANDBY. I will NOT start any task on my own. I will NOT message the own
 - Owner approved the mid-run re-plan (improvements/r3-l3-replan-midrun-20261125.md) at 18:46 +07 on 2026-11-25 with counting rule A (supersede at closure, separate re-run ledger R3-L3-reruns.jsonl, originals preserved). HOLD lifted; the run executes the re-plan.
 - Run state verified from the state file: 6 graded (3 PASS Codex: R3-040, R3-041, R3-042; 3 FAIL FCC fabrication: R3-001, R3-002, R3-003; 0 INVALID); ledger R3-L3-grades.jsonl 7 rows (trial + 6 graded), tip 7517abe6; runner split (runner_split field): Muse 25 (3 re-runs + 22 in positions 4-28) / Codex 24 (positions 32-55) / FCC 3 easy (R3-014, R3-027, R3-037) / opencode 0; task_start null, codex_task_start null; current task R3-001 re-run (position 1, Class L, Claude-run).
 - This deputy is on STANDBY under re-plan section 7 fencing: no orders issued, no tasks released, no driving, no scoring. It only confirms readiness and stands by. The coordinator owns the state file and all pushes; this deputy only appends to the declaration and dry-run files.
+
+---
+
+## Deputy declaration, epoch 9, session 8aef68b3-a324-4159-aba5-493fdfe304e4
+
+- Declaration timestamp: 2026-11-26T05:05:22+07:00 (after state file last_updated 2026-11-26T05:04:58+07:00, G-24 freshness satisfied).
+- Session ID: 8aef68b3-a324-4159-aba5-493fdfe304e4 (fresh deputy, epoch 9).
+- State file read at: 2026-11-26T05:05:07+07:00 (initial read and parse; dry-run re-parse and ledger count at 05:05 +07).
+- This deputy replaces epoch-8 deputy 0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (superseded, no authority) and epoch-7 deputy b03fde23-3a8e-4a03-b40d-256743644a45 (superseded, no authority).
+- Coordinator: 1a1a1188-9be6-45dc-ae75-9c7bfbe96894, epoch 9 (takeover record in state file at 2026-11-26T05:04:58+07:00). Workers obey only coordinator_active 1a1a1188 under re-plan section 7 fencing.
+- Run state verified from the state file: epoch 9, coordinator_active names 1a1a1188-9be6-45dc-ae75-9c7bfbe96894, run PAUSED at pause point (current_task: PAUSED at pause point, in-flight complete, holding for re-plan coordinator resume word), task_start null, runner_pid null, codex_task_start null, codex_runner_pid null, no runner alive.
+- Ledgers verified by parse and count: R3-L3-grades.jsonl 29 rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST); R3-L3-reruns.jsonl 3 rows (all PASS: R3-001, R3-002, R3-003). Rule-A counted: 24 PASS / 0 FAIL (21 original PASS + 3 re-run PASS replacing the 3 original FAILs). No mismatch.
+- Next position on resume: R3-027 (position 24). Resume gate delegated to the team (council+redteam unanimous incl. Cloudflare fix proven live, tested the user way). Task 56 (counted, end of run) restores the owner's pinned+essential tabs. R3-029 (position 25) password is parent-held.
+- This deputy is on STANDBY under re-plan section 7 fencing: no orders issued, no tasks released, no driving, no scoring, no writes to the ledger, state file, or verdict files. It only confirms readiness and stands by. The coordinator owns the state file and all pushes; this deputy only appends to the declaration file. Takeover only if the parent (main Muse) verifies the coordinator is DEAD (not merely silent) and directs takeover; then a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.

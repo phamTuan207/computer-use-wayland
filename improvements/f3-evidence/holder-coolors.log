@@ -1,0 +1,14 @@
+{"wall":"2026-11-25T23:08:35.438Z","elapsed_s":"0.0","step":"shim_pinned","sha256":"bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8","bytes":316}
+{"wall":"2026-11-25T23:08:35.438Z","elapsed_s":"0.0","step":"start"}
+{"wall":"2026-11-25T23:08:35.466Z","elapsed_s":"0.0","step":"session","sessionId":"cfa7c456-e9ce-4916-823d-051e071dd378"}
+{"wall":"2026-11-25T23:08:35.468Z","elapsed_s":"0.0","step":"preload_installed","preloadId":"c5646f3d-03b7-4c68-b36d-b201e1157754"}
+{"wall":"2026-11-25T23:08:35.780Z","elapsed_s":"0.3","step":"context_created","context":"3910666d-3751-49d1-aa9c-d561ed7ba5be"}
+{"wall":"2026-11-25T23:08:37.308Z","elapsed_s":"1.9","step":"descriptor_probe","info":{"webdriver":false,"own_on_navigator":false,"own_on_proto":true,"get_name":"get webdriver","get_tostring":"function () {\n    [native code]\n}","configurable":true,"enumerable":true,"title":"wdprobe","url":"data:text/html,<title>wdprobe</title><body>probe</body>"}}
+{"wall":"2026-11-25T23:08:37.309Z","elapsed_s":"1.9","step":"probe_ok"}
+{"wall":"2026-11-25T23:08:50.929Z","elapsed_s":"15.5","step":"rpc_done","id":"1795648130676762715","op":"evaluate","ok":true}
+{"wall":"2026-11-25T23:09:32.191Z","elapsed_s":"56.8","step":"rpc_done","id":"1795648171845664147","op":"evaluate","ok":true}
+{"wall":"2026-11-25T23:10:19.451Z","elapsed_s":"104.0","step":"rpc_done","id":"1795648219089730713","op":"evaluate","ok":true}
+{"wall":"2026-11-25T23:10:20.254Z","elapsed_s":"104.8","step":"preload_removed"}
+{"wall":"2026-11-25T23:10:20.271Z","elapsed_s":"104.8","step":"context_closed"}
+{"wall":"2026-11-25T23:10:20.285Z","elapsed_s":"104.8","step":"session_ended"}
+{"wall":"2026-11-25T23:10:20.286Z","elapsed_s":"104.8","step":"done"}

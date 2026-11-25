@@ -1,0 +1,13 @@
+F3 prover cookie clear, chatgpt.com, wall-clock Asia/Ho_Chi_Minh.
+Full 81-name before list is in cookies-chatgpt-delete-raw.log (delete_before line, fetched from laptop). Names only, no values.
+Deleting chatgpt.com cookies removes the sign-in session cookies in this profile. Expected for the gate per runbook section 6. Landing check needs a usable prompt box, not a signed-in session.
+
+[2026-11-26 06:11:16 +07] probe cookies chatgpt.com (before): count 81. cf_clearance present, 3 entries, domain .chatgpt.com. Also present: __cf_bm, _cfuvid, __Secure-next-auth.session-token.0 and .1, and normal site cookies. Full names in raw delete log.
+[2026-11-26 06:11:22 +07] probe delete chatgpt.com: delete_before count 81, delete_after count 0. RC=0. Raw log: cookies-chatgpt-delete-raw.log.
+[2026-11-26 06:11:28 +07] probe cookies chatgpt.com (independent re-read):
+{"wall":"2026-11-25T23:11:32.522Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:11:32.551Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"dd4fbd71-0f4c-4ea0-be3a-98bcbbad84ee"}
+{"wall":"2026-11-25T23:11:32.567Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"chatgpt.com","cookies":[]}
+{"wall":"2026-11-25T23:11:32.568Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Re-read count 0. Clear PASS.

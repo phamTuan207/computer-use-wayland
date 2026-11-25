@@ -1,0 +1,4 @@
+{"wall":"2026-11-25T22:57:00.392Z","elapsed_s":"0.0","mode":"probe","step":"start"}
+{"wall":"2026-11-25T22:57:00.422Z","elapsed_s":"0.0","mode":"probe","step":"session","sessionId":"0bfeba03-5f59-4004-b75c-4ea8ebc12943"}
+{"wall":"2026-11-25T22:57:02.268Z","elapsed_s":"1.9","mode":"probe","step":"descriptor","info":{"webdriver":true,"own_on_navigator":false,"own_on_proto":true,"get_name":"get webdriver","get_tostring":"function webdriver() {\n    [native code]\n}","title":"wdprobe","url":"data:text/html,<title>wdprobe</title><body>probe</body>"}}
+{"wall":"2026-11-25T22:57:02.293Z","elapsed_s":"1.9","mode":"probe","step":"done"}

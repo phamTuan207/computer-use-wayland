@@ -1,0 +1,13 @@
+F3 prover cookie clear, chatgpt.com fresh-session repeat, wall-clock Asia/Ho_Chi_Minh.
+Full name lists in cookies-chatgpt2-before-raw.log and cookies-chatgpt2-delete-raw.log (fetched from laptop). Names only, no values.
+
+[2026-11-26 06:23:15 +07] probe cookies chatgpt.com (before repeat): count 16. cf_clearance count 0. Names: oai-did, __oailb, __cflb, _cfuvid, oai_pl_permission_state, oai-did-first-seen, oai-mweb-route, oai-mweb-origin, oai-sc, __cf_bm (with repeats across domain forms, 16 entries total). Full list in raw before log.
+[2026-11-26 06:23:22 +07] probe delete chatgpt.com: delete_before count 16, delete_after count 0. Raw log: cookies-chatgpt2-delete-raw.log.
+[2026-11-26 06:23:30 +07] probe cookies chatgpt.com (independent re-read):
+{"wall":"2026-11-25T23:23:34.143Z","elapsed_s":"0.0","mode":"cookies","step":"start"}
+{"wall":"2026-11-25T23:23:34.172Z","elapsed_s":"0.0","mode":"cookies","step":"session","sessionId":"e73b991b-7f5c-48b8-839f-d44a787da9d4"}
+{"wall":"2026-11-25T23:23:34.184Z","elapsed_s":"0.0","mode":"cookies","step":"cookies","domain":"chatgpt.com","cookies":[]}
+{"wall":"2026-11-25T23:23:34.184Z","elapsed_s":"0.0","mode":"cookies","step":"done"}
+RC=0
+Re-read count 0. Clear PASS.
+Note: landing image for this repeat already showed draft text hello in the prompt box before the interact step. Cookie delete does not clear local storage drafts. Recorded honestly in proof record.
