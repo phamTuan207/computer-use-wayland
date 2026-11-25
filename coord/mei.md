@@ -767,3 +767,14 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Kiem tra lai Gutenberg cho R3-047 (2026-11-25 07:54 +07)
+
+Lenh chu so huu 2026-11-24 18:42 +07: kiem tra lai Gutenberg truoc vi tri 34 (R3-049 moi la 35). R3-047 la vi tri 34 trong thu tu chay R3-L3, thuoc batch Codex (vi tri 29-55).
+
+- Kiem tra truc tiep bang trinh duyet 2026-11-25 07:54 +07: https://www.gutenberg.org/ KHONG tai binh thuong, khong chuyen huong. Tieu de trang: "Temporarily Down for Maintenance". Thong bao: "Project Gutenberg is temporarily unavailable while we perform maintenance. Please check back soon." Khong cho thoi gian mo lai. Chi doc, khong dang nhap, khong bam them, khong tai gi.
+- Doi chieu: trang Entireweb noi Gutenberg chay binh thuong ngay 24/11, mau thuan voi kiem tra truc tiep; kiem tra truc tiep bang trinh duyet la bang chung manh hon, vi do la thu runner se gap. File770 ngay 20-21/11 ghi Gutenberg dang xay lai sau pha hoai, chua co lich mo lai, phu hop voi trang bao tri van hien.
+- R3-047 (Tier B, key R3-L3 dong 434-440) doi 3 cuon tren gutenberg.org: Pride and Prejudice (ebook 1342), Frankenstein (ebook 84), Adventures of Huckleberry Finn (ebook 76), moi cuon it nhat 3 dinh dang. Task khong lam duoc khi trang bao tri.
+- De xuat (theo dinh dang triage da duoc chu so huu xac nhan 2026-11-24 18:41 +07): R3-047 giu nguyen la ung vien INVALID thu 5, backup DP-03. Quyet dinh vo hieu can scorer 2 xac nhan mu + dieu phoi vien dong ky, truoc khi vi tri 34 chay. Neu Gutenberg mo lai truoc vi tri 34, kiem tra lai mot lan nua bang trinh duyet roi moi cho chay, vi trang bao tri khong cho thoi gian mo lai.
+- Em khong cham diem, khong doc ledger hay snapshot, khong lien he scorer hay runner, khong sua file dong bang.
+- Boi canh: khong co commit moi tren todolist-push ke tu 81919c0 luc 21:52 ngay 24/11, chua thay dau vet lan chay R3-L3 tren GitHub luc kiem tra.
