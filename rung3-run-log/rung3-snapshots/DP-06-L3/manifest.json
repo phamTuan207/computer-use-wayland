@@ -1,0 +1,44 @@
+{
+ "files": [
+  {
+   "mtime": 1795624799,
+   "name": "20261125-233554-paris.png",
+   "sha256": "9d9055655d65f086a4e1cd49fe509c7c58671c6d15119f06465999304c0ce913",
+   "size": 2060094
+  },
+  {
+   "mtime": 1795624818,
+   "name": "20261125-233557-berlin.png",
+   "sha256": "5e5057753bd2cd7c346be6aa21c83b9e898e83068bf7a5273f01099391e6191f",
+   "size": 1976542
+  },
+  {
+   "mtime": 1795624836,
+   "name": "20261125-233559-rome.png",
+   "sha256": "bab8ab61bcd8248e3488caf15c953c93d99f5f5ed393b3c7c24a8dc7b783430b",
+   "size": 1986579
+  },
+  {
+   "mtime": 1795624769,
+   "name": "end_time.txt",
+   "sha256": "fda688ffd020ced65e5796c5635c3c789ab2ec3883aafb57f7c91cb9ea246b72",
+   "size": 26
+  },
+  {
+   "mtime": 1795624782,
+   "name": "ket-qua.txt",
+   "sha256": "72c30e05b8d3138d8800191033216c0963fb2e06eaa54d10c2ad2762b6253a92",
+   "size": 80
+  },
+  {
+   "mtime": 1795624756,
+   "name": "start_time.txt",
+   "sha256": "f52f413e2c2f1e1e68108299c83421cbfc390c920549cda33fd95a4a062c8569",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "3ef9dd40122ae09a1706a238b8bc3c99fc50dc1b22e251cac6f00ae9b333b404",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/DP-06-L3",
+ "source_dir": "/home/hatch/workspace/rung3-evidence-staging/DP-06",
+ "task": "DP-06"
+}

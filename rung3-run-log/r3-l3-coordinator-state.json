@@ -24,7 +24,7 @@
   "completed_positions": 0,
   "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
   "current_position": 1,
-  "current_task": "R3-011 INVALID (countersigned), backup DP-06 to release next (position 12), then R3-013",
+  "current_task": "DP-06: drive done, sealed + gate PASS, Pair A scoring next; R3-013 to release",
   "deputy": "0d185ff6-38c9-4d93-83ec-28b5d7fea1b7 (declaration appended to ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-25 18:49:29 +07, after state last_updated 2026-11-25T18:48:41+07:00; dry run PASS 18:49:07-18:49:26 +07, all 5 items PASS, appended to rung3-run-log/r3-l3-deputy-dry-run-20261125.md, G-24 and G-38 CLOSED for epoch 8, on STANDBY). Session b03fde23-3a8e-4a03-b40d-256743644a45 (epoch 7 deputy) SUPERSEDED (completed, holds no deputy authority). Session 411037c8-88f0-48e8-a1e7-f5f832cae19f (epoch 6 deputy) SUPERSEDED.",
   "fail_count": 3,
   "freeze": {
@@ -42,7 +42,7 @@
     "trung_binh": 0
   },
   "invalid_count": 0,
-  "last_updated": "2026-11-25T23:27:41+07:00",
+  "last_updated": "2026-11-25T23:41:20+07:00",
   "ledger": {
     "file": "rung3-run-log/R3-L3-grades.jsonl",
     "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -636,6 +636,21 @@
       "ts": "2026-11-25T23:27:41+07:00",
       "by": "coordinator-epoch-8",
       "text": "R3-011 INVALID (Pair A agree, both audited, coordinator countersign): A1 Mochi INVALID 23:19:27 (branch mochi/verdict-R3-011-L3, copied to ~/workspace/rung3-verdicts/R3-011-A1.json), A2 310d2148 INVALID 23:17:44 (R3-011-A2.json, blind confirm). Key hashes verified by both; allowlist clean; manifest df6d1163. Original ledger row recorded (R3-L3-grades.jsonl now 15 rows) with invalid{is_invalid: true, backup_task: DP-06}. Pair recorded in du-phong.txt (repo mirror; laptop canonical to be synced byte-identical after push). Counting: shared timeanddate cause = 1 invalid for both caps (5 total, 2 medium); R3-028/036/046 share the cause and will consume DP-07 then drop per the four-task scenario if all blocked. DP-06 (medium backup order 1, Tier B, Wikipedia population Paris/Berlin/Rome) releases next at position 12, Claude lane, Pair A; then R3-013. Valid count stays 55 with the replacement; bar stays 53/55. Run: 17 graded; under rule A banked count 13 PASS / 0 FAIL + 1 INVALID (replaced). Bar math: need 40/42 remaining (2 slack). Owner notification: per plan, notify at invalid 3/4/5; this is invalid 1 (shared-cause event 1) - parent informed via state; no owner stop condition."
+    },
+    {
+      "ts": "2026-11-25T23:28:23+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-06 RELEASED (position 12, Tier B, Class S, Claude-run, backup replacement for R3-011 INVALID): Wikipedia population lookup for Paris, Berlin, Rome in order; record the city population (first line of the Population row in the infobox, NOT Urban/Metro/Estimate lines) with the date shown beside it; screenshot each infobox as the figure appears; ket-qua.txt with 3 rows. Evidence requirements: files [ket-qua.txt], screenshots_min 3. Evidence dir ~/rung3-chung-cu/DP-06/ on the laptop. du-phong.txt pair record pushed (0bdbf469) and laptop canonical synced byte-identical (sha256 b08bab28 both). task_start set at release; runner_pid null (Muse runner). Brief includes M2 self-check and the 21:31 tab-close rule. After DP-06: R3-013 (position 13)."
+    },
+    {
+      "ts": "2026-11-25T23:28:37+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-06 RUNNER SPAWNED: fresh Muse subagent bea23487-3eae-46a9-be39-d54eb2e32afc (claude_runner_session recorded; runner_pid null; timeout-watch tracks via task_start + session liveness; coordinator enforces the 30-min timeout by closing the subagent if it overruns). Brief includes the 21:31 tab-close standing rule and the M2 end-of-drive self-check. Scoring pair for DP-06: Pair A (inherits R3-011's pair)."
+    },
+    {
+      "ts": "2026-11-25T23:41:20+07:00",
+      "by": "coordinator-epoch-8",
+      "text": "DP-06 DRIVE COMPLETE (runner bea23487): start 2026-11-25T23:35:50+07:00, end 2026-11-25T23:36:00+07:00 (10s, inside timeout). Evidence: ket-qua.txt (80 B), 3 infobox screenshots (Paris/Berlin/Rome), start/end times. Session clean after (no cursor.lock, pill released). Pulled 6 files sha256-verified. Sealed DP-06-L3 manifest 3ef9dd40122ae09a1706a238b8bc3c99fc50dc1b22e251cac6f00ae9b333b404, gate PASS. task_start cleared. Tab-close verification (23:40 list, 23 tabs): 0 Paris/Berlin/Rome tabs - runner closed its task tabs per the 21:31 standing rule. Next: publish to repo for Mochi, Pair A scoring (DP-06 inherits R3-011's Pair A), release R3-013."
     }
   ],
   "pass_count": 3,
@@ -784,5 +799,5 @@
     "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
     "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
   },
-  "claude_runner_session": "a9ce3da8-11e9-43de-9db1-e31a84324228"
+  "claude_runner_session": "bea23487-3eae-46a9-be39-d54eb2e32afc"
 }
