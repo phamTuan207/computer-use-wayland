@@ -1369,6 +1369,78 @@ class TestRun(unittest.TestCase):
         self.assertNotIn('given_observation_rejected',
                          env['observation'])
 
+    def test_captured_source_window_bound_batch_refused_loudly(self):
+        # R7 (tracker J35/J40): no --observation given, so act-now
+        # captures a screen observation. A batch bound to window
+        # scope carries window-space points; running them on the
+        # screen capture misses by the window origin offset with a
+        # success envelope. The run must refuse loudly BEFORE any
+        # session attempt, naming the captured source.
+        with mock.patch.object(first_action, 'broker_attempt') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(_args(_write_actions(
+                    self.tmp.name,
+                    [{'type': 'click', 'x': 160, 'y': 21,
+                      'scope': 'window',
+                      'observation_id': 'win-obs-9'}])))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'refused')
+        self.assertEqual(env['observation']['source'], 'captured')
+        self.assertIn('captured', env['error'])
+        self.assertIn('window', env['error'])
+        self.assertIn('refusing', env['error'])
+        self.assertEqual(env['fallback_reason'], env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_captured_source_foreign_observation_id_refused(self):
+        # R7, id form: a batch bound to another observation id (no
+        # scope field) is likewise refused on the captured source.
+        with mock.patch.object(first_action, 'broker_attempt') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(_args(_write_actions(
+                    self.tmp.name,
+                    [{'type': 'click', 'x': 160, 'y': 21,
+                      'observation_id': 'some-other-obs'}])))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('some-other-obs', env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_captured_source_unbound_batch_still_runs(self):
+        # R7 control: unbound actions on the captured source are
+        # screen coordinates by definition (the documented default)
+        # and still reach the session.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 160, 'y': 21}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5))
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['observation']['source'], 'captured')
+
+    def test_captured_source_refusal_helper(self):
+        # R7 pure helper: matching bindings and unbound actions
+        # pass; a scope or id mismatch names the action index.
+        meta = {'id': 'cap-1', 'scope': 'screen'}
+        self.assertIsNone(first_action.captured_source_refusal(
+            [{'type': 'click', 'x': 1, 'y': 2}], meta))
+        self.assertIsNone(first_action.captured_source_refusal(
+            [{'type': 'click', 'x': 1, 'y': 2, 'scope': 'screen',
+              'observation_id': 'cap-1'}], meta))
+        msg = first_action.captured_source_refusal(
+            [{'type': 'click', 'x': 1, 'y': 2},
+             {'type': 'click', 'x': 3, 'y': 4, 'scope': 'window'}],
+            meta)
+        self.assertIn('action 1', msg)
+        self.assertIn('captured', msg)
+
     def test_session_after_is_scope_matching_not_screen(self):
         # AMEND4 item 12 (CL1-SWEEP regression): the envelope 'after'
         # must be the scope-matching capture, not the screen capture.
