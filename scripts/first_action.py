@@ -66,7 +66,10 @@ The observation, when given, must be fresh (under 120 s); a given
 observation that is stale, missing, or unreadable is NEVER silently
 replaced by a screen capture that the batch then acts on (G28): the
 run refuses loudly instead, for any batch, naming the given
-observation, why it was rejected, and what to pass. The overlay is acquired
+observation, why it was rejected, and what to pass. When no
+observation is given (source captured, screen scope), a batch bound
+to a window scope or another observation is likewise refused
+loudly (R7): window-space points never run on a screen capture. The overlay is acquired
 before anything else, so the pill is visible within about a second of
 the command starting. The run appends a JSON timing record to
 STATE/first-action-YYYYMMDD.jsonl. Every invocation prints exactly one
@@ -954,6 +957,52 @@ def loud_substitution_refusal(rejected, has_keyboard=True):
             % (given, reason, age_txt, remedy))
 
 
+def captured_source_refusal(actions, meta):
+    """R7 fail-loud guard for the captured-source path.
+
+    When no observation was given, act-now captures a fresh SCREEN
+    observation (source 'captured'). A batch whose actions are bound
+    to a different scope or observation (typically window-space
+    points grounded on a window image) must NOT run on that screen
+    capture: the points would execute in screen space, off by the
+    window origin offset, and the envelope would still read success
+    (tracker J35/J40, the largest click-miss class). Returns the
+    refusal message naming the first mismatched action, or None
+    when every bound action matches the captured meta (unbound
+    actions are the documented screen-coordinates default and pass;
+    CB-2 stamping in broker_attempt still refuses a mismatch as a
+    second line, but this guard fires first, before any session
+    attempt, and names the captured source). Pure function, unit
+    tested.
+    """
+    if not isinstance(meta, dict):
+        return ('observation source is captured but the captured '
+                'meta is unreadable; refusing rather than acting')
+    for index, action in enumerate(actions):
+        if not isinstance(action, dict):
+            continue
+        scope = action.get('scope')
+        if scope is not None and scope != meta.get('scope'):
+            return ('observation source is captured (screen scope, '
+                    'id %s) but action %d is bound to scope %r; '
+                    'refusing rather than running window-space '
+                    'points in screen space: re-observe the target '
+                    'window and pass the fresh window observation '
+                    'with --observation'
+                    % (meta.get('id'), index, scope))
+        observation_id = action.get('observation_id')
+        if (observation_id is not None
+                and observation_id != meta.get('id')):
+            return ('observation source is captured (screen scope, '
+                    'id %s) but action %d is bound to observation '
+                    '%r; refusing rather than running points '
+                    'grounded on another observation against this '
+                    'screen capture: re-observe and pass the fresh '
+                    'observation with --observation'
+                    % (meta.get('id'), index, observation_id))
+    return None
+
+
 def _load_cu():
     """The cu module: when cu.py is the main script its module is
     __main__, not 'cu'; importing cu again would load a second copy.
@@ -1132,6 +1181,20 @@ def run(args):
             envelope['error'] = message
             envelope['path'] = 'refused'
             return 1
+        if obs_source == 'captured':
+            # R7: no observation was given, so act-now captured a
+            # screen observation. A batch bound to a window scope or
+            # to another observation carries window-space points;
+            # running them on the screen capture misses by the
+            # window origin offset with a success envelope (J35/J40).
+            # Refuse loudly before any session attempt. Unbound
+            # actions are screen coordinates by definition and pass.
+            message = captured_source_refusal(actions, meta)
+            if message is not None:
+                envelope['fallback_reason'] = message
+                envelope['error'] = message
+                envelope['path'] = 'refused'
+                return 1
         envelope['order_to_session_attempt_ms'] = _ms(t0)
         (rc, out, err, timed_out, _elapsed,
          broker_detail) = broker_attempt(
