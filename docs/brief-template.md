@@ -108,6 +108,21 @@ the ones workers kept repeating because a brief omitted them.
 - Never start work before the user says GO. "Ready" is not GO.
 - Never report "ready" without a live check (login state, session
   state, file presence).
+- BROWSER RESTART (R16, decided 2026-11-27; full procedure in
+  `docs/browser-restart-procedure.md`): no watch ever kills or
+  restarts a live browser. Revive-dead only: the health watch may
+  relaunch only when no browser process exists AND the automation
+  ports are down on two consecutive checks, logged. A live restart
+  is coordinator/human-initiated at a task boundary, never mid-drive:
+  record open tabs (including pinned and essential) via BiDi list
+  dump to a file first, restart through the wrapper, then verify
+  ports up, pill visible, session restore, owner essentials present.
+  Memory threshold is 8 GB RSS (uncalibrated placeholder); record
+  RSS + headroom at every boundary to calibrate. The same
+  record-before / verify-after checklist and the R6 guardrail govern
+  agent-initiated tooling restarts (e.g. sessionstore surgery),
+  whoever initiates. The procedure is not "ready" until a
+  throwaway-profile drill passes on the real mechanism.
 
 ## 8. Channels and process (D1-D5)
 
