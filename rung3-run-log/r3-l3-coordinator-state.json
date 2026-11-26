@@ -21,10 +21,10 @@
  ],
  "class_l_count": 9,
  "class_s_count": 46,
- "completed_positions": 26,
+ "completed_positions": 27,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
- "current_position": 27,
- "current_task": "EPOCH 21: R3-036 (position 27) snapshot pushed 36687609 (manifest f857cf4f, 15 files). Pair A scoring dispatched: Mochi scorer 1 (daemon run 240, verified=True 14:05:13) + Fresh scorer 2 (861775d2). Verdicts due ~14:35 on branches mochi/verdict-R3-036-L3 + fresh/verdict-R3-036-L3. Rule-A 27/0.",
+ "current_position": 28,
+ "current_task": "EPOCH 21: R3-036 (position 27) GRADED PASS 14:09 (A1 Mochi PASS 14:06:24 + A2 Fresh PASS 14:06:14, agree, no tiebreaker; shared_cause_confirmed false, no block occurred; validators exit 0; verdicts filed R3-036-A1/A2.json). Rule-A 28/0. Next: release R3-037 (position 28, FCC lane). No drive in progress.",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,11 +42,11 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T14:05:23+07:00",
+ "last_updated": "2026-11-26T14:07:58+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
-  "note": "33 rows (1 TEST + 24 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 65 verdict files)",
-  "rows": 33
+  "note": "34 rows (1 TEST + 25 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 67 verdict files)",
+  "rows": 34
  },
  "notes": [
   "Phase 0 coordinator. Run NOT started. No task has run.",
@@ -1279,9 +1279,14 @@
    "ts": "2026-11-26T14:05:23+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-036 SCORING DISPATCHED 2026-11-26T14:05:23+07:00. Mochi scorer 1 via daemon run 240 (outcome=sent, verified=True, pill acquired/released). Fresh scorer 2 spawned (861775d2-8b6f-4c74-a166-eb38b9c125aa), shared_cause_confirmed required in verdict JSON. Verdicts due ~30 min on branches mochi/verdict-R3-036-L3 + fresh/verdict-R3-036-L3. No INVALID candidate triggered in the drive (no bot block), so shared-cause counting is expected moot, but scorer 2 confirmation still required by brief."
+  },
+  {
+   "ts": "2026-11-26T14:07:58+07:00",
+   "by": "coordinator-epoch-21",
+   "text": "R3-036 GRADED PASS (ledger row recorded 14:09:00). Scorer 1 (Mochi 70cd99d1) PASS scored 14:06:24; scorer 2 (Fresh 861775d2) PASS scored 14:06:14; both audited PASS (key hashes match freeze, manifest f857cf4f, files read = snapshot + key + brief, independence declarations present), agree, no tiebreaker. Shared-cause: NO block occurred (timeanddate loaded normally), scorer 2 shared_cause_confirmed false, INVALID candidate not triggered, 0 cap events consumed. Verdicts filed ~/workspace/rung3-verdicts/R3-036-A1.json + R3-036-A2.json (+ grade mds) before the ledger row. validate-ledger PASS (34 rows, 0 errors), ledger-cross-check OK (67 verdict files, 0 errors). Drive 13:28:36-13:55:07 (26m31s), snapshot R3-036-L3 manifest f857cf4f. Rule-A 28 PASS / 0 FAIL. Next: release R3-037 (position 28, FCC lane; scorers Mochi + Clone1, clone1 first scoring task, calibration APPROVED 4/4)."
   }
  ],
- "pass_count": 23,
+ "pass_count": 24,
  "plan_adaptations": [
   {
    "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
@@ -1324,7 +1329,7 @@
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
- "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 33 grade rows (24 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 27 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 24 PASS from 26 remaining original positions. Next drive R3-036 (position 27, Muse lane, named INVALID candidate, timeanddate shared cause). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
+ "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 34 grade rows (25 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 28 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 23 PASS from 25 remaining original positions. Next drive R3-037 (position 28, FCC lane; scorers Mochi + Clone1 first scoring task). Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00)",
  "epoch": 21,
  "task_start": null,
