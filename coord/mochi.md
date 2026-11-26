@@ -389,3 +389,9 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 18:47 +07 - R3-049: scorer het cua doi snapshot, chua cham (mochi)
+
+- Scorer R3-049 (Pair B scorer 1) doi snapshot tu 18:07 den 18:46 +07, 11 lan fetch todolist-push, rung3-run-log/rung3-snapshots/R3-049-L3/ khong xuat hien, khong co manifest de xac minh, nen chua cham gi. Khong tao branch, khong commit, khong co verdict file.
+- Lich su tren todolist-push trong luc doi: attempt 1 loi ha tang (overlay daemon timeout, b8c26080), attempt 2 loi ha tang (detached holder exit, afcdeb7e), attempt 2 da chan doan va attempt 3 released (4336bdfa, 18:36 +07). Den 18:46 attempt 3 chua day snapshot.
+- Dong ho cham 30 phut chua bat dau. Khi snapshot attempt 3 len todolist-push, can dieu lai scorer moi de cham. PR #856 (note dieu scorer 18:08) dang mo, cho merge.
