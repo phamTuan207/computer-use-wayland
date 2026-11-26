@@ -24,7 +24,7 @@
  "completed_positions": 24,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
- "current_task": "R3-029 (position 25, Muse lane, runner 1aa462ff) drive COMPLETED 2026-11-26T12:42:14+07:00 (states 5/4/5, no bot block, logged out). task_start/runner_pid CLEARED at drive end. Epoch 19 coordinator 4eb5ee66, deputy 51154780 on standby. Snapshot + Pair A scoring (Mochi + Clone2) next. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
+ "current_task": "R3-029 (position 25) drive COMPLETED 12:42:14; snapshot pushed 83b4fef5 (manifest 42d22dff); Pair A scoring dispatched 12:46 (Mochi scorer 1 daemon run 238, Clone2 scorer 2 PWA), verdicts due ~13:16. task_start/runner_pid null. Epoch 19 coordinator 4eb5ee66, deputy 51154780 on standby. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
  "deputy": "51154780-ef5c-4fab-bb75-755eeec66760 (epoch 19 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T12:14:45+07:00, after state last_updated 2026-11-26T12:12:42+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive untouched, codex-cli 0.172.0, state parse epoch 19 coordinator_active 4eb5ee66, snapshot + verdict paths exist; declaration pushed f452b3e1; epoch 18 deputy 79db2d8c SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T12:43:00+07:00",
+ "last_updated": "2026-11-26T12:46:27+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1214,6 +1214,11 @@
    "ts": "2026-11-26T12:15:32+07:00",
    "by": "coordinator-epoch-19",
    "text": "DEPUTY CONFIRMED, EPOCH 19: fresh deputy 51154780. Declaration 12:14:45 +07 (after state 12:12:42, G-24 satisfied), pushed f452b3e1 (ls-remote verified). Dry run 5/5 PASS. G-24 and G-38 CLOSED for epoch 19. Deputy on STANDBY under section 7 fencing. R3-029 releasing now (position 25, Muse lane)."
+  },
+  {
+   "ts": "2026-11-26T12:46:27+07:00",
+   "by": "coordinator-epoch-19",
+   "text": "R3-029 DRIVE COMPLETED 2026-11-26T12:42:14+07:00 (runner 1aa462ff, Muse lane; start 12:18:21, inside 30-min timeout). Wishlist states 5/4/5 screenshot-verified; logged out at end; no bot block, no INVALID candidate. Two drives (drive 1 aborted at runner 19-min cap after 5+4 states; drive 2 fresh probe completed re-add + 5-again + logout). Probe both drives: webdriver false, own_on_proto true, own_on_navigator false, get_name get webdriver, toString empty-name form; holder hashes verified per drive; pill visible both drives, released with grim proof; no cookies cleared; owner tabs untouched. task_start/runner_pid CLEARED at drive end (pushed 7061a60c). Snapshot: 13 files pulled sha256-verified, snapshot.py manifest 42d22dff, pushed 83b4fef5. pii-scan v1: 14 hits, ALL manual-review class (disposable test-account email on @example.com + public demo-store account-route URLs; session tokens already redacted in logs; no password, no personal email, no owner tab URL) - coordinator manual review PASS per R3-040 precedent, scan output filed here. Pair A scoring dispatched 12:46: Mochi scorer 1 (daemon run 238, verified) + Clone2 scorer 2 (PWA send ok); verdicts due within 30 min on branches mochi/verdict-R3-029-L3 + clone2/verdict-R3-029-L3. Next: file verdicts to ~/workspace/rung3-verdicts, validate + cross-check, ledger row, per-task report, then R3-035 (position 26)."
   }
  ],
  "pass_count": 22,

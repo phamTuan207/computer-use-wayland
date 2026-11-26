@@ -129,3 +129,4 @@
 2026-11-26T09:03:56+07:00 epoch 18 deputy confirmed (79db2d8c, G-24/G-38 closed); R3-029 held for parent password
 2026-11-26T12:14:13+07:00 epoch 19 takeover (coordinator 4eb5ee66); parent released R3-029 hold; Rule-A 25/0
 2026-11-26T12:15:38+07:00 epoch 19 deputy confirmed (51154780, G-24/G-38 closed); R3-029 releasing
+2026-11-26T12:46:27+07:00 R3-029 drive completed 12:42:14 (states 5/4/5, no block); snapshot 83b4fef5 manifest 42d22dff; Pair A scoring dispatched (Mochi run 238, Clone2 PWA)
