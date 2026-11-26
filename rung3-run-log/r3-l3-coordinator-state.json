@@ -21,10 +21,10 @@
  ],
  "class_l_count": 9,
  "class_s_count": 46,
- "completed_positions": 29,
+ "completed_positions": 30,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
- "current_position": 30,
- "current_task": "R3-046 ATTEMPT 2 COMPLETED, SNAPSHOT SEALED, SCORING ASSIGNED 2026-11-26T17:52:00+07:00: codex PID 3067146, drive 17:23:30-17:43:08 (19m38s), 6/6 lookups, ket-qua.txt written. Snapshot R3-046-L3 59 files manifest 5ac02800, gate PASS, pii clean, pushed 95792534 + 96b2e6f7 (60 tracked files). Pair B scorers Fresh1 + Fresh2 spawned. task_start/runner_pid cleared (drive over).",
+ "current_position": 31,
+ "current_task": "R3-046 GRADED PASS 2026-11-26T17:56:00+07:00 (Pair B Fresh1+Fresh2 agree, audits PASS, ledger 37 rows validated). Rule-A 29 PASS / 1 FAIL. Valid 52, bars 50/52 + 51/53, need 21 PASS from 22 remaining (22 from 23 with task 56), slack 1 FAIL. DP-03 (position 31, Codex lane, driver 3279a33d) RELEASED 17:53, drive in progress. Our-side invalid budget 5/5.",
  "deputy": "b3cf2527-e98a-48ab-85bd-e752138fa15a (epoch 23 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T17:08:16+07:00, after state last_updated 2026-11-26T17:08:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 23 coordinator_active 0d5fb18c, snapshot + verdict paths exist; epoch 22 deputy c6bc61fa SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T17:52:00+07:00",
+ "last_updated": "2026-11-26T17:56:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1359,6 +1359,11 @@
    "ts": "2026-11-26T17:52:00+07:00",
    "by": "coordinator-epoch23",
    "text": "R3-046 ATTEMPT 2 COMPLETED (driver c1874630 report 17:50:01): codex exec PID 3067146 (session 01a2175f), launch 17:21:14, drive window 17:23:30-17:43:08 (19m38s, inside 30-min deadline 17:51:14). Probe clean (webdriver false, own_on_proto true, own_on_navigator false, get_name \"get webdriver\", shim bb49ff3f). 6/6 lookups done user-way (DuckDuckGo SERP entry, visible form): Ha Noi 2026-12-02 06:17/17:14/10:56:38, 2027-06-02 05:14/18:34/13:19:54, diff +2:23:16; London 2026-12-02 07:45/15:54/8:09:15, 2027-06-02 04:48/21:09/16:20:30, diff +8:11:15; Sydney 2026-12-02 05:37/19:51/14:14:38, 2027-06-02 06:51/16:54/10:02:13, diff -4:12:25 (ket-qua.txt sha256 7261974e). Focus-verify before every act; no foreign-window interruption; Docs tab untouched. Pill acquired 17:22:31, released 17:41:09, grim-verified gone (driver independent grim). Holder clean end 17:41:03. No service block (timeanddate loaded normally; shared-cause INVALID candidate NOT triggered). Snapshot R3-046-L3 sealed 59 files (6 result screenshots + 46 working screenshots + ket-qua + probe + holder.log + times + report + pill-verify), manifest sha256 5ac02800027900a2dc22bd8c2994c603c379331ad2e13d4ce4fe825c1da76054, manifest gate PASS, pii-scan clean, pushed 95792534 (text) + 96b2e6f7 (53 PNGs force-added), ls-remote verified, 60 tracked files. Scoring: Pair B Fresh1 + Fresh2 (fix A F5.2), briefs rung3-run-log/briefs/R3-046-scorer-fresh1-brief.md + fresh2 (infra re-run record required before INVALID; scorer 2 shared-cause duty). task fields cleared. R3-046 is Class S: next task DP-03 (position 31) may release after scoring backpressure check (max 2 unscored per runner; Codex has 1 unscored)."
+  },
+  {
+   "ts": "2026-11-26T17:56:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "R3-046 GRADED PASS (ledger row recorded 17:56:00, validate exit 0, cross-check OK 73 verdict files). B1 Fresh 69d28ac3 PASS 17:52:10 (branch fresh1/verdict-R3-046-L3 81e42e8b), B2 Fresh 4ac339a6 PASS 17:52:39 (branch fresh2/verdict-R3-046-L3 bc9c9f06); both audited PASS (key hashes match freeze, manifest 5ac02800, 59/59 files hash-OK, independence declarations, shared_cause_confirmed false: no block, INVALID path not triggered). Scorers agree, no tiebreaker. Rule-A 29/1. DP-03 RELEASED 17:53 (position 31, Codex lane, driver 3279a33d; briefs pushed df41d006; scorers Clone2+Fresh per fix A F5.2). R3-046 reset: Class S, no fixture; evidence dir is the snapshot source; task tabs closed by runner at drive end (Docs tab untouched). Next after DP-03: R3-049 (position 32)."
   }
  ],
  "pass_count": 24,
