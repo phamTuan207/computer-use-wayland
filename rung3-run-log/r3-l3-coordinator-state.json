@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T18:17:00+07:00",
+ "last_updated": "2026-11-26T18:20:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1399,6 +1399,11 @@
    "ts": "2026-11-26T18:17:00+07:00",
    "by": "coordinator-epoch23",
    "text": "R3-049 ATTEMPT 1 DIAGNOSED (independent worker afb80694, 18:12:57-18:15:52): root cause NOT a dead daemon. Overlay daemon spawns on first acquire; Daemon.serve() calls apply_holders() before the accept loop, spawning the native indicator, whose init waits up to 30 s for BOTH hyprctl configerrors empty AND liquid backend ready. A stale Lua configerror (failed old-form string dispatch: hl.dispatch(\"closewindow\", \"address:0x5614f08a2ab0\")) appeared between 17:53:53 and 18:06:29 (DP-03 window; DP-03 Codex reported two failed Hyprland close attempts). Every fresh native spawn burned 30 s and failed (native_spawn_failed 18:06:59, 18:07:29, 18:08:24, 18:08:55) while _ensure_daemon waits only 15 s, hence \"overlay daemon did not answer within 15s\". FIX (investigator, no code change): hyprctl eval \"return true\" cleared configerrors; verified live: acquire native_spawned 209 ms, pill label exact, act-now wait-only batch ok (1670 ms), release clean, Zen 578117 untouched. CAVEAT: poison recurs if any agent uses string-form dispatch; PRE-FLIGHT for every drive from now: hyprctl configerrors must be empty (no-op eval clears it); hl.dsp object form only (standing rule). Structural fragility noted for post-run team decision: 30 s blocking native spawn inside serve() vs 15 s _ensure_daemon deadline. Attempt 2 released 18:17; attempt-1 evidence preserved in ~/rung3-chung-cu/R3-049/attempt1-infra-fail/ on the laptop."
+  },
+  {
+   "ts": "2026-11-26T18:20:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "OWNER RULE ON FIXES (2026-11-26 18:19 +07, final, via parent): during the run, ONLY RECORD every error and every fix (what failed, what was done, evidence). Integrate NOTHING mid-run into neither the repo nor the local install; hold no criteria meeting now. Finish all tasks first. After the run closes, the team reviews the full record and only the best, most essential fixes get integrated. Machine-state unblocks needed to keep a drive alive (like clearing the hyprctl configerror at 18:14) stay allowed as operational fixes, recorded not integrated as code. Epoch 23 compliance: the configerrors clear was a machine-state unblock (no code change), recorded in state + event log; the overlay 30s-spawn vs 15s-deadline fragility is recorded for post-run review; no code integrated mid-run. Coordinator keeps the error/fix record complete in state notes + per-task reports for the end-of-run review."
   }
  ],
  "pass_count": 24,
