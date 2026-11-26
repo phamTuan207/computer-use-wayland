@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T23:23:12+07:00",
+ "last_updated": "2026-11-26T23:24:14+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "41 rows (1 TEST + 30 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 81 verdict files)",
@@ -1657,15 +1657,15 @@
  "rule_a_pass": 25,
  "rule_a_fail": 0,
  "score": {
-  "rule_a_pass": 38,
+  "rule_a_pass": 39,
   "rule_a_fail": 1,
   "valid": 52,
   "bar_original": "50/52",
   "bar_with_task56": "51/53",
-  "need_original": "12 PASS from 13 remaining",
-  "need_with_task56": "13 PASS from 14 remaining",
+  "need_original": "11 PASS from 12 remaining",
+  "need_with_task56": "12 PASS from 13 remaining",
   "slack_fails": 1
  },
- "last_graded": "R3-078 (position 39) PASS at 2026-11-26T22:53:26+07:00 (Clone2 B1 + Fresh B2)",
+ "last_graded": "R3-079 (position 40) PASS at 2026-11-26T23:24:14+07:00 (Fresh B1 + Clone2 B2)",
  "allocation_20261126_2136": "Owner order 21:36 (supersedes 17:53): Clone2 is the main burner (scoring + prep/analysis/review); Mei steady (prep/analysis/review/research, NEVER scores); Mochi and Clone1 reduced to the minimum needed (both ~65% tokens used, Clone2 ~26%). Scorer independence untouchable; live driving Muse subagents/Codex/FCC. Applied from the next assignment onward. R3-075 scoring (Mochi + Clone2) was already assigned and delivered before the order, undisturbed. R3-076 scorer 2 reassigned Clone1 -> Clone2 (disjointness re-checked: prep Mei, scorers Fresh + Clone2, reviewer Mochi)."
 }

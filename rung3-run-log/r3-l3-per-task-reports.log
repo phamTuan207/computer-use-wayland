@@ -107,3 +107,13 @@
 - Evidence: snapshot R3-078-L3 (12 files + manifest, manifest sha256 6f16a394, gate PASS, pii clean).
 - Reset (Class L, after scoring, F12 coupled-reset for R3-079): ~/rung3/d45-backup removed; verified ls d45-backup = No such file, ls ~/rung3/d46-restored = No such file, diff -r -q ~/rung3/ ~/rung3-goc/ empty before R3-079 release.
 - Score after: Rule-A 38 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 12 PASS from 13 remaining original positions, 13 from 14 with task 56; slack 1 further FAIL).
+
+## R3-079 (position 40) - GRADED PASS 2026-11-26T23:24:14+07:00
+- Lane: Codex exec PID 3557304 (driver ccf0f5dd), 22:59:41-23:11:55 +07, elapsed 12m14s, within the 30-min limit. Task fields recorded in state at launch verification (91c12a1b), cleared at drive end.
+- F12 guard: released only after R3-078 graded + reset with diff -r -q ~/rung3/ ~/rung3-goc/ empty (verified 22:54; d46-restored exists empty in both fixture copies, noted against the guard's literal "No such file" wording).
+- Task: restore bao-cao-tuan.txt from the 2026-11-22 backup into ~/rung3/d46-restored via Nautilus copy; content "Bao cao tuan 47, doanh thu 12500000, don hang 320." matches the manifest 2026-11-22 line (sha256 407851fc, differs from the 2026-11-20 backup); work-folder files not overwritten (before/after hashes identical).
+- Scoring: Fresh B1 PASS (23:19:34, audited) + Clone2 B2 PASS (23:19, branch clone2/verdict-R3-079-L3 8ce38b56, audited); no tiebreaker.
+- Anomalies (full chains in drive-log.txt): Super-only key refused (Super+Space); window geometry-change refusal when opening the request file (no replay; re-observed kitty by exact address; first session ended, second session completed the UI steps; editor closed with :q, no edits); driver SSH launch exit 255 broken pipe (detached runner verified alive, no relaunch); drive-log cosmetic sort artifact (timestamp-normalization interleaved hash lines; all values present, bao-cao.txt lists them cleanly).
+- Evidence: snapshot R3-079-L3 (13 files + manifest, manifest sha256 d0bedcee, gate PASS, pii clean).
+- Reset (Class L, after scoring): ~/rung3/d46-restored/bao-cao-tuan.txt removed; evidence dir ~/rung3-chung-cu/R3-079 cleared; diff -r -q ~/rung3/ ~/rung3-goc/ empty again.
+- Score after: Rule-A 39 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 11 PASS from 12 remaining original positions, 12 from 13 with task 56; slack 1 further FAIL).
