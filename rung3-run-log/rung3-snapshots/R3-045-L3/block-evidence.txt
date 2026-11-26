@@ -1,0 +1,12 @@
+R3-045 block evidence
+Stage: URL upload (source image 1)
+First block observation: after the visible Upload files! action; screenshot capture timestamp 2026-11-26T15:05:12.920+07:00.
+Page title: Free Online GIF Maker
+Page URL: https://ezgif.com/maker?err=http
+Ray ID: none shown
+Visible page text: The HTTP request has failed. The URL may be incorrect, or the remote server has blocked our access. Please download the file to your computer and upload it manually!
+Wait log: after observing the block message, requested clock.sleep for 60000 ms; it completed. Then captured the page screenshot at 2026-11-26T15:06:50.747+07:00. Wait start timestamp was not separately captured.
+Screenshot: /home/james/rung3-chung-cu/R3-045/20261126-150806-block.jpg
+SHA-256: 907a5590c2a8e8cf3038e62826975f05437514c25eb5f14ed368aff09516d907
+Screenshot scope: full visible Zen window, including the block message and maker page.
+Coordinator ruling: not assigned to runner; INVALID candidate evidence only.

@@ -1,0 +1,56 @@
+{
+ "files": [
+  {
+   "mtime": 1795679910,
+   "name": "20261126-145853-serp.jpg",
+   "sha256": "08a8519714a943d785d335c710072ae88adb67b24f34579e62875c91e93c1c30",
+   "size": 227148
+  },
+  {
+   "mtime": 1795680412,
+   "name": "20261126-150806-block.jpg",
+   "sha256": "907a5590c2a8e8cf3038e62826975f05437514c25eb5f14ed368aff09516d907",
+   "size": 179193
+  },
+  {
+   "mtime": 1795680486,
+   "name": "block-evidence.txt",
+   "sha256": "3ed6df4dd3ee0fd45743f584087e0bb6dd1d58e1ac309ea5c864e896fd38989c",
+   "size": 986
+  },
+  {
+   "mtime": 1795680577,
+   "name": "end_time.txt",
+   "sha256": "fb5cb8f9fd339071d557f987658d9a9562447d82b6dc748826ab90bcd0e8c1fb",
+   "size": 26
+  },
+  {
+   "mtime": 1795680520,
+   "name": "holder.log",
+   "sha256": "a47ffb54840c2f7814f29631d7bd74f55a3f7d09e34d14272356bf9ff8b2c5f5",
+   "size": 3252
+  },
+  {
+   "mtime": 1795680523,
+   "name": "pill-gone.png",
+   "sha256": "58d5bddc28706fa3dc6c32f0ea015e75000b3f31a5651b99ba435c29121c6768",
+   "size": 1516631
+  },
+  {
+   "mtime": 1795679667,
+   "name": "probe-ready.json",
+   "sha256": "43f08edc5e315b16255618932ec054b415709e78b037d4af54cfead6ba3ed476",
+   "size": 455
+  },
+  {
+   "mtime": 1795679654,
+   "name": "start_time.txt",
+   "sha256": "a3df62d6749a468756f022d967193e7c2586a383655cb71478ec62041ee62c49",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "ae8b7299f91b2c86c6939ed77d9c54b518e45e0fb9462aa3b8c11c7a86e55de1",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-045-L3",
+ "source_dir": "/tmp/r3045-evidence/R3-045",
+ "task": "R3-045"
+}
