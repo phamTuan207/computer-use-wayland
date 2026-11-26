@@ -334,3 +334,18 @@ I am on STANDBY. I will NOT start any task on my own. I will NOT message the own
   4. State file parse PASS: epoch 11, coordinator_active 0e455752-c083-4108-a617-9934c72a41b6, current_task `EPOCH 11 TAKEOVER (R3-029 held for parent password)`.
   5. Ledgers + scorer paths PASS: R3-L3-grades.jsonl 31 rows, R3-L3-reruns.jsonl 3 rows under ~/workspace/r3l3-run-wt/rung3-run-log/; ~/workspace/rung3-snapshots/ exists; ~/workspace/rung3-verdicts/ exists.
 - Standing rules acknowledged: English only; ydotool banned; never touch ws3, owner tabs, or FCC pane PID 22399; never edit MEMORY.md.
+
+## Deputy declaration, epoch 12, 2026-11-26T07:54:12+07:00
+
+- Deputy session id: 3b1ee4ed-5fb3-40b2-a23c-22bb5405c351 (label 29191715-6b25-4dc3-979d-6b7c15a71bf6)
+- Coordinator active: 0ef54a8e-67b6-4d85-b2b1-d227630f365b, epoch 12, takeover 2026-11-26T07:53:29+07:00
+- Role: DEPUTY on STANDBY under re-plan section 7 fencing. Takeover ONLY on parent-verified coordinator death plus parent direction. No run orders, no task releases, no ledger or state run-field edits, no commits. Coordinator commits centrally.
+- State confirmation: coordinator_active 0ef54a8e-67b6-4d85-b2b1-d227630f365b, epoch 12, task_start null, runner_pid null, codex_task_start null, codex_runner_pid null, current_task `EPOCH 12 TAKEOVER (ledger repair done; R3-029 held for parent password)`. Declaration timestamp after state last_updated 2026-11-26T07:53:29+07:00, G-24 freshness satisfied.
+- Dry run (all 5 PASS):
+  a. Laptop SSH PASS: `~/workspace/ssh-laptop.sh "hostname"` returned `omarchy`, exit 0.
+  b. FCC tmux session PASS: `tmux ls` shows `r3-fcc-runner-L3: 1 windows (created Wed Nov 25 09:00:18 2026)`; pane PID 22399 (python) confirmed PERSISTENT, not touched.
+  c. Codex exec PASS: `codex --version` returned `codex-cli 0.172.0`, exit 0.
+  d. State file parse PASS: epoch 12, coordinator_active 0ef54a8e-67b6-4d85-b2b1-d227630f365b, invalid_count 5, pass_count 22 (grades), fail_count 3, rule_a_pass 25, rule_a_fail 0.
+  e. Ledgers parse PASS: R3-L3-grades.jsonl 31 rows, R3-L3-reruns.jsonl 3 rows; `python3 rung3-ci/validate-ledger.py` exit 0 (31 rows, 0 errors); `python3 rung3-ci/ledger-cross-check.py` exit 0 (61 verdict files, 0 errors).
+- Standing rules acknowledged: English only; Ponytail for code work; ydotool BANNED; pill on any agent control; SSH to laptop only via ~/workspace/ssh-laptop.sh; never close owner tabs, pinned, essentials, or ws3 windows; verdict files in ~/workspace/rung3-verdicts (VM-local, never committed); no personal info on GitHub; never assume an agent's capabilities.
+- This deputy stands by. If told to stand down, this deputy ends.

@@ -25,7 +25,7 @@
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 1,
  "current_task": "EPOCH 12 TAKEOVER (ledger repair done; R3-029 held for parent password)",
- "deputy": "4e4c8de2-9955-4075-a1e9-bb98335624d8 (epoch 10 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T06:34:53+07:00, after state last_updated 2026-11-26T06:34:15+07:00, G-24 freshness satisfied; dry run 5/5 PASS 06:34: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive, codex-cli 0.172.0, state parse epoch 10 coordinator_active f1dac71f, ledgers 29 rows 21 PASS/4 INVALID/3 FAIL/1 TEST + 3 re-run PASS rule-A 24 PASS / 0 FAIL, scorer paths present; epoch 9 deputy 8aef68b3 SUPERSEDED; on STANDBY under section 7 fencing)",
+ "deputy": "3b1ee4ed-5fb3-40b2-a23c-22bb5405c351 (epoch 12 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T07:54:12+07:00, after state last_updated 2026-11-26T07:53:29+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 12 coordinator_active 0ef54a8e, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; epoch 10 deputy 4e4c8de2 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T07:53:29.012102+07:00",
+ "last_updated": "2026-11-26T07:54:51.137788+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1129,6 +1129,11 @@
    "ts": "2026-11-26T07:53:29.012102+07:00",
    "by": "coordinator-epoch-12",
    "text": "COORDINATOR TAKEOVER, EPOCH 12: epoch 11 (0e455752) completed after its takeover write; parent appoints successor 0ef54a8e as coordinator epoch 12 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 0ef54a8e). LEDGER REPAIR DONE: R3-027 scorer1.files_read (was int 20) repaired to the 20-file list transcribed from Mochi grade md (17 snapshot files + 3 docs); R3-028 scorer1.files_read (was missing) restored verbatim from Mochi A1 verdict JSON (15 files). Verdict JSONs filed in ~/workspace/rung3-verdicts (R3-027-A1/A2, R3-028-A1/A2, scorer content verbatim). validate-ledger PASS (31 rows, 0 errors), ledger-cross-check OK (61 verdict files, 0 errors). No grade, verdict, or hash changed (diff-verified: only scorer1.files_read on lines 30-31). Rule-A recomputed: 25 PASS / 0 FAIL, 5 INVALID (events 5/5 EXHAUSTED; a 6th event needs a new recorded team decision via parent BEFORE further releases). Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Per-task reports backfilled for R3-027 + R3-028. R3-029 (position 25, Muse lane) HELD: parent re-verifying password with owner; do NOT release until parent sends it; password in spawn message only, never in any file. Clone1 calibration dispatched (sealed set R3-002/013/016/024, brief 31fa2244); clone1 scores nothing until sign-off (first scoring task R3-037). Checks 11-12 prep next. Fresh deputy to be spawned (G-24/G-38)."
+  },
+  {
+   "ts": "2026-11-26T07:54:51.137788+07:00",
+   "by": "coordinator-epoch-12",
+   "text": "DEPUTY CONFIRMED, EPOCH 12: fresh deputy 3b1ee4ed. Declaration 07:54:12 +07 (after state 07:53:29, G-24 satisfied). Dry run 5/5 PASS. G-24/G-38 CLOSED for epoch 12. CHECK 11 ARMED: re-proof trigger written into rung3-run-log/r3-l3-coordinator-checklist.md (site classes timeanddate first; stop behavior: halt releases on that class, notify parent, council+redteam gate re-check). CHECK 12 PREPPED: F12 guard texts verbatim in rung3-run-log/briefs/R3-079-runner-brief.md, R3-089-runner-brief.md, R3-100-runner-brief.md (grep-verified). R3-089 guard refresh 2026-11-30 12:00 owned by coordinator (checklist). Status narrative corrected (31 rows, rule-A 25). Clone1 calibration: no branch yet at 07:56 (dispatched ~07:45, 60-min deadline ~08:45); follow up after deadline. R3-029 still HELD for parent password."
   }
  ],
  "pass_count": 22,
@@ -1174,7 +1179,7 @@
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
- "status": "PAUSED at pause point, RESUME GATE PASSED with conditions (owner 04:31 pause, 04:53 delegated gate, redteam reconvene 06:30 YES/YES with 12 checks). Ledger: 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 24 PASS / 0 FAIL. Bars (N-2): 52/54 original, 53/55 with task 56, slack 2. Next: R3-027 frozen position 23 after checks 3-9.",
+ "status": "RESUMED under re-plan (gate passed 06:30, checks 3-9 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk = event 5); a 6th event needs a new recorded team decision via parent before further releases. Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Next: R3-029 frozen position 25, HELD for parent password. Checks 11-12 prepped (checklist + F12 briefs filed).",
  "coordinator_active": "0ef54a8e-67b6-4d85-b2b1-d227630f365b (epoch 12, takeover 2026-11-26T07:53:29.012102+07:00)",
  "epoch": 12,
  "task_start": null,
