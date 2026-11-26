@@ -1,0 +1,18 @@
+R3-029 LambdaTest demo store wishlist (test account)
+Products added in order: iPhone, MacBook, Canon EOS 5D, HP LP3065, HTC Touch HD
+Values read from the saved wishlist screenshots in this folder.
+
+1. State: 5 saved
+   Wishlist lists: HTC Touch HD, Canon EOS 5D, iPhone, MacBook, HP LP3065
+   Count: 5
+   Screenshot: 20261126-123219-wishlist-5-saved.jpg
+
+2. State: 4 saved (Canon EOS 5D removed)
+   Wishlist lists: HTC Touch HD, iPhone, MacBook, HP LP3065
+   Count: 4
+   Screenshot: 20261126-123510-wishlist-4-saved.jpg
+
+3. State: 5 saved again (Canon EOS 5D re-added)
+   Wishlist lists: HTC Touch HD, Canon EOS 5D, iPhone, MacBook, HP LP3065
+   Count: 5
+   Screenshot: 20261126-124033-wishlist-5-again.jpg

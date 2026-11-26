@@ -1,0 +1,86 @@
+{
+ "files": [
+  {
+   "mtime": 1795671797,
+   "name": "20261126-123219-wishlist-5-saved.jpg",
+   "sha256": "68de7fbd8f055ca0a5692bf2fa5c41e35e0624952b220687ed8e6c9f53675369",
+   "size": 116367
+  },
+  {
+   "mtime": 1795671806,
+   "name": "20261126-123510-wishlist-4-saved.jpg",
+   "sha256": "fb9d361e4c4c7b3eae46b1457e9f5db080a737f3a73c99d2d53efb3950ca431f",
+   "size": 111628
+  },
+  {
+   "mtime": 1795671816,
+   "name": "20261126-124033-wishlist-5-again.jpg",
+   "sha256": "9d64a3511a5fce208d1036c7ea2334bdd76bbdcba3e136fd9969dfbeee225fb1",
+   "size": 112947
+  },
+  {
+   "mtime": 1795671861,
+   "name": "drive-r3029.log",
+   "sha256": "262cf4e79578734aad2489c1d40b11dffbb08288ad4ab0950d600a5aaf36e4b6",
+   "size": 106659
+  },
+  {
+   "mtime": 1795671870,
+   "name": "drive-r3029b.log",
+   "sha256": "99c194e48a86232be9c0f9d8ceae61d2d70f5bc11f94a20cb5d729ba234138c8",
+   "size": 35425
+  },
+  {
+   "mtime": 1795671889,
+   "name": "drive-stdout-b.log",
+   "sha256": "c98d30a7ccc5e06b2637233c1a6ca691b9f5cb3464840757c958a513534b9595",
+   "size": 35535
+  },
+  {
+   "mtime": 1795671880,
+   "name": "drive-stdout.log",
+   "sha256": "966c10a298b7ae3d1f6037d4366b61f9671fc1f0865916f379d872337e8e913e",
+   "size": 106769
+  },
+  {
+   "mtime": 1795671852,
+   "name": "end_time.txt",
+   "sha256": "9a6eba3039280fed68caa02fe1e9ddd26d00049312e42cb0939cd89584aad994",
+   "size": 26
+  },
+  {
+   "mtime": 1795671898,
+   "name": "holder-r3029.log",
+   "sha256": "9afefc50ab180deb641b1d4b3cf96030777f96e2a3abbe153088b3218bbee6aa",
+   "size": 11381
+  },
+  {
+   "mtime": 1795671907,
+   "name": "holder-r3029b.log",
+   "sha256": "e30d603ba42269e32a36f33a208a45bce4bb6f6686198f8e648f7927a360716b",
+   "size": 4516
+  },
+  {
+   "mtime": 1795671825,
+   "name": "ket-qua.txt",
+   "sha256": "ae68015bf876d148420294df56364de34ac12b744558f651104feeadccea8a14",
+   "size": 707
+  },
+  {
+   "mtime": 1795671834,
+   "name": "probe-ready.json",
+   "sha256": "5f95ce7fa8b8670c734df105fa127a0ef8b6e3d05cf06c5f6553554191c61f20",
+   "size": 455
+  },
+  {
+   "mtime": 1795671843,
+   "name": "start_time.txt",
+   "sha256": "1c9557bf102428f7f6af2fff41af7f2a8e77329157a66b36c2def63b9e18fcaa",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "42d22dff5e809b386ed4b0426f79448149cba91c301790c63d80894ced8ca5dc",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-029-L3",
+ "source_dir": "/tmp/R3-029",
+ "task": "R3-029"
+}
