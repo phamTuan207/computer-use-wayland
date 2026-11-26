@@ -144,3 +144,4 @@
 2026-11-26T14:08:24+07:00 epoch 21: R3-037 RELEASED (FCC lane, driver 8d044b59, task_start provisional); R3-036 PASS filed
 2026-11-26T14:45:51+07:00 epoch 21: R3-037 drive ENDED by timeout (1 of 2 domains), snapshot sealed 4f758d62, gate PASS; scoring dispatching
 2026-11-26T14:46:32+07:00 epoch 21: R3-037 scoring dispatched (Mochi run 241 + Clone1 PWA); verdicts due ~15:16
+2026-11-26T14:51:15+07:00 epoch 21: R3-037 GRADED FAIL (A1+A2 agree, timeout); ledger 35 rows, validators exit 0; Rule-A 28/1; releasing R3-045 next
