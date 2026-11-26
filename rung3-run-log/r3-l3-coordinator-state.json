@@ -23,8 +23,8 @@
  "class_s_count": 46,
  "completed_positions": 33,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
- "current_position": 34,
- "current_task": "R3-067 (position 34, Class S) DRIVE COMPLETED 2026-11-26T19:40:21+07 (codex PID 3209975, 19:10:56-19:40:21, 29m25s). Snapshot R3-067-L3 sealed (10 files, manifest 31da7629, gate PASS, pii clean; codex-exec.log held out of snapshot: pii-scan high-entropy hit on HYPRLAND_INSTANCE_SIGNATURE line, raw log kept at /tmp + laptop only). Pair B scoring: Mochi B1 + Fresh B2. Triangle method deviation recorded by runner (multi-drag + bucket fill; computer-use drag is 2-point) for scorers. Foreign Docs item resolved: it is a TAB inside the main Zen window, not a separate window; correctly untouched. task fields CLEARED.",
+ "current_position": 35,
+ "current_task": "R3-067 (position 34) drive COMPLETED, snapshot sealed 31da7629, scoring in progress (Mochi B1 daemon run 243 19:43:24, Fresh B2 subagent 78ac621a). R3-072 (position 35, Class S, Tier A) RELEASED 2026-11-26T19:43:44+07:00: driver 092ab895 spawned, awaiting launch report (task_start + PID to record at once). Mei prep for R3-072 in flight (daemon run 35). Backpressure: Codex lane 1 unscored (R3-067), within max 2.",
  "deputy": "dee95d07-524e-4e10-8dcf-271d5b36c65c (epoch 24 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T19:07:21+07:00, after state last_updated 2026-11-26T19:06:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 24 coordinator_active 64030fac, snapshot + verdict paths exist; epoch 23 deputy b3cf2527 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T19:42:55+07:00",
+ "last_updated": "2026-11-26T19:43:44+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "40 rows (1 TEST + 29 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 79 verdict files)",
@@ -1469,6 +1469,11 @@
    "ts": "2026-11-26T19:42:55+07:00",
    "by": "coordinator-epoch-24",
    "text": "R3-067 DRIVE COMPLETED 2026-11-26T19:40:21+07 (29m25s, inside 30-min limit). PNG 800x600 saved, reopened + verified by runner; driver independently viewed VM copy (red rect, blue circle, green triangle, white bg). Anomalies (full chains in drive-log.txt): (1) triangle drawn via multiple Freeform drags + Paint Bucket fill because computer-use drag accepts exactly 2 points (single held 3-vertex path not expressible); runner recorded the deviation in bao-cao.txt; scorers judge. (2) Ellipse Fill Style is per-tool (first circle outline-only, undone, redrawn filled). (3) monitor guess DP-1 failed, doctor showed eDP-2. (4) save-dialog path fumble, recovered, no stray file. (5) session PTY relaunch. Foreign-window cleanup: NOT closed, the untitled Docs is a tab inside the main Zen window (ws2), not a separate window; left untouched per hard rule. Snapshot sealed 10 files manifest 31da7629975d0f5072e1da5f0a75dfa725a3535d5c114ac508bde1420a2b1f17, gate PASS, pii clean (codex-exec.log excluded after pii-scan high-entropy hit; precedent R3-055 snapshot also carried no raw codex log). task_start/runner_pid CLEARED at drive end. Scoring assigned: Mochi B1 (daemon) + Fresh B2."
+  },
+  {
+   "ts": "2026-11-26T19:43:44+07:00",
+   "by": "coordinator-epoch-24",
+   "text": "R3-067 scoring assigned: Mochi B1 via daemon run 243 (19:43:24, outcome=sent verified=True, V12 in thread items 36->37; delivery verified by branch mochi/verdict-R3-067-L3 landing). Fresh B2 subagent 78ac621a spawned with scorer-fresh brief. R3-072 RELEASED (Class S decoupled flow after R3-067 gate PASS): driver 092ab895 spawned with pre-staged brief 6675c6bd. Snapshot PNG force-add lesson recorded: .gitignore line 24 (*.png) silently drops snapshot PNGs on plain git add; always git add -f snapshot PNGs and verify ls-tree count vs manifest."
   }
  ],
  "pass_count": 24,

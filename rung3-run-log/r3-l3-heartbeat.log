@@ -161,3 +161,4 @@
 2026-11-26T19:09:52+07:00 | epoch24 | R3-067 RELEASED (driver f6ced820) | Rule-A 32/1 | position 34 | R3-055 reset done | our-side invalid budget 5/5
 2026-11-26T19:11:02+07:00 | epoch24 | R3-067 DRIVING (PID 3209975, start 19:10:50) | Rule-A 32/1 | position 34 | task_start+PID recorded | our-side invalid budget 5/5
 2026-11-26T19:42:55+07:00 | epoch24 | R3-067 DRIVE COMPLETED, snapshot sealed 31da7629, scoring assigned | Rule-A 32/1 | position 34 | task fields cleared | our-side invalid budget 5/5
+2026-11-26T19:43:44+07:00 | epoch24 | R3-067 scoring (Mochi run 243 + Fresh 78ac621a); R3-072 RELEASED (driver 092ab895) | Rule-A 32/1 | position 35 | our-side invalid budget 5/5
