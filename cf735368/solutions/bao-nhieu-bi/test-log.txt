@@ -1,0 +1,33 @@
+Bao nhieu bi — test log
+Samples: none are provided in the statement.
+Compile command: g++ -O2 -std=c++17 -o ~/cf735368-work/bao-nhieu-bi/sol ~/cf735368-work/bao-nhieu-bi/sol.cpp
+Compile result: exit code 0.
+
+Test: Degenerate 1x1 and minimum valid indices
+Input:
+1 1
+0
+1 1
+Hand-computed expected output:
+0
+0
+Actual output:
+0
+0
+Result: PASS
+
+Test: Upper valid row/column indices, spacing, and large cell value
+Input:
+2 3
+0 4 1000000000000
+8 15 42
+2 3
+Hand-computed expected output:
+0 4 1000000000000
+8 15 42
+42
+Actual output:
+0 4 1000000000000
+8 15 42
+42
+Result: PASS

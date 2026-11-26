@@ -1,0 +1,7 @@
+Calibration anchor ratings (AI-estimated)
+
+1. Bubble Sort — Nhan biet. This is a direct simulation of the taught bubble-sort passes; printing after each pass adds only straightforward output handling. The stated limits do not require an insight beyond recalling the algorithm.
+
+2. Di tim bai de nhat / In Search of an Easy Problem — Nhan biet. A single scan checks whether any answer is 1, which is the simplest conditional pattern. There are no tricky constraints or meaningful edge cases.
+
+3. Keo Con / Candies range sum — Nhan biet. The task is one taught loop over an inclusive range (or a basic prefix-sum application). Even with N up to 10^6, the provided time limit permits the straightforward scan, so constraints do not force a more advanced method.

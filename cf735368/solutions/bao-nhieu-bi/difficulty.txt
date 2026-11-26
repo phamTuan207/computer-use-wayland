@@ -1,0 +1,3 @@
+AI-estimated difficulty: Nhan biet (Recognition)
+
+The required concepts are basic 2D array input/output and direct indexing. There is no algorithmic insight beyond mapping the requested color and size to A[i][j], and the constraints (m, n ≤ 100) create no meaningful complexity pressure. Edge cases are limited to valid boundary indices and correct spacing while printing the matrix.
