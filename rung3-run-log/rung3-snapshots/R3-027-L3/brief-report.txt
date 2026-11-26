@@ -1,0 +1,39 @@
+TASK R3-027 (FCC lane) - BLOCKED-FINALIZED
+Runner pane r3-fcc-runner-L3
+Evidence folder: ~/rung3-chung-cu/R3-027/
+
+TIMELINE:
+- 2026-11-26T06:55:53+07:00 : Holder sequence start (30-min drive deadline 07:25:53+07:00)
+- 2026-11-26T06:55:57+07:00 : Pill acquired (FCC:22399, visible=true) before holder launch (fail-closed passed)
+- 2026-11-26T06:56:03+07:00 : Holder launched detached (PID 2331815, /tmp/fixb-runner/holder-fixb.mjs)
+- 2026-11-26T06:56:05+07:00 : /tmp/fixb-rpc/ready.json received; descriptor probe_ok
+- 2026-11-26T06:57:xx+07:00 : Zen address bar -> typed "namechk" -> Return -> DuckDuckGo SERP (real input, act-now)
+- 2026-11-26T07:05:xx+07:00 : Clicked first SERP result -> namechk.com (RPC verified: URL https://namechk.com/, title "Namechk: Username & Domain Name Checker")
+- 2026-11-26T07:07:xx+07:00 : Typed username "rung3alpha01" into namechk search field; clicked Search
+- 2026-11-26T07:10:51+07:00 : hCaptcha "I am not a robot" gate shown (4 hCaptcha iframes); Search submitted but NO results load; page stays https://namechk.com/homepage (blocked)
+- 2026-11-26T07:10:51+07:00 : Evidence screenshot saved (see below); STOP per bot-check rule (no hammering, no captcha solve)
+
+BLOCKER:
+- namechk.com presents an hCaptcha "I am not a robot" checkbox (unchecked) that gates availability results; no results returned after search. No Ray ID shown (not Cloudflare). Per the brief bot-check rule: STOP and report INVALID candidate; do not hammer service; do not solve captcha; do not try workarounds.
+
+PROBE FIELDS (verbatim from ready.json / holder log):
+- webdriver: false
+- own_on_proto: true
+- own_on_navigator: false
+- get_name: "get webdriver"
+- get_tostring: "function () {\n    [native code]\n}" (expected empty-name form)
+- shim_sha256: bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8
+- context: b975e423-8c2a-4a8e-9206-3111bdefca3d
+- sessionId: ecfc536e-716c-43e7-9134-5f6d39f54029
+
+EVIDENCE FILES (in ~/rung3-chung-cu/R3-027/):
+- probe-ready.json (ready.json copy; enters snapshot manifest chain)
+- start_time.txt = 2026-11-26T06:55:53+07:00
+- end_time.txt = current wall clock (see below)
+- 20261126-071051-hcaptcha-blocked.png (block screenshot)
+- holder-task.log (holder lifecycle log)
+- No ket-qua.txt written (no platform results produced)
+- No 3 username-result screenshots (blocked before results)
+
+START WALL-CLOCK: 2026-11-26T06:55:53+07:00
+END WALL-CLOCK: <current>

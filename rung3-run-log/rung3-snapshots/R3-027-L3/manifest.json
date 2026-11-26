@@ -1,0 +1,104 @@
+{
+ "files": [
+  {
+   "mtime": 1795651851,
+   "name": "20261126-071051-hcaptcha-blocked.png",
+   "sha256": "20b773396ed8735756c10c01dfae89f0fbf6814ed6ba063c62491a6e615055af",
+   "size": 1123058
+  },
+  {
+   "mtime": 1795652181,
+   "name": "20261126-071620-pill-gone.png",
+   "sha256": "0fcf8cd2883331c44360b9d942c75a5c95babbe37905e546e48fc05f153a6422",
+   "size": 1877406
+  },
+  {
+   "mtime": 1795651114,
+   "name": "act1.json",
+   "sha256": "87178daef959459aac47ba5cc18b836e2f3b4146987970ab26d3763af12047f8",
+   "size": 50
+  },
+  {
+   "mtime": 1795651184,
+   "name": "act2.json",
+   "sha256": "9636e264930e54433675362d7dffb284734e49b29c325bd836ce78edc05a63c9",
+   "size": 115
+  },
+  {
+   "mtime": 1795651440,
+   "name": "act3.json",
+   "sha256": "5d100ee39b6dc8380cd847872fe69c6c4554b5b48273845a4c40c2105708bd9a",
+   "size": 51
+  },
+  {
+   "mtime": 1795651544,
+   "name": "act4.json",
+   "sha256": "942b4894659e529332904b49db3ba3b930949eb82ea412ef5bf3a31eba876443",
+   "size": 51
+  },
+  {
+   "mtime": 1795651643,
+   "name": "act5.json",
+   "sha256": "5f2a502a46b4ab517842dba488b346f818a73d5459eb4afbbfa63afa01620440",
+   "size": 51
+  },
+  {
+   "mtime": 1795651653,
+   "name": "act6.json",
+   "sha256": "0ee7bf4b27fb8dfc26c84ea9640109ac1d2c86b7a660d6ec932f55355a1b3d4d",
+   "size": 53
+  },
+  {
+   "mtime": 1795651682,
+   "name": "act7.json",
+   "sha256": "755ba43556d095fca3fffeb878df00fa1f02ebfbce73d7d96d86ff9b96b81a5b",
+   "size": 51
+  },
+  {
+   "mtime": 1795652285,
+   "name": "brief-report.txt",
+   "sha256": "b7167565445458dd2659eb217a874b4d6841a401a1ec8b714748bfe7bdab402a",
+   "size": 2423
+  },
+  {
+   "mtime": 1795652151,
+   "name": "end_time.txt",
+   "sha256": "4968bb24475d1b4ed1aca8d50f74079ba604b8619ba8b2155eead45155310795",
+   "size": 26
+  },
+  {
+   "mtime": 1795650963,
+   "name": "holder-pid.txt",
+   "sha256": "85755f27594ede36ac1bcaff4f3b6c28583fcd330d8986f99ffbc02515a9d001",
+   "size": 8
+  },
+  {
+   "mtime": 1795652171,
+   "name": "holder-task.log",
+   "sha256": "2d4ae05a4efb70a8b322a45b58d30f742f656ef09778b18a0616a17790dd1f30",
+   "size": 3593
+  },
+  {
+   "mtime": 1795650965,
+   "name": "probe-ready.json",
+   "sha256": "ed738eb7ff8e4a4da70d2e7bcd04967595e4f80708e0ab3ed729188dc5f1f703",
+   "size": 455
+  },
+  {
+   "mtime": 1795651238,
+   "name": "req-serp1.json",
+   "sha256": "824932acac5ee4f5066e7024aea07fae8b636be50fd626a4f0fbf13499045ee6",
+   "size": 342
+  },
+  {
+   "mtime": 1795650953,
+   "name": "start_time.txt",
+   "sha256": "75189e4cdd5099fae7640b59d9d4793c77937f74beeb38328ae1705a4787e1a0",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "be4791f1834df6badf4494cea81ee9351af497c92a8dec9b0703e3b4449582ff",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-027-L3",
+ "source_dir": "/tmp/r3027-ev2",
+ "task": "r3027-ev2"
+}

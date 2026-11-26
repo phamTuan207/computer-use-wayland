@@ -1,0 +1,1 @@
+{"id":"serp-1","expr":"(()=>{const as=[...document.querySelectorAll('a[href]')].filter(a=>/namechk\\.com/.test(a.href));return as.map(a=>{const r=a.getBoundingClientRect();return{text:a.innerText.trim().slice(0,80),href:a.href,x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2),w:Math.round(r.width),h:Math.round(r.height)}}})()"}
