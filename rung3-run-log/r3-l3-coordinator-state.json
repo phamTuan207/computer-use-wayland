@@ -24,7 +24,7 @@
  "completed_positions": 30,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 31,
- "current_task": "R3-046 GRADED PASS 2026-11-26T17:56:00+07:00 (Pair B Fresh1+Fresh2 agree, audits PASS, ledger 37 rows validated). Rule-A 29 PASS / 1 FAIL. Valid 52, bars 50/52 + 51/53, need 21 PASS from 22 remaining (22 from 23 with task 56), slack 1 FAIL. DP-03 (position 31, Codex lane, driver 3279a33d) RELEASED 17:53, drive in progress. Our-side invalid budget 5/5.",
+ "current_task": "DP-03 DRIVE COMPLETED 2026-11-26T17:57:14+07:00 (codex PID 3114214, 17:53:19-17:57:14, N=5). Snapshot DP-03-L3 sealed (6 files, manifest 71cea95f, gate PASS, pii clean, pushed 3f475ee5). Pair B scoring: Clone2 (scorer 1, via PWA) + Fresh (scorer 2). task fields CLEARED at drive end. Next: R3-049 (position 32) after DP-03 graded (backpressure: Codex 1 unscored).",
  "deputy": "b3cf2527-e98a-48ab-85bd-e752138fa15a (epoch 23 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T17:08:16+07:00, after state last_updated 2026-11-26T17:08:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 23 coordinator_active 0d5fb18c, snapshot + verdict paths exist; epoch 22 deputy c6bc61fa SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T17:59:00+07:00",
+ "last_updated": "2026-11-26T18:01:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1374,6 +1374,11 @@
    "ts": "2026-11-26T17:59:00+07:00",
    "by": "coordinator-epoch23",
    "text": "STATE GAP FIX (timeout watch flag 17:57:58, parent instruction): DP-03 task fields recorded from driver launch line (laptop event log: LAUNCHED codex PID 3114214 start 2026-11-26T17:53:19+07:00; start_time.txt 17:53:47). task_start=2026-11-26T17:53:19+07:00, runner_pid=3114214, codex_task_start/codex_runner_pid same, codex_task=DP-03. 30-min deadline 18:23:19. Evidence files already present on laptop (bao-cao.txt, ss-output.txt, terminal screenshot, end_time.txt); no codex exec process running at 17:58 check; driver 3279a33d final report pending. Fields to be CLEARED at confirmed drive end per standing rule (fresh at start, clear at end). Second occurrence of this gap (R3-046 attempt 2 same); coordinator records fields from the driver launch line immediately at every future release."
+  },
+  {
+   "ts": "2026-11-26T18:01:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "DP-03 DRIVE COMPLETED (driver 3279a33d report 17:59:59): codex exec PID 3114214, launch 17:53:19, start_time.txt 17:53:47, end 17:57:14 (~3.5 min, deadline 18:23:19). N=5 recorded (non-sudo ss -tlnp, process names shown, ascending port order). Evidence 5 files sha256-verified (bao-cao.txt d644ab2b, ss-output.txt 91797897, terminal jpg 2933e6d9, start/end times) + driver pillcheck grim 2701a1c9 (no pill). Pill acquired 17:53:47 visible \"Computer use active\", released at end, grim-verified gone. Snapshot DP-03-L3 sealed 6 files manifest sha256 71cea95f99ac606fc282ff701235a16925950362042604759d5792dae09571a6, gate PASS, pii clean, pushed 3f475ee5. task_start/runner_pid/codex fields CLEARED at drive end (standing rule). Scoring assigned: Clone2 scorer 1 via PWA (brief rung3-run-log/briefs/DP-03-scorer-clone2-brief.md, branch clone2/verdict-DP-03-L3), Fresh scorer 2 spawned (branch fresh/verdict-DP-03-L3). Disjointness (fix A F5.2 + owner order 17:53): DP-03 scorers Clone2+Fresh, prep Mei, analysts on-call Mei+Clone1, reviewer Mochi; no overlap (Clone2 does not prep/analyze/review DP-03)."
   }
  ],
  "pass_count": 24,
@@ -1422,11 +1427,11 @@
  "status": "RESUMED under re-plan, RELEASES HELD pending event-6 decision. Ledger: 36 grade rows (25 PASS, 6 INVALID, 4 FAIL, 1 TEST) + 3 re-run PASS; rule-A 28 PASS / 1 FAIL (R3-037 timeout). Invalid events 6 (R3-011/022/024/026/027/045); budget was 5/5, event 6 needs a new recorded team decision via parent before further releases. Valid 52; bars 50/52 (original) and 51/53 (with task 56); need 22 PASS from 23 remaining original positions (slack 1). Next drive R3-046 (position 30, Codex lane) HELD. R3-037 re-run decision also via parent. Checks 11-12 armed; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "0d5fb18c-c281-4c65-81a8-624e43de6595 (epoch 23, takeover 2026-11-26T17:08:00+07:00)",
  "epoch": 23,
- "task_start": "2026-11-26T17:53:19+07:00",
- "runner_pid": 3114214,
- "codex_task": "DP-03",
- "codex_task_start": "2026-11-26T17:53:19+07:00",
- "codex_runner_pid": 3114214,
+ "task_start": null,
+ "runner_pid": null,
+ "codex_task": null,
+ "codex_task_start": null,
+ "codex_runner_pid": null,
  "graded_count": 30,
  "graded": 6,
  "pass": 22,
