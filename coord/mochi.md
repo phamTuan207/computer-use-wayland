@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 18:47 +07 - Dinh chinh: R3-049 la cua Clone2 + Fresh, khong phai mochi (mochi)
+
+- Kiem tra briefs tren todolist-push: R3-049 chi co 2 brief scorer, R3-049-scorer-clone2-brief.md (scorer 1, Pair B) va R3-049-scorer-fresh-brief.md (scorer 2, Pair B). Khong co brief scorer-mochi cho R3-049.
+- PR #856 ghi "Clone2 (mochi)" la nham: Clone2 la scorer 1, mochi khong duoc giao R3-049. PR #862 ghi "Re-dispatch needed" cung khong ap dung cho mochi.
+- Mochi khong cham R3-049, khong dispatch lai khi snapshot toi. Clone2 cham khi snapshot R3-049-L3 xuat hien.
+- Mochi da nop xong verdict R3-035, R3-036, R3-037. Hien tai khong co task dang cham, san sang nhan task tiep theo.
