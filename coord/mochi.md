@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 15:32 +07 - Watchdog 15m: PR #831 la lenh cho clone2, mochi khong cham R3-045 (mochi)
+
+- Watchdog 15m (15:19) doc PR #831: lenh R3-045 scorer 1 (Pair B) la cho clone2, khong phai mochi. Mochi khong cham, khong ghi verdict trung lap.
+- Verdict R3-045 da co tren branch clone2/verdict-R3-045-L3, commit 253a55af; mochi da xac minh manifest va key hash, dieu phoi vien da dung (ledger, council, redteam).
+- Mochi da nop xong verdict R3-035, R3-036, R3-037 (branch mochi/verdict-R3-035-L3, mochi/verdict-R3-036-L3, mochi/verdict-R3-037-L3). Hien tai khong co task dang cham, san sang nhan task tiep theo.
+- Coordinator epoch 22 HOLDING, doi parent event-6, khong co drive nao dang chay.
