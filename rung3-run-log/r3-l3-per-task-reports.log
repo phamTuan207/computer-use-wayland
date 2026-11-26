@@ -69,3 +69,12 @@
 - Evidence: snapshot R3-072-L3 (9 files, manifest 5623a6af, gate PASS, pii clean; codex-R3-072.log held out after pii-scan high-entropy hit, same precedent as R3-067).
 - Reset (Class S): ~/rung3/d72-ket-qua.txt removed from the laptop after scoring; fixture images in ~/rung3/d72-anh/ remain (task inputs).
 - Score after: Rule-A 34 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 16 PASS from 17 remaining original positions, 17 from 18 with task 56; slack 1 further FAIL).
+
+## R3-074 (position 36) - GRADED PASS 2026-11-26T21:07:33+07:00
+- Lane: Codex exec PID 3315485 (driver e7a5ff4c), runner 20:29:44-20:49:44 +07, elapsed 20m00s, within the 30-min limit. Task fields recorded in state at launch verification (418da341), cleared at drive end.
+- Task: fix the NameError in d40-tinh-toan.py (line 8 `tongue` -> `tong`) in a GUI editor, run twice, result file d40-ket-qua.txt with 10 lines. Both scorers proved the fix is exactly the single-token change (reverting line 8 reproduces the keyed original script sha256 f3b09ca0) and that run1/run2/result are byte-identical to the expected file (sha256 f737a14b).
+- Scoring: Clone2 B1 PASS (20:59, branch clone2/verdict-R3-074-L3 87f7fc94, audited) + Fresh B2 PASS (21:01:11, audited); no tiebreaker.
+- Anomalies (full chains in drive-log.txt): window-list diagnostic quoting error (simplified query); Ctrl+Alt+T no terminal (Super+Return opened Kitty on ws2); computer-use session driver 1 exited during Kitty observe ("Unknown process id", fresh session 2 started, Kitty preserved); "text editor" search opened Sublime setup sudo prompt (no credentials entered, closed, VS Code used); file picker stuck in /tmp (navigated Home/rung3); stray "Visual Studio" text in Kitty prompt cleared with Ctrl+U; Alt+F4 did not close Kitty (Ctrl+D); VS Code pre-existing unsaved "Hello grouping" tab left open intentionally (window left open to avoid discarding owner work). Pill label washed out in the during-drive capture but bar present; label fix stays queued post-run per owner 17:41.
+- Evidence: snapshot R3-074-L3 (16 files + manifest, manifest sha256 36e440e8, gate PASS, pii clean; codex-R3-074.log included, pii-clean this time).
+- Reset (Class L, after scoring): original buggy script restored from ~/rung3-goc (sha256 f3b09ca0 verified), ~/rung3/d40-ket-qua.txt removed.
+- Score after: Rule-A 35 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 15 PASS from 16 remaining original positions, 16 from 17 with task 56; slack 1 further FAIL).

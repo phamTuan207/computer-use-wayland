@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T20:54:17+07:00",
+ "last_updated": "2026-11-26T21:07:33+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "41 rows (1 TEST + 30 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 81 verdict files)",
@@ -1657,14 +1657,14 @@
  "rule_a_pass": 25,
  "rule_a_fail": 0,
  "score": {
-  "rule_a_pass": 34,
+  "rule_a_pass": 35,
   "rule_a_fail": 1,
   "valid": 52,
   "bar_original": "50/52",
   "bar_with_task56": "51/53",
-  "need_original": "16 PASS from 17 remaining",
-  "need_with_task56": "17 PASS from 18 remaining",
+  "need_original": "15 PASS from 16 remaining",
+  "need_with_task56": "16 PASS from 17 remaining",
   "slack_fails": 1
  },
- "last_graded": "R3-072 (position 35) PASS at 2026-11-26T20:37:50+07:00 (Fresh B1 + Clone1 B2, Tier A checker false negative overridden openly by both; overrun 1m29s graded on evidence per R3-036 precedent)"
+ "last_graded": "R3-074 (position 36) PASS at 2026-11-26T21:07:33+07:00 (Clone2 B1 + Fresh B2; single-token fix proven by hash reconstruction)"
 }

@@ -168,3 +168,4 @@
 2026-11-26T20:33:34+07:00 | epoch24 | R3-074 DRIVING (PID 3315485, start 20:29:20) fields recorded; R3-072 Fresh B1 PASS audited, Clone1 branch landed | Rule-A 33/1 | position 36 | our-side invalid budget 5/5
 2026-11-26T20:37:50+07:00 | epoch24 | R3-072 GRADED PASS (Fresh B1 + Clone1 B2); R3-074 driving since 20:29:20 (PID 3315485) | Rule-A 34/1 | position 36 | our-side invalid budget 5/5
 2026-11-26T20:54:17+07:00 | epoch24 | R3-074 drive COMPLETED 20:49:44 within limit; fields cleared; snapshot+scoring next | Rule-A 34/1 | position 36 | our-side invalid budget 5/5
+2026-11-26T21:07:33+07:00 | epoch24 | R3-074 GRADED PASS (Clone2 B1 + Fresh B2); R3-075 released (driver 241bb105) | Rule-A 35/1 | position 37 | our-side invalid budget 5/5
