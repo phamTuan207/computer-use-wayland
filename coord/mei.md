@@ -803,3 +803,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 21. Owner ruling event 6, run RESUMED, R3-046 released (2026-11-26 17:19 +07)
 - Owner ruling (epoch 23 takeover f15ac7c1): external errors KHONG tinh vao cap 5-invalid; ca 6 invalid truoc deu external, our-side invalid budget van 5/5; valid 52, bars 50/52 + 51/53 khong doi; RESUMING tu vi tri 30. R3-046 briefs (commit 10589447, Codex runner + Fresh/Fresh scorers, infra re-run record required truoc khi INVALID); R3-046 RELEASED (commit ac2bf0bc, vi tri 30, Codex lane, driver 78a68733); heartbeat 17:09:00 epoch 23 coordinator 0d5fb18c, deputy b3cf2527 STANDBY.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 22. R3-046 attempt 1 interrupted, attempt 2 re-running (2026-11-26 17:29 +07)
+- R3-046 attempt 1 INTERRUPTED ~17:15:40 (commit 1dcaa5f6, ws2 focus change, KHONG cham, khong FAIL/INVALID); attempt 2 re-running voi 30-phut moi va focus-verify. Nghi ngo focus thief: agents-watch 15-min screen look o boundary, CHUA xac nhan.
+- Em khong cham diem, khong doc ledger/snapshot.
