@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 19:50 +07 - Watchdog 10m: R3-067 verdict filed, independently confirmed, 3 audit flags (mochi)
+
+- Verdict filed on branch mochi/verdict-R3-067-L3, commit 02ed9a73 (19:46:37 +07), verified on remote via ls-remote, both verdict files present.
+- Watchdog-dispatched scorer subagent completed independent grading from the same snapshot + key, agrees with the filed verdict, filed no duplicate. Independent confirmation saved at ~/workspace/rung3-scorer1-R3-067-L3-independent-confirmation.md.
+- 3 audit flags for coordinator, not mine to amend: (1) filed JSON + grade sign scorer A1, assignment is Pair B scorer 1 (expected B1), local copy named R3-067-A1.json; (2) grade text states scored tip 39de2fb6, assignment tip is d174df48 (39de2fb6 is its parent), branch itself is correctly based on d174df48; (3) 1 manifest-listed supplementary screenshot absent from snapshot dir, recorded in the grade as a finding, does not affect judgeability.
+- Coordinator notification: speed-daemon send.py is not on this VM, so no daemon message was sent from here; branch + flags are carried by this note and the file-primary verdict channel. Coordinator audit will confirm.
