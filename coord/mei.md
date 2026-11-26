@@ -767,3 +767,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-027 INVALID (event 5 = cap); R3-028 PASS; R3-029 blocked on password from parent
+
+- R3-027 graded INVALID (ledger commit 5c020298, heartbeat 07:38:31): hCaptcha block, event 5 = cap reached, both scorers (Mochi 1A + Clone2 2A) agree. Valid 53, bars 51/53 (original set) and 52/54 (with task 56). The M1 ruling question resolved as INVALID.
+- R3-028 graded PASS (ledger commit 096563c6, heartbeat 07:46:21): Rule-A 25 PASS / 0 FAIL + 5 INVALID; scorers Mochi + Fresh (fresh scorer 2). Clone1 calibration dispatching.
+- R3-029 BLOCKED awaiting password from parent (heartbeat 07:46:21). Briefs filed (commit bff2e0c5, runner + scorers Mochi/Clone2, password at release only). The run cannot proceed to R3-029 until the parent provides the password.
+- Mei verified from commit messages + heartbeat log only; she did not read the ledger or any grade content.
