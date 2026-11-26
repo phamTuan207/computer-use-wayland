@@ -444,3 +444,42 @@ I am on STANDBY. I will NOT start any task on my own. I will NOT message the own
 - Standing rules acknowledged: Ponytail for code work (~/workspace/custom-skills/ponytail/SKILL.md): smallest complete change, reuse before writing, stdlib/platform before dependencies, no unrequested abstraction, one small test for non-trivial logic, never cut validation/security/error handling. Graphify for codebase context (~/workspace/cu-graphify/graphify-out/). ydotool BANNED. Pill must show on any agent control ("Computer use active"). SSH to laptop ONLY via ~/workspace/ssh-laptop.sh, short commands only. NEVER close or navigate owner tabs, pinned, essentials, or ws3 windows. NO personal info on GitHub. English for all work. NEVER assume an agent's capabilities; ask directly. Git: explicit pathspec on BOTH add and commit, never git add -A, never leave files staged, verify pushes via ls-remote. FCC pane PID 22399 is PERSISTENT, never kill it.
 - Standby statement under section 7 fencing: this deputy takes no run orders unless the coordinator dies and the parent appoints this deputy under re-plan section 7 fencing. This deputy issues no orders, releases no tasks, drives nothing, scores nothing, and writes no ledger, state run-field, or verdict files while on standby. Takeover only if the parent verifies the coordinator is DEAD (not merely silent) and directs takeover; then a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position.
 - This deputy stands by. If told to stand down, this deputy ends.
+
+## Deputy declaration, epoch 19, 2026-11-26T12:14:45+07:00
+
+- Deputy session id: 51154780-ef5c-4fab-bb75-755eeec66760
+- Coordinator active: 4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3, epoch 19, takeover 2026-11-26T12:12:42+07:00, commit d9f00fba on todolist-push
+- Date and time read: 2026-11-26T12:14:45+07:00 (Asia/Ho_Chi_Minh), after state last_updated 2026-11-26T12:12:42+07:00, G-24 freshness satisfied
+- Role: fresh deputy coordinator for R3-L3, epoch 19, STANDBY ONLY under re-plan section 7 fencing. I hold NO authority while coordinator 4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3 is alive. I issue NO orders while the coordinator is alive. Takeover ONLY if the coordinator dies and the parent directs takeover under section 7 fencing.
+
+## What I read
+
+I read the following files in full before writing this declaration, verifying each live:
+
+- ~/workspace/r3l3-run-wt/improvements/r3-l3-replan-total-20261126.md (the re-plan, total re-plan 2026-11-26)
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json (CURRENT state file, last_updated 2026-11-26T12:12:42+07:00, verified live, parses as JSON: coordinator_active 4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3, epoch 19, current_position 25, task_start null)
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md (previous declarations epochs 2-18; this declaration APPENDS, never replaces the file; epoch 18 deputy 79db2d8c-860c-4cd6-af4f-9eac380e3574 SUPERSEDED)
+
+## Corrected facts verified live from ledgers and state file
+
+- Rule-A 25 PASS / 0 FAIL from ledgers: R3-L3-grades.jsonl 31 rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST); R3-L3-reruns.jsonl 3 rows all PASS (R3-001, R3-002, R3-003). Rule-A counted: 22 original PASS + 3 re-run PASS replacing 3 original FAILs = 25 PASS / 0 FAIL. State fields rule_a_pass 25, rule_a_fail 0 agree.
+- Invalid events 5/5 EXHAUSTED: R3-011, R3-022, R3-024, R3-026, R3-027 (invalid_count 5; invalid_by_group trung_binh 4, kho 1). Any 6th invalid event needs a new recorded team decision before further releases.
+- Valid 53, bars 51/53 and 52/54: valid original set 53, bar 51/53; with task 56 valid 54, bar 52/54. Need 26 PASS from 28 remaining original positions per state current_task.
+- Next position 25 = R3-029, Muse lane (current_position 25, completed_positions 24). Parent released the R3-029 hold; credential received in spawn message only, never in any file. R3-029 releasing now per coordinator epoch 19.
+- Task 56 counted at position 56: restore pinned and essential tabs, Class L, counted in score, closure counts both ways (51/53 original set and 52/54 with task 56).
+
+## Dry run (all 5 PASS, 2026-11-26T12:14+07:00)
+
+a. Laptop reachable PASS: `~/workspace/ssh-laptop.sh "hostname; date -Iseconds"` returned `omarchy` and `2026-11-26T12:14:12+07:00`, exit 0. Short command only via ssh-laptop.sh.
+b. FCC tmux session PASS: `tmux ls` on laptop shows `r3-fcc-runner-L3: 1 windows (created Wed Nov 25 09:00:18 2026)` (plus legacy-link and main). Read-only check only, not touched, no keys sent.
+c. Codex exec version PASS: `codex --version` on laptop returned `codex-cli 0.172.0` (`/home/james/.local/share/mise/shims/codex`), exit 0.
+d. State-file parse PASS: json.load OK; coordinator_active starts with 4eb5ee66, epoch == 19, task_start null, last_updated 2026-11-26T12:12:42+07:00, current_position 25. ASSERT OK.
+e. Snapshot + verdict paths PASS: `rung3-run-log/rung3-snapshots/` exists (43 entries in worktree copy; 65 entries in ~/workspace/rung3-snapshots/); `~/workspace/rung3-verdicts/` exists (114 entries). Both directories present and readable.
+
+## Standby statement under section 7 fencing
+
+I hold no authority while coordinator 4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3 is alive. I will NOT start any task on my own. I will NOT message any agent. I will NOT write to the ledger, the state file run fields, or any verdict file. I will NOT issue run orders while on standby. I will NOT drive the browser or score anything. I will NOT touch the laptop beyond the dry-run reads above. I will only act as coordinator if the parent verifies the coordinator is DEAD (not merely silent) and directs me to take over under re-plan section 7 fencing; then a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.
+
+Standing rules acknowledged: English only; ydotool BANNED; no personal info on GitHub; never close or navigate owner tabs, pinned tabs, essentials, or ws3 windows; SSH to laptop ONLY via ~/workspace/ssh-laptop.sh with short commands; never assume an agent capability, verify live; git explicit pathspec on add and commit, never git add -A, verify pushes via ls-remote; Ponytail for code work; pill "Computer use active" on any agent control.
+
+This deputy stands by. If told to stand down, this deputy ends.
