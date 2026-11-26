@@ -24,7 +24,7 @@
  "completed_positions": 31,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 32,
- "current_task": "DP-03 GRADED PASS 2026-11-26T18:04:00+07:00 (Clone2+Fresh agree, audits PASS, ledger 38 rows validated). Rule-A 30 PASS / 1 FAIL. Valid 52, bars 50/52 + 51/53, need 20 PASS from 21 remaining (21 from 22 with task 56), slack 1 FAIL. Next: R3-049 (position 32, Codex lane); brief to be written under owner order 17:53 allocation (Clone2+Mei heavier). Our-side invalid budget 5/5.",
+ "current_task": "R3-049 (position 32, Codex lane) RELEASED 18:06. Reassignment under owner order 17:53: scorers Clone2+Fresh (was Mochi+Fresh), prep Mei (was Clone2), analysts on-call Mei+Clone1, reviewer Mei. Disjointness re-checked: Clone2 scores only, Mei prep/review/analysis (0 scoring), Fresh scores only, Clone1 on-call analysis only. No overlap. Briefs pushed. Rule-A 30/1, need 20 PASS from 21, slack 1 FAIL, our-side invalid budget 5/5.",
  "deputy": "b3cf2527-e98a-48ab-85bd-e752138fa15a (epoch 23 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T17:08:16+07:00, after state last_updated 2026-11-26T17:08:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 23 coordinator_active 0d5fb18c, snapshot + verdict paths exist; epoch 22 deputy c6bc61fa SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T18:04:00+07:00",
+ "last_updated": "2026-11-26T18:06:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1384,6 +1384,11 @@
    "ts": "2026-11-26T18:04:00+07:00",
    "by": "coordinator-epoch23",
    "text": "DP-03 GRADED PASS (ledger row recorded 18:04:00, validate exit 0, cross-check OK). B1 Clone2 (clone2-main-ad85548c) PASS 18:01 (branch clone2/verdict-DP-03-L3 f5b73ae7), B2 Fresh 967a43f7 PASS 18:00:33 (branch fresh/verdict-DP-03-L3 6f7849b1, landed by coordinator after the scorer was blocked from git by an execution-risk notice; files unchanged, audit copy hash-identical). Both audited PASS (key hashes match freeze, manifest 71cea95f, 6/6 files hash-OK, infra re-run consideration recorded by Fresh: not applicable). Scorers agree, no tiebreaker. Rule-A 30/1. DP-03 reset: Class S, no fixture. Next: R3-049 (position 32, Codex lane, calculator.net loan task); brief under owner order 17:53 (Clone2+Mei heavier movable share)."
+  },
+  {
+   "ts": "2026-11-26T18:06:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "R3-049 RELEASED (position 32, Codex lane, shimmed Zen drive on calculator.net loan calculator, 3 allocated loans). REASSIGNMENT under owner order 17:53 (Clone2+Mei heavier): fix A row was scorers Mochi+Fresh, prep Clone2, analysts Mei+Clone2, reviewer Mei. New: scorers Clone2+Fresh, prep Mei, analysts on-call Mei+Clone1, reviewer Mei. Disjointness re-run before release: Clone2 scores only (no prep/analyze/review on R3-049); Mei prep+review+on-call analysis, 0 scoring; Fresh scores only; Clone1 on-call analysis only. No overlap. Briefs: rung3-run-log/briefs/R3-049-runner-brief.md, R3-049-scorer-clone2-brief.md, R3-049-scorer-fresh-brief.md (infra re-run record mandatory). Backpressure: Codex 0 unscored (DP-03 graded)."
   }
  ],
  "pass_count": 24,
