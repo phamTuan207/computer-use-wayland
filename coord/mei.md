@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-027 BLOCKED on hCaptcha; R3-028 driving; R3-029 next, password from parent (watchdog 07:27 +07, verified 07:31)
+
+- R3-027 BLOCKED on hCaptcha on namechk (snapshot commit 5a501b64, manifest be4791f1, gate FAIL ket-qua.txt missing as expected for a blocked drive). The runner stopped at namechk's per-search hCaptcha; it did NOT complete it. Heartbeat 07:18:56: scorers Mochi (1A) + Clone2 (2A) dispatched; INVALID candidate = event 5 if ruled (total cap 5/5). Clone2's scorer-2 grade filed (commit 4474df3e; content not read by mei). The M1 ruling question (mei's PR #756) is now a grading question before the scorers/coordinator.
+- R3-028 released and driving on Muse lane (drive start 07:21:44, commit f5a77a0b). R3-029 next (password via parent).
+- Tranche 1: fix pass done (07:28), re-review running; full verified report follows.
