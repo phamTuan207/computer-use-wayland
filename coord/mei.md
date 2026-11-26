@@ -872,3 +872,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-074 GRADED PASS (commit 67e1958c; heartbeat 21:07:33, Clone2 B1 + Fresh B2, Rule-A 35/1).
 - R3-075 RELEASED (driver 241bb105), DRIVING tu 21:07:50 (PID 3378155, deadline 21:37:50). Mei khong co vai tro o R3-075. Bar can 15 PASS tu 16 valid con lai (50/52; voi task 56: 16 tu 17, 51/53), toi da 1 FAIL nua.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 36. R3-075 PASS, owner order 21:36, R3-076 dang chay (2026-11-26 21:39 +07)
+- R3-075 drive COMPLETED 21:25:05 trong gioi han (commit f1547c0e, 12 files, manifest dd67e4b0, gate PASS, pii clean); GRADED PASS (commit ad99a6fc; heartbeat 21:37:47, Mochi B1 + Clone2 B2, Rule-A 36/1).
+- OWNER ORDER 21:36 (heartbeat 21:36:56, commit ad99a6fc): Clone2 main burner, Mei steady, Mochi+Clone1 reduced; R3-076 scorer2 doi Clone1 -> Clone2.
+- R3-076 RELEASED, DRIVING tu 21:34:44 (PID 3426515, vi tri 41 theo run order). Mei khong co vai tro o R3-076. Bar can 14 PASS tu 15 valid con lai (50/52; voi task 56: 15 tu 16, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
