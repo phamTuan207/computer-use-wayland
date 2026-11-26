@@ -1,0 +1,26 @@
+R3-078 backup report
+
+Start: 2026-11-26T22:20:46+07:00 (Asia/Ho_Chi_Minh, +07:00)
+End: 2026-11-26T22:38:47+07:00 (Asia/Ho_Chi_Minh, +07:00)
+Elapsed: 1081s
+Runner PID observed: 3494773 (Codex process). Active Codex runner context was used; no nested codex exec subprocess was launched.
+
+Original: ~/rung3/d45-work
+Original file count: 10
+Original total file size: 560 bytes (Nautilus Properties showed 10 selected items, totaling 560 bytes)
+
+Backup: ~/rung3/d45-backup
+Backup file count: 10
+Structure: 10 expected files directly inside d45-backup; names match d45-work.
+Checksum comparison: all 10 original/backup SHA-256 pairs match; 0 mismatches.
+Per-file results: d45-file-01.txt MATCH; d45-file-02.txt MATCH; d45-file-03.txt MATCH; d45-file-04.txt MATCH; d45-file-05.txt MATCH; d45-file-06.txt MATCH; d45-file-07.txt MATCH; d45-file-08.txt MATCH; d45-file-09.txt MATCH; d45-file-10.txt MATCH.
+Backup list: ~/rung3-chung-cu/R3-078/d45-backup-list.txt
+Backup list rows: 10; sorted by name; each row contains filename, byte size, backup SHA-256.
+
+Fixed-position content checks (backup line / original line / match):
+d45-file-01.txt: Noi dung file lam viec so 01, dung de kiem tra sao luu. / Noi dung file lam viec so 01, dung de kiem tra sao luu. / yes
+d45-file-05.txt: Noi dung file lam viec so 05, dung de kiem tra sao luu. / Noi dung file lam viec so 05, dung de kiem tra sao luu. / yes
+d45-file-10.txt: Noi dung file lam viec so 10, dung de kiem tra sao luu. / Noi dung file lam viec so 10, dung de kiem tra sao luu. / yes
+
+Computer-use pill: visible with exact label "Computer use active" during the drive; session finished; pill absent in desktop-after-release.png and computer-use status reported no active cancellation/session.
+Anomalies and recovery chains are detailed in drive-log.txt.

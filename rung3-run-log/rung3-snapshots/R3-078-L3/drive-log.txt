@@ -1,0 +1,80 @@
+R3-078 timed drive log
+Timezone: Asia/Ho_Chi_Minh (+07:00)
+Task start: 2026-11-26T22:20:46+07:00
+Runner PID observed: 3494773 (Codex process). Active Codex runner context was used; no nested codex exec subprocess was launched.
+
+Timed steps (elapsed from task start):
+22:20:46+07:00 (00:00) Created evidence directory and start_time.txt.
+22:21:10+07:00 (00:24) Started computer-use session with current Hyprland instance signature; indicator ready.
+22:21:14+07:00 (00:28) Direct desktop capture showed the exact pill label "Computer use active".
+22:21:43+07:00 (00:57) First dock click opened Bar Folder panel; see recovery chain A1.
+22:22:14+07:00 (01:28) Bare Super key action was refused before input; see recovery chain A2.
+22:22:26+07:00 (01:40) Super+Space opened launcher; Files search launched Nautilus.
+22:22:56+07:00 (02:10) Nautilus opened ~/rung3/d45-work. Ten files shown.
+22:23:08+07:00 (02:22) Nautilus Properties showed 10 items, total 560 bytes.
+22:23:28+07:00 (02:42) Saved timestamped d45-work screenshot.
+22:23:51+07:00 (03:05) Nautilus Ctrl+C/Ctrl+V created d45-work (Copy) in ~/rung3.
+22:24:16+07:00 (03:30) Renamed the UI-created copy to d45-backup.
+22:24:37+07:00 (03:51) First backup folder double-click was refused by screen-changed guard; see recovery chain A3.
+22:24:43+07:00 (03:57) Fresh observation and second double-click opened ~/rung3/d45-backup; ten files shown.
+22:25:06+07:00 (04:20) Saved timestamped d45-backup screenshot.
+22:25:49+07:00 (05:03) Opened launcher and selected Foot terminal.
+22:26:06+07:00 (05:20) Typed and ran visible sha256sum comparison loop in Foot; it computed original and backup checksums pairwise and wrote the backup list from the computed backup hashes.
+22:27:23+07:00 (06:37) Terminal output reported ten MATCH rows, zero mismatches, counts 10/10, 560 original bytes, ten list rows.
+22:27:24+07:00 (06:38) Opened backup d45-file-01.txt in the text editor; visible line matched the later original cat output.
+22:28:12+07:00 (07:26) An editor close attempt received an unsupported-key preflight refusal; see recovery chain A4.
+22:29:21+07:00 (08:35) On-disk SHA-256 of backup d45-file-01.txt still matched the earlier recorded hash.
+22:30:12+07:00 (09:26) Closed the editor without saving and returned to Foot.
+22:30:34+07:00 (09:48) Visible terminal cat output showed the three original lines for positions 1, 5, and 10.
+22:30:35+07:00 (09:49) Opened backup d45-file-05.txt; visible line matched original.
+22:31:07+07:00 (10:21) Opened backup d45-file-10.txt; visible line matched original.
+22:31:37+07:00 (10:51) Saved timestamped opened-backup-file screenshot.
+22:32:54+07:00 (12:08) Alt+F4 did not close Foot; see recovery chain A5.
+22:33:27+07:00 (12:41) Super+Q closed the Foot window; Super+Q then closed Nautilus. Only pre-existing ws2 Zen and VS Code windows remained.
+22:33:48+07:00 (13:02) Sent computer-use finish; indicator closed.
+22:33:48+07:00 (13:02) computer-use status showed no cancellation; process check found no session driver/guard/indicator. Saved desktop-after-release.png; pill absent.
+2026-11-26T22:38:47+07:00 (1081s) Final read-only check: 10 originals, 10 backup files, same sorted names, zero hash mismatches, exact 10-row list, and fixed-position content matches.
+
+Anomaly chains (failure -> reasoning -> attempts -> decision -> fix -> outcome):
+
+A1 — Dock target opened the wrong panel.
+Failure: Clicking the apparent folder dock icon opened a Bar Folder panel instead of Files.
+Reasoning: The click hit a dock/panel control rather than a Nautilus launcher.
+Attempts: Pressed Escape to dismiss it; opened the Omarchy launcher with Super+Space; searched for Files and selected it.
+Decision: Use the visible app launcher after the dock target proved wrong.
+Fix: Launched Files from the search result and navigated in Nautilus to ~/rung3.
+Outcome: Nautilus opened; d45-work was opened and counted. No task files were changed by the miss.
+
+A2 — Super-only launcher key was refused by input preflight.
+Failure: A key action containing only Super was rejected because it had no non-modifier key; no input was sent.
+Reasoning: The desktop input tool requires a non-modifier key in each key action.
+Attempts: The bare Super attempt was refused; then Super+Space was sent.
+Decision: Use the standard Omarchy launcher chord.
+Fix: Sent Super+Space, searched Files, and selected the Files application.
+Outcome: The launcher opened and Nautilus started.
+
+A3 — Guard refused the first backup-folder open.
+Failure: First double-click attempt returned screen changed; no input was sent.
+Reasoning: The cached observation no longer matched the current screen after the rename/list update.
+Attempts: Took a new screen observation and confirmed d45-backup was selected and showed 10 items.
+Decision: Re-ground the click on the fresh observation instead of replaying the refused action.
+Fix: Double-clicked the selected d45-backup row using the fresh observation.
+Outcome: Nautilus opened d45-backup with the 10 expected files.
+
+A4 — Editor close attempts and unsaved buffer input.
+Failure: Pressing q did not close the editor; a colon key action was refused as an unsupported XKB key. A later literal typing attempt left extra text visible in the editor buffer.
+Reasoning: The opened text file was displayed in nvim inside a separate kitty window; the initial close action did not invoke its quit command, and literal text was not a safe way to enter a command.
+Attempts: Observed the buffer; checked the on-disk SHA-256 for d45-file-01.txt, which still equaled the previously computed checksum; then used Escape and XKB colon/q/exclam/Enter keys to execute :q! without saving.
+Decision: Discard the editor buffer and verify the file from disk rather than save any editor changes.
+Fix: Closed nvim with :q!; reopened later backup files only to read them, and closed them the same way.
+Outcome: The editor closed without saving. The final read-only check found zero checksum mismatches; d45-file-01, -05, and -10 content all matched their originals.
+
+A5 — Alt+F4 did not close Foot.
+Failure: Alt+F4 left the focused Foot window open.
+Reasoning: That shortcut did not close this window in the current desktop setup.
+Attempts: Confirmed Foot remained the active ws2 window and used Super+Q while it was focused.
+Decision: Use the desktop close-window shortcut on the identified task-owned window.
+Fix: Super+Q closed Foot, then closed Nautilus while Nautilus was active.
+Outcome: ws2 retained only the pre-existing Zen and VS Code windows; ws3 was not visited or changed.
+
+End time: 2026-11-26T22:38:47+07:00
