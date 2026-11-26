@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T17:56:00+07:00",
+ "last_updated": "2026-11-26T17:58:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1364,6 +1364,11 @@
    "ts": "2026-11-26T17:56:00+07:00",
    "by": "coordinator-epoch23",
    "text": "R3-046 GRADED PASS (ledger row recorded 17:56:00, validate exit 0, cross-check OK 73 verdict files). B1 Fresh 69d28ac3 PASS 17:52:10 (branch fresh1/verdict-R3-046-L3 81e42e8b), B2 Fresh 4ac339a6 PASS 17:52:39 (branch fresh2/verdict-R3-046-L3 bc9c9f06); both audited PASS (key hashes match freeze, manifest 5ac02800, 59/59 files hash-OK, independence declarations, shared_cause_confirmed false: no block, INVALID path not triggered). Scorers agree, no tiebreaker. Rule-A 29/1. DP-03 RELEASED 17:53 (position 31, Codex lane, driver 3279a33d; briefs pushed df41d006; scorers Clone2+Fresh per fix A F5.2). R3-046 reset: Class S, no fixture; evidence dir is the snapshot source; task tabs closed by runner at drive end (Docs tab untouched). Next after DP-03: R3-049 (position 32)."
+  },
+  {
+   "ts": "2026-11-26T17:58:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "OWNER ORDER 2026-11-26 17:53 +07 (via parent): use Clone2 and Mei MORE with HEAVIER tasks from now, because they still have plenty of tokens. Supersedes the 26/11 re-plan weights (100/100/85/50) for the REMAINING movable work of R3-L3. Clone2 and Mei take the heaviest share of what remains. Hard constraints unchanged: Mei scores 0 (authored list+keys; grader never the author), her heavier load = prep, analysis, review, research. Clone2 scores (Pair A/B as eligible) plus prep/analysis/review. No SSH for clone1/clone2/mei/mochi; live driving stays with Muse subagents/Codex/FCC. Scorer independence untouchable; per-task assignments stay disjoint. APPLICATION (epoch 23, from the next assignment onward; R3-046 already graded PASS and DP-03 already assigned Clone2+Fresh, both undisturbed): remaining movable pool = 21 tasks (R3-049, R3-055, R3-067, R3-072, R3-074, R3-075, R3-076, R3-078, R3-079, R3-082, R3-083, R3-085, R3-086, R3-088, R3-089, R3-093, R3-094, R3-096, R3-098, R3-099, R3-100) + task 56 = 22 tasks, 44 scoring slots + prep/analysis/review. New allocation: Clone2 takes a scoring seat on the majority of remaining tasks (disjointness permitting) plus prep/analysis/review; Mei takes the heaviest prep + analysis + review load (0 scoring); Mochi and Clone1 take lighter shares than the re-plan table; fresh sessions fill remaining slots. Every reassignment re-runs the per-row disjointness check before release and records the result in this state file (per re-plan fix A F5.2 rule)."
   }
  ],
  "pass_count": 24,
