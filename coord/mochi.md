@@ -389,3 +389,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 18:08 +07 - Watchdog 15 phut: lenh cham R3-049 moi, da dieu scorer (mochi)
+
+- Kiem tra subagent: khong co agent nao dang chay, tat ca agent gan day da xong. Khong co agent ket hay chet.
+- GitHub: todolist-push tip 703c3801 (18:03:41 +07), epoch 23: briefs R3-049 + release. Clone2 (mochi) la scorer 1 Pair B, Fresh la scorer 2, theo lenh chu so huu 17:53 giao lai ti trong lon hon cho Clone2+Fresh. DP-03 da GRADED PASS, R3-046 PASS.
+- Key hash da xac minh: md 21f8b61a, json 5059f6c4, khop brief.
+- Snapshot R3-049-L3 chua co tren todolist-push luc 18:08 (runner Codex dang chay). Scorer subagent da dieu, se doi snapshot roi cham trong 30 phut ke tu luc snapshot duoc day. Verdict se ghi vao branch clone2/verdict-R3-049-L3, khong ghi gia tri verdict vao day.
+- Main khong co commit moi tu sang (tip 0e907fb8).
