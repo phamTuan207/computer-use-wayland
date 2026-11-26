@@ -160,10 +160,14 @@ def test_cmd_acquire_visible_still_succeeds():
 
 
 def test_label_format():
-    assert overlay._label_for('Muse', 'BiDi') == 'Muse via BiDi'
-    assert overlay._label_for('Codex', 'DOM') == 'Codex via DOM'
+    # Pill text is always the plain string (owner rule 2026-11-23,
+    # re-confirmed 2026-11-26): agent/method never reach the screen.
+    assert overlay._label_for('Muse', 'BiDi') == 'Computer use active'
+    assert overlay._label_for('Codex', 'Codex') == 'Computer use active'
+    assert overlay._label_for('Codex', 'DOM') == 'Computer use active'
     assert overlay._label_for('', '') == 'Computer use active'
     long_label = overlay._label_for('A' * 30, 'B' * 30)
+    assert long_label == 'Computer use active'
     assert len(long_label) <= overlay.MAX_LABEL
 
 

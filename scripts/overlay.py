@@ -526,7 +526,7 @@ def cmd_acquire(args):
     holders, _ = add_holder(args.agent, args.method, args.pid)
     try:
         _ensure_daemon()
-        label = args.label or _label_for(args.agent, args.method)
+        label = _label_for(args.agent, args.method)
         reply = _send_socket({'command': 'acquire', 'agent': args.agent,
                               'method': args.method, 'pid': args.pid})
         reply['label'] = label
