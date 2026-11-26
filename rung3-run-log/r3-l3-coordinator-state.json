@@ -24,8 +24,8 @@
  "completed_positions": 0,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 1,
- "current_task": "EPOCH 15 (R3-029 held for parent password; clone1 calibration sign-off in progress)",
- "deputy": "ca88fad1-ee1d-4893-8e09-e5e2d6f26d0a (epoch 14 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T07:58:15+07:00, after state last_updated 2026-11-26T07:57:30+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 14 coordinator_active 0c2dc9fb, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed 137e5369; epoch 13 deputy af43c55e SUPERSEDED; on STANDBY under section 7 fencing)",
+ "current_task": "EPOCH 15 (R3-029 held for parent password; clone1 calibration sign-off verifier running)",
+ "deputy": "1598992c-2fde-4aa7-af83-17803c0f61c0 (epoch 15 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:00:52+07:00, after state last_updated 2026-11-26T07:59:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 15 coordinator_active 4ede4016, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed ebecf830; epoch 14 deputy ca88fad1 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T07:59:52.252828+07:00",
+ "last_updated": "2026-11-26T08:01:19.736092+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1159,6 +1159,11 @@
    "ts": "2026-11-26T07:59:52.252828+07:00",
    "by": "coordinator-epoch-15",
    "text": "COORDINATOR TAKEOVER, EPOCH 15: epoch 14 (0c2dc9fb) completed its setup session; parent appoints successor 4ede4016 as coordinator epoch 15 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 4ede4016). Ledgers recomputed by epoch 15 from files: grades 31 rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS = rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk = event 5). Valid 53; bars 51/53 + 52/54 (task 56); need 26 PASS from 28 remaining original positions. R3-029 (position 25, Muse lane) HELD for parent password (owner re-verify asked 07:47, pending). Clone1 calibration grades filed on branch clone1/calibration-sealed-20261126 (dbc7e3f6, 8 files); sealed verdicts VM-local at ~/workspace/r3l3-calibration-sealed/sealed-verdicts-clone1-20261126.json; sign-off verifier spawned (re-grade from scratch, compare, write r3-l3-clone1-calibration-signoff-20261126.md). Clone1 scores nothing until sign-off passes (first scoring task R3-037). Checks 11-12 prepped (epoch 12). Fresh deputy to be spawned (G-24/G-38). State written via temp file then rename (G-48 atomic write)."
+  },
+  {
+   "ts": "2026-11-26T08:01:19.736092+07:00",
+   "by": "coordinator-epoch-15",
+   "text": "DEPUTY CONFIRMED, EPOCH 15: fresh deputy 1598992c. Declaration 08:00:52 +07 (after state 07:59:52, G-24 satisfied), pushed ebecf830 (ls-remote verified). Dry run 5/5 PASS (SSH omarchy, FCC tmux pane 22399 untouched, codex 0.172.0, state parse epoch 15, validate + cross-check exit 0). G-24/G-38 CLOSED for epoch 15. Deputy on STANDBY under section 7 fencing. Clone1 sign-off verifier still running. R3-029 still held for parent password."
   }
  ],
  "pass_count": 22,
