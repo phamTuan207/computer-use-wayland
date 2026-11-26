@@ -24,7 +24,7 @@
  "completed_positions": 24,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
- "current_task": "EPOCH 18 (R3-029 position 25 HELD for parent password; release on password receipt)",
+ "current_task": "EPOCH 19 TAKEOVER 2026-11-26T12:12:42+07:00: parent released the R3-029 hold (credential received in spawn message only, never in any file). R3-029 (position 25, Muse lane) releasing now. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
  "deputy": "79db2d8c-860c-4cd6-af4f-9eac380e3574 (epoch 18 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T09:03:02+07:00, after state last_updated 2026-11-26T09:00:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399 untouched, codex-cli 0.172.0, state parse epoch 18 coordinator_active 8ba3ee09, ledgers validate + cross-check exit 0; declaration pushed 290073d4; epoch 17 deputy aa7cf6b1 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T09:03:56.136997+07:00",
+ "last_updated": "2026-11-26T12:12:42+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1204,6 +1204,11 @@
    "ts": "2026-11-26T09:03:56.136997+07:00",
    "by": "coordinator-epoch-18",
    "text": "DEPUTY CONFIRMED, EPOCH 18: fresh deputy 79db2d8c. Declaration 09:03:02 +07 (after state 09:00:52, G-24 satisfied), pushed 290073d4 (ls-remote verified). Dry run 5/5 PASS. G-24 and G-38 CLOSED for epoch 18. Deputy on STANDBY under section 7 fencing."
+  },
+  {
+   "ts": "2026-11-26T12:12:42+07:00",
+   "by": "coordinator-epoch-19",
+   "text": "COORDINATOR TAKEOVER, EPOCH 19, 2026-11-26T12:12:42+07:00: epoch 18 (8ba3ee09) completed cleanly 09:04:37 +07 and stood by; run intentionally HELD at position 25 since then (no crash). Parent released the hold at 12:11 +07: R3-029 test credential received in the coordinator spawn message only, never in any file; forwarded to the runner in its spawn message only. Parent appoints successor session 4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3 as coordinator, epoch 19, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 4eb5ee66). All predecessors dead, no split-brain risk. Run state re-verified by epoch 19 from ledgers: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; Rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-011/022/024/026/027); a 6th event needs a new recorded team decision via the parent BEFORE further releases. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 26 PASS from 28 remaining original positions. No drive in progress; task_start/runner_pid null. Next: fresh deputy (G-24/G-38), then release R3-029 (position 25, Muse lane) immediately. Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator."
   }
  ],
  "pass_count": 22,
@@ -1250,8 +1255,8 @@
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 26 PASS from 28 remaining original positions. Next drive R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
- "coordinator_active": "8ba3ee09-30a1-44e0-ae56-10900f4be03b (epoch 18, takeover 2026-11-26T09:00:52.749174+07:00)",
- "epoch": 18,
+ "coordinator_active": "4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3 (epoch 19, takeover 2026-11-26T12:12:42+07:00)",
+ "epoch": 19,
  "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",
