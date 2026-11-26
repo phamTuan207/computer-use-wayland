@@ -1,0 +1,27 @@
+R3-098 drive log (Asia/Ho_Chi_Minh; elapsed from 2026-11-27T02:44:40+07:00)
+
+2026-11-27T02:44:40+07:00 (+00:00) Start. `date --iso-8601=seconds` -> 2026-11-27T02:44:40+07:00. Workdir /home/james.
+2026-11-27T02:44:40+07:00 (+00:00) Locate long-lived Codex PID: `pgrep -af 'codex exec'` -> Codex exec PID 3912527 (shell PID 3912960 excluded).
+2026-11-27T02:44:45+07:00 (+00:05) Acquire and verify pill: `python3 ~/computer-use-wayland/scripts/overlay.py acquire --agent Codex --method Codex --pid 3912527 && python3 ~/computer-use-wayland/scripts/overlay.py status` -> holder Codex:3912527, label Computer use active, visible true.
+2026-11-27T02:44:47+07:00 (+00:07) Create evidence directory: `mkdir -p ~/rung3-chung-cu/R3-098` -> success.
+2026-11-27T02:44:50+07:00 (+00:10) Start one interactive visible terminal session (`bash`, TTY session 44168) in /home/james.
+2026-11-27T02:44:58+07:00 (+00:18) First pill screenshot attempt used `grim -o $(hyprctl -j monitors | python3 -c 'import json,sys; print(next(m["name"] for m in json.load(sys.stdin) if m["focused"]))') .../pill-on.png` with required GUI env. Failure: hyprctl returned no JSON to the Python pipeline; JSONDecodeError and grim reported unknown output. Reasoning: focused-output selection failed, screenshot had not been taken. Retry: run grim without `-o`, with the same required fresh GUI env/signature. Outcome: success; `file .../pill-on.png` -> PNG 1920x1200 RGB. A concurrent `overlay.py status` -> label Computer use active, visible true, holder PID 3912527.
+2026-11-27T02:45:04+07:00 (+00:24) In the visible terminal, `wc -l ~/rung3/nd18-du-lieu.csv` -> `51 /home/james/rung3/nd18-du-lieu.csv`.
+2026-11-27T02:45:08+07:00 (+00:28) In the visible terminal, `head -n 1 ~/rung3/nd18-du-lieu.csv` -> `ten,nhom,so_tien`.
+2026-11-27T02:45:12+07:00 (+00:32) In the visible terminal, `sha256sum ~/rung3/nd18-du-lieu.csv` -> `71dd42639dadbd62d458d2304e30f05e7ed227f8b55387f830eadd4262648eea  /home/james/rung3/nd18-du-lieu.csv` (matches required fixture).
+2026-11-27T02:45:16+07:00 (+00:36) First awk sums command in visible terminal: `awk -F, 'NR>1 {sum[$2]+=$3} END {for (g in sum) print g, sum[g]}' ~/rung3/nd18-du-lieu.csv | sort` -> `NhomA 66193`, `NhomB 52674`, `NhomC 69300`, `NhomD 51018`.
+2026-11-27T02:45:22+07:00 (+00:42) Required mid-drive pill check: `python3 ~/computer-use-wayland/scripts/overlay.py status` -> holder Codex:3912527, label Computer use active, visible true.
+2026-11-27T02:45:26+07:00 (+00:46) First awk per-group count command in visible terminal: `awk -F, 'NR>1 {count[$2]++} END {for (g in count) print g, count[g]}' ~/rung3/nd18-du-lieu.csv | sort` -> `NhomA 14`, `NhomB 12`, `NhomC 13`, `NhomD 11`.
+2026-11-27T02:45:30+07:00 (+00:50) First awk grand total command in visible terminal: `awk -F, 'NR>1 {total+=$3} END {print total}' ~/rung3/nd18-du-lieu.csv` -> `239185`; equals 66193+52674+69300+51018.
+2026-11-27T02:45:34+07:00 (+00:54) Write report in visible terminal using `cat > ~/rung3/nd18-bao-cao.txt` heredoc. Contents: per-group sums A 66193, B 52674, C 69300, D 51018; row counts A 14, B 12, C 13, D 11; grand total 239185. `cat ~/rung3/nd18-bao-cao.txt` read-back displayed the same complete contents.
+2026-11-27T02:45:43+07:00 (+01:03) Copy graded report: `cp ~/rung3/nd18-bao-cao.txt ~/rung3-chung-cu/R3-098/bao-cao.txt` -> success.
+2026-11-27T02:45:47+07:00 (+01:07) Second awk sums command (exact command above) -> `NhomA 66193`, `NhomB 52674`, `NhomC 69300`, `NhomD 51018`.
+2026-11-27T02:45:51+07:00 (+01:11) Second awk per-group count command (exact command above) -> `NhomA 14`, `NhomB 12`, `NhomC 13`, `NhomD 11`.
+2026-11-27T02:45:55+07:00 (+01:15) Second awk grand total command (exact command above) -> `239185`. All results match the report.
+2026-11-27T02:45:59+07:00 (+01:19) Record `date --iso-8601=seconds` -> 2026-11-27T02:45:59+07:00. Create start_time.txt and awk-commands.txt; copy report to nd18-bao-cao.txt. (The evidence files are then read back below.)
+2026-11-27T02:46:44+07:00 (+02:04) Read back start_time.txt, drive-log.txt, bao-cao.txt, nd18-bao-cao.txt, and awk-commands.txt. `cmp` against original report -> both evidence copies match. `stat` confirmed existing evidence mtimes were inside the run window. `file pill-on.png` -> valid 1920x1200 PNG; visually inspected and pill label visible.
+2026-11-27T02:46:58+07:00 (+02:18) Release pill with same long-lived PID: `python3 ~/computer-use-wayland/scripts/overlay.py release --agent Codex --pid 3912527 && python3 ~/computer-use-wayland/scripts/overlay.py status` -> holders {}, owner none, visible false.
+2026-11-27T02:47:00+07:00 (+02:20) Capture pill-off evidence using `grim ~/rung3-chung-cu/R3-098/pill-off.png` with required GUI environment and freshly read Hyprland signature. `file` -> valid 1920x1200 PNG; final overlay status -> holders {}, visible false.
+2026-11-27T02:47:07+07:00 (+02:27) Final evidence read-back and mtime check in progress; end time 2026-11-27T02:47:07+07:00. No other task started.
+2026-11-27T02:47:30+07:00 (+02:50) Final read-back completed: all text evidence files read; report copies compare equal to original; both screenshots are valid PNG files; all evidence mtimes are inside the run window. Overlay remains released (holders {}, visible false). End time recorded immediately after final checks.
+2026-11-27T02:47:58+07:00 (+03:18) Adjusted end_time.txt after checking file mtimes, so its recorded end boundary includes every evidence file. Final status: report copies equal original, all requested files present, pill released.

@@ -1,0 +1,35 @@
+First run: per-group sums
+$ awk -F, 'NR>1 {sum[$2]+=$3} END {for (g in sum) print g, sum[g]}' ~/rung3/nd18-du-lieu.csv | sort
+NhomA 66193
+NhomB 52674
+NhomC 69300
+NhomD 51018
+
+First run: per-group row counts
+$ awk -F, 'NR>1 {count[$2]++} END {for (g in count) print g, count[g]}' ~/rung3/nd18-du-lieu.csv | sort
+NhomA 14
+NhomB 12
+NhomC 13
+NhomD 11
+
+First run: grand total
+$ awk -F, 'NR>1 {total+=$3} END {print total}' ~/rung3/nd18-du-lieu.csv
+239185
+
+Second run: per-group sums
+$ awk -F, 'NR>1 {sum[$2]+=$3} END {for (g in sum) print g, sum[g]}' ~/rung3/nd18-du-lieu.csv | sort
+NhomA 66193
+NhomB 52674
+NhomC 69300
+NhomD 51018
+
+Second run: per-group row counts
+$ awk -F, 'NR>1 {count[$2]++} END {for (g in count) print g, count[g]}' ~/rung3/nd18-du-lieu.csv | sort
+NhomA 14
+NhomB 12
+NhomC 13
+NhomD 11
+
+Second run: grand total
+$ awk -F, 'NR>1 {total+=$3} END {print total}' ~/rung3/nd18-du-lieu.csv
+239185
