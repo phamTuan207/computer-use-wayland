@@ -1,0 +1,74 @@
+{
+ "files": [
+  {
+   "mtime": 1795717630,
+   "name": "bao-cao.txt",
+   "sha256": "ef6d3986142746c3500e8df5b5b644140b7723a48024e2ea82a75dff290a7161",
+   "size": 3728
+  },
+  {
+   "mtime": 1795717633,
+   "name": "drive-log.txt",
+   "sha256": "933d63dbef1fc299bef396f0ac19ddae27e1e964c0581fbe9c6176ec9398fdfc",
+   "size": 5795
+  },
+  {
+   "mtime": 1795717637,
+   "name": "end_time.txt",
+   "sha256": "c069b13ea6f5687f924fee6e700058c3a6750f279fd1eba36c2f4ae276358179",
+   "size": 26
+  },
+  {
+   "mtime": 1795717623,
+   "name": "nd28-bao-cao.txt",
+   "sha256": "0160af4b5e05bca7d6c82468ba84dca160d62286fac1470e99836a129a75a503",
+   "size": 535
+  },
+  {
+   "mtime": 1795717641,
+   "name": "nd28-luu-tru.tar.gz",
+   "sha256": "491ef848433497226787a3fa2d18053e4e2e19951b8379a7faa9bf5681532db6",
+   "size": 346
+  },
+  {
+   "mtime": 1795717645,
+   "name": "shot-00-pill.png",
+   "sha256": "5ca59e357850f2e99977bcc54a7f63db6dbd6fa9343d3628f06a80f04844f189",
+   "size": 27680
+  },
+  {
+   "mtime": 1795717649,
+   "name": "shot-01-terminal.png",
+   "sha256": "d1652944823349012dfa4054cd2be2451ace2281ab0c4cf85cd36b61cd08e6cc",
+   "size": 84687
+  },
+  {
+   "mtime": 1795717654,
+   "name": "shot-02-tar.png",
+   "sha256": "177357efa094d1ea0f409ab0e202ff4695d5b850867e9c00d3eb3ccde1f35730",
+   "size": 165726
+  },
+  {
+   "mtime": 1795717659,
+   "name": "shot-03-result.png",
+   "sha256": "d07010e5b6186f33370bb5e9c737694bb901e4c3348142f63f9b01335dc6cf25",
+   "size": 216602
+  },
+  {
+   "mtime": 1795717662,
+   "name": "shot-04-after-release.png",
+   "sha256": "39b6b95c15f1938e42490354d3442199401cc2d1063aa8e05512d419b35a9a21",
+   "size": 24960
+  },
+  {
+   "mtime": 1795717666,
+   "name": "start_time.txt",
+   "sha256": "78969e2389bd66785ed3586aa1f4d4848575c2c1536949aa10e2684e22ad18c0",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "3e6392f16a5969663e542eb9713ef7cabb2fe6b7cbbed0de9bb1f6f2ce54aecf",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-088-L3",
+ "source_dir": "/tmp/r3-088-evidence",
+ "task": "r3-088-evidence"
+}

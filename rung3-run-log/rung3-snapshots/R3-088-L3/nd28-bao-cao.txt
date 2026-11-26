@@ -1,0 +1,9 @@
+R3-088 archive report
+Source regular files: 10 (find -maxdepth 1 -type f | wc -l)
+Source total size: 470 bytes (du -sb)
+Archive command: tar -czf ~/rung3/nd28-luu-tru.tar.gz -C ~/rung3 nd28-work
+Archive entries including root directory: 11
+Regular files in archive: 10
+Regular files after extraction: 10
+Comparisons with cmp -s: nd28-file-01.txt MATCH; nd28-file-05.txt MATCH; nd28-file-10.txt MATCH.
+Note: ls is aliased to eza with long-format headers. ls -1 | wc -l returned 11 including the header; find confirmed 10 regular files.
