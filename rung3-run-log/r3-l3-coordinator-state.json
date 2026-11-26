@@ -24,7 +24,7 @@
  "completed_positions": 28,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 29,
- "current_task": "EPOCH 21: R3-037 (position 28) GRADED FAIL 14:52 (A1 Mochi FAIL 14:47:10 + A2 Clone1 FAIL, agree, no tiebreaker; timeout, 1 of 2 domains; NOT INVALID; validators exit 0; verdicts filed R3-037-A1/A2.json). Rule-A 28/1. Next: release R3-045 (position 29, Codex lane). No drive in progress.",
+ "current_task": "EPOCH 21: R3-045 (position 29, Codex lane) RELEASED 2026-11-26T14:52:08+07:00 via Codex driver 1db67099 (briefs written + pushed 334ccec6; task_start provisional, correct to runner actual start when driver reports). Scorers Clone2 + Fresh (F5.2). Rule-A 28/1.",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T14:51:15+07:00",
+ "last_updated": "2026-11-26T14:52:08+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "35 rows (1 TEST + 25 PASS + 5 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 69 verdict files)",
@@ -1304,6 +1304,11 @@
    "ts": "2026-11-26T14:51:15+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-037 GRADED FAIL (ledger row recorded 14:52:00). Scorer 1 (Mochi 70cd99d1) FAIL scored 14:47:10; scorer 2 (Clone1 9e32c788, first scoring task) FAIL; both audited PASS (key hashes match freeze, manifest 4f758d62, files read = snapshot + key + brief, independence declarations present), agree, no tiebreaker. FAIL reason: 30-min timeout, only 1 of 2 domains captured (wikipedia.org missing screenshot + data); NOT INVALID (who.is loaded normally, no reCAPTCHA/block). Verdicts filed ~/workspace/rung3-verdicts/R3-037-A1.json + R3-037-A2.json (+ grade mds) before the ledger row. validate-ledger PASS (35 rows, 0 errors), ledger-cross-check OK (69 verdict files, 0 errors). Drive 14:11:44-14:41:43 (29m59s), snapshot R3-037-L3 manifest 4f758d62. Rule-A 28 PASS / 1 FAIL (FAIL #1; slack 2->1; need 23 PASS from 24 remaining original positions; bar-unreachable trigger fails=3 NOT hit). Re-run decision via parent/council per mid-run re-plan (Rule A: re-run PASS replaces FAIL at closure; original FAIL row stays; failed re-run gets no second re-run without new owner decision). Run continues to R3-045 (position 29, Codex lane) per frozen order."
+  },
+  {
+   "ts": "2026-11-26T14:52:08+07:00",
+   "by": "coordinator-epoch-21",
+   "text": "R3-045 RELEASED 2026-11-26T14:52:08+07:00 (position 29, Codex lane). Briefs written by epoch 21 from the frozen list extract (docs/rung3-list-100-tasks.md R3-045 section) + F5.2 row (scorers Clone2 + Fresh, prep Mei, reviewer Mochi): rung3-run-log/briefs/R3-045-codex-runner-brief.md + R3-045-scorer-clone2-brief.md + R3-045-scorer-fresh-brief.md, pushed 334ccec6. Codex driver 1db67099-581e-4080-a4af-e3cecfa4c4c1 spawned (codex exec -m gpt-6-luna --sandbox danger-full-access --skip-git-repo-check from /home/james, Hyprland env exported, detached, log /tmp/codex-R3-045.log). task_start provisional 2026-11-26T14:52:08+07:00; runner_pid null (driver reports codex PID; timeout watch uses task_start). One driver on shared Zen."
   }
  ],
  "pass_count": 24,
@@ -1352,7 +1357,7 @@
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 35 grade rows (25 PASS, 5 INVALID, 4 FAIL, 1 TEST) + 3 re-run PASS; rule-A 28 PASS / 1 FAIL (R3-037 timeout). Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 23 PASS from 24 remaining original positions (slack 1). Next drive R3-045 (position 29, Codex lane). R3-037 re-run decision via parent/council (Rule A: re-run PASS replaces FAIL at closure). Checks 11-12 armed; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00)",
  "epoch": 21,
- "task_start": null,
+ "task_start": "2026-11-26T14:52:08+07:00",
  "runner_pid": null,
  "codex_task": "R3-042",
  "codex_task_start": null,
