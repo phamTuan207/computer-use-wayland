@@ -1,0 +1,3 @@
+AI-estimated difficulty: Nhan biet
+
+The solution uses basic array-style traversal, a running sum and maximum, a threshold count, and one-decimal output formatting. The main edge cases are counting a score exactly equal to 5.0 and preserving the required output precision; with n at most 10, there is no meaningful constraint pressure or advanced insight.

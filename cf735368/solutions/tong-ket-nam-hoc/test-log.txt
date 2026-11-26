@@ -1,0 +1,66 @@
+Task: tong-ket-nam-hoc
+Start: 2026-11-27 06:55:41 +07
+
+Step log (Asia/Ho_Chi_Minh; elapsed from start):
+- 06:55:42 (+00:01): Read the ponytail skill and located the long-lived codex exec PID (66872).
+- 06:55:46 (+00:05): Acquired the overlay with PID 66872; verified label "Computer use active" and visible=true. Existing holder Muse was present and left untouched.
+- 06:55:53 (+00:12): Checked the target directory; it had no files, and no applicable AGENTS.md was found under the work directory.
+- 06:56:03 (+00:22): Created the target directory and wrote sol.cpp.
+- 06:56:18 (+00:37): Compiled the solution successfully.
+- 06:56:25 (+00:44): Ran all three self-made test cases below.
+- 06:56:44 (+01:03): Wrote the test log and difficulty rating; solution source was reviewed.
+
+Compilation:
+Command: g++ -O2 -std=c++17 -o /home/james/cf735368-work/tong-ket-nam-hoc/sol /home/james/cf735368-work/tong-ket-nam-hoc/sol.cpp
+Result: PASS (exit code 0)
+
+Samples: The statement provides no sample cases.
+
+Self-made tests (expected results computed by hand):
+
+1. Minimum score and single subject
+Input:
+1
+0.1
+Expected output:
+0.1
+0.1
+0
+Actual output:
+0.1
+0.1
+0
+Result: PASS
+
+2. Full subject count, minimum/maximum bounds, exact 5.0 threshold
+Input:
+10
+0.1 4.9 5.0 5.1 6.2 7.3 8.4 9.5 9.9 10.0
+Expected output:
+6.6
+10.0
+8
+Actual output:
+6.6
+10.0
+8
+Result: PASS
+
+3. Half-valued average and no passing subjects
+Input:
+2
+1.0 2.0
+Expected output:
+1.5
+2.0
+0
+Actual output:
+1.5
+2.0
+0
+Result: PASS
+- 06:56:56 (+01:15): Released Codex overlay holder using the same PID. Final overlay status: Codex holder removed; Muse holder remains, so holders are not empty and visible remains true. Muse was pre-existing and was not altered.
+- 06:57:04 (+01:23): Recorded the final end time and elapsed duration.
+
+End: 2026-11-27 06:57:04 +07
+Elapsed: 00:01:23
