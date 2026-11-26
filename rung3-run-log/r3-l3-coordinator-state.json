@@ -24,7 +24,7 @@
  "completed_positions": 26,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 27,
- "current_task": "EPOCH 21: R3-036 (position 27, Muse lane) RELEASED 2026-11-26T13:25:33+07:00, runner 1e25ec14-963a-4161-a894-ea8c0c6edff3, 30-min deadline ~30 min from start. Named INVALID candidate (timeanddate shared cause); scorers Mochi + Fresh (shared_cause_confirmed required). Rule-A 27/0.",
+ "current_task": "EPOCH 21: R3-036 (position 27) drive COMPLETED 13:55:07, snapshot sealed f857cf4f (14 files, gate PASS), NO bot block (INVALID candidate not triggered). Snapshot pushing; Pair A scoring next (Mochi + Fresh). Rule-A 27/0.",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T13:25:33+07:00",
+ "last_updated": "2026-11-26T14:04:51+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "33 rows (1 TEST + 24 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 65 verdict files)",
@@ -1269,6 +1269,11 @@
    "ts": "2026-11-26T13:25:33+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-036 RELEASED 2026-11-26T13:25:33+07:00 (position 27, Muse lane, runner 1e25ec14-963a-4161-a894-ea8c0c6edff3). Brief spot-checked: standing-rule fields present (ydotool ban, pill, user-path entry + forbidden shortcuts, holder discipline, bot-check rule, invalid budget 5/5). Scorer briefs: Mochi scorer 1 + Fresh scorer 2 (shared_cause_confirmed required in verdict JSON). task_start set 2026-11-26T13:25:33+07:00; runner_pid null (Muse lane, no OS PID). One driver on shared Zen. Timeout watch deadline 30 min from task_start."
+  },
+  {
+   "ts": "2026-11-26T14:04:51+07:00",
+   "by": "coordinator-epoch-21",
+   "text": "R3-036 DRIVE COMPLETE 2026-11-26T13:55:07+07:00 (runner 1e25ec14, start 13:28:36, inside 30-min timeout). No bot block on timeanddate.com or Google Docs; pre-declared INVALID candidate NOT triggered, no block-evidence.txt needed. Results: Hanoi UTC+7, Tokyo UTC+9, Sydney UTC+11 (DST); common window Wed 2026-12-02 Hanoi 09:00-13:00 = Tokyo 11:00-15:00 = Sydney 13:00-17:00; chosen slot Hanoi 10:00-11:00 / Tokyo 12:00-13:00 / Sydney 14:00-15:00; doc saved + reopened (3 text rows + explanation, clipboard paste, R3-035 precedent form). Probe clean all 3 attempts (webdriver false, shim bb49ff3f); pill visible, grim proof of release; no cookies cleared; owner tabs untouched. Evidence pulled laptop->VM (scp -p, 177 files sha256-verified); collect-evidence PASS (177 files, 5 screenshots); snapshot R3-036-L3 manifest f857cf4f8abcb07288fc142b8d0e0c26dd255dbb69d6d36cb8396769b16ab010 (14 top-level files; work/ auxiliary files remain in VM staging /tmp/r3036-evidence/R3-036/work); manifest-gate PASS. pii-scan v1: 15 hits, all owner-url class (task-created Google Doc URL + generic docs.google.com/u/0/ in drive logs; no email, no owner tab URL, no password); coordinator manual review PASS per R3-035/R3-029 precedent. task_start/runner_pid cleared at drive end."
   }
  ],
  "pass_count": 23,
@@ -1317,7 +1322,7 @@
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 33 grade rows (24 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 27 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 24 PASS from 26 remaining original positions. Next drive R3-036 (position 27, Muse lane, named INVALID candidate, timeanddate shared cause). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00)",
  "epoch": 21,
- "task_start": "2026-11-26T13:25:33+07:00",
+ "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",
  "codex_task_start": null,

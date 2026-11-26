@@ -1,0 +1,92 @@
+{
+ "files": [
+  {
+   "mtime": 1795675539,
+   "name": "20261126-134539-meeting-timetable.jpg",
+   "sha256": "da02c3937dd6f203b9d004d6702bced3f5d4afc79aae9eec458c8e23727ec8dd",
+   "size": 273085
+  },
+  {
+   "mtime": 1795675581,
+   "name": "20261126-134621-worldclock-readings.jpg",
+   "sha256": "9b319d10dc241dc1b14609e16226bb9170e4ab4661229b50f425d61e61f9b5e6",
+   "size": 231125
+  },
+  {
+   "mtime": 1795675791,
+   "name": "20261126-134951-worldclock-readings.jpg",
+   "sha256": "82988b081937e75928d5d2740bc61b603fdedadf142f47310a798fb986ca76ac",
+   "size": 256685
+  },
+  {
+   "mtime": 1795676003,
+   "name": "20261126-135323-doc-saved.jpg",
+   "sha256": "c7660c67b7b1b8895a6c31e206f5edae97e34f6f2d8fc2122206364530adaac7",
+   "size": 111837
+  },
+  {
+   "mtime": 1795676072,
+   "name": "20261126-135432-doc-reopened.jpg",
+   "sha256": "73304caca1763cf73fec58568e95e7dc4f05df95416f607cca3eef9583cbb5eb",
+   "size": 117152
+  },
+  {
+   "mtime": 1795676107,
+   "name": "drive-r3036.log",
+   "sha256": "50deecc42011333a38edf393120c5a98e673391f5c72f516ee5d2d91f7fca193",
+   "size": 121336
+  },
+  {
+   "mtime": 1795674580,
+   "name": "drive-stdout.log",
+   "sha256": "b677b2a14aae5ee21c1af32fc5dbfd80c156c645e0b144b77032e5428c00b88f",
+   "size": 1583
+  },
+  {
+   "mtime": 1795675682,
+   "name": "drive-stdout2.log",
+   "sha256": "23dafb41d3dda89c2eea57002949fe87d1a2264b6b77076e400d958b2666a27b",
+   "size": 84483
+  },
+  {
+   "mtime": 1795676107,
+   "name": "drive-stdout3.log",
+   "sha256": "a0564a2caa45f73126ff5fb4ea516f86ec6da6cb05caaf3eb2f271f082785426",
+   "size": 35600
+  },
+  {
+   "mtime": 1795676107,
+   "name": "end_time.txt",
+   "sha256": "1c887cb5e0960a1a048e39bf543f54a49051f6a8025af9f33957d4dd15f44ea1",
+   "size": 26
+  },
+  {
+   "mtime": 1795676105,
+   "name": "holder-r3036.log",
+   "sha256": "43ac762166f9a6f7924ce89aa8f137788cbdf345f97e592d19418c8afe3839cf",
+   "size": 5526
+  },
+  {
+   "mtime": 1795676054,
+   "name": "ket-qua.txt",
+   "sha256": "24509f2507566b9485629156fd941bc6880e63a6a2626bd45bc458522660b86a",
+   "size": 1623
+  },
+  {
+   "mtime": 1795675702,
+   "name": "probe-ready.json",
+   "sha256": "0777475af4c5aa49846b37478992f2f5af235148f93c8197fe03e4a08dc7c450",
+   "size": 455
+  },
+  {
+   "mtime": 1795676145,
+   "name": "start_time.txt",
+   "sha256": "c801bdc6f0a9c00b4db24bc34d5acb68135aa5e80827e2dfc26b6c237e8065d6",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "f857cf4f8abcb07288fc142b8d0e0c26dd255dbb69d6d36cb8396769b16ab010",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-036-L3",
+ "source_dir": "/tmp/r3036-evidence/R3-036",
+ "task": "R3-036"
+}

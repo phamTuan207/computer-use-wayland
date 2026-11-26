@@ -1,0 +1,23 @@
+R3-036 - Meeting across 3 time zones (timeanddate.com)
+Cities in order: Hanoi, Tokyo, Sydney. Meeting date: Wednesday 2026-12-02.
+Working hours: 09:00-17:00 local. Values read from the saved screenshots in this folder.
+
+Current local times read on the World Clock page (screenshot 20261126-134951-worldclock-readings.jpg, Thu 2026-11-26):
+Hanoi Thu 13:49, Tokyo Thu 15:49, Sydney Thu 17:49 (marked * = daylight saving time on the site).
+
+Offsets read from the Meeting Planner timetable (screenshot 20261126-134539-meeting-timetable.jpg, UTC-time column):
+Hanoi UTC+7, Tokyo UTC+9, Sydney UTC+11 (DST, marked *).
+Offset differences: Tokyo is 2 hours ahead of Hanoi. Sydney is 4 hours ahead of Hanoi. Sydney is 2 hours ahead of Tokyo.
+
+Common working-hours window on Wed 2026-12-02 (all 3 inside 09:00-17:00 local):
+Hanoi 09:00-13:00 = Tokyo 11:00-15:00 = Sydney 13:00-17:00 (UTC 02:00-06:00).
+
+Chosen 60-minute meeting time (inside the common window):
+Hanoi - Wed 2 Dec 2026, 10:00-11:00 (UTC+7)
+Tokyo - Wed 2 Dec 2026, 12:00-13:00 (UTC+9)
+Sydney - Wed 2 Dec 2026, 14:00-15:00 (UTC+11, DST)
+
+This time suits all three sides because it falls inside the shared 09:00-17:00 working-hours window (Hanoi 09:00-13:00 = Tokyo 11:00-15:00 = Sydney 13:00-17:00), so every participant joins during normal work hours.
+
+Online document (Google Docs): https://docs.google.com/document/d/1CY7-VjhxORgRYSngDzEOIAsmqnZCzyQVfQ2Ncl3Nqws/edit?tab=t.0
+Screenshots: 20261126-134951-worldclock-readings.jpg (current times), 20261126-134539-meeting-timetable.jpg (timetable with chosen slot rows), doc-saved and doc-reopened shots in this folder.

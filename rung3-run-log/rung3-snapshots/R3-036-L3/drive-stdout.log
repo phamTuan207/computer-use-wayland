@@ -1,0 +1,10 @@
+{"wall": "2026-11-26T13:28:36+07:00", "elapsed_s": 0.0, "step": "drive_start", "query": "timeanddate world clock", "expect_host": "timeanddate.com", "entry_point": "Zen address bar, type timeanddate world clock, Return (DuckDuckGo SERP), click first result", "forbidden": "deep link, BiDi navigate to timeanddate URLs, DOM click, internal setters, API calls, offsets from memory, cookie clearing", "rules": "ydotool BANNED; pill Computer use active fail closed; one driver; owner tabs untouched; ws2 only; ws3 untouched"}
+{"wall": "2026-11-26T13:28:36+07:00", "elapsed_s": 0.0, "step": "hash_check", "file": "/tmp/fixb-runner/holder-fixb.mjs", "ok": true}
+{"wall": "2026-11-26T13:28:36+07:00", "elapsed_s": 0.0, "step": "hash_check", "file": "/tmp/fixb-runner/probe-fixb.mjs", "ok": true}
+[overlay] {"elapsed_ms":1,"event":"daemon_spawned","pid":2787230,"wall_time":"2026-11-26T13:28:36.714+07:00"}
+{"wall": "2026-11-26T13:28:36+07:00", "elapsed_s": 0.2, "step": "pill_acquired", "visible": true, "label": "Computer use active"}
+{"wall": "2026-11-26T13:29:37+07:00", "elapsed_s": 60.7, "step": "drive_error", "error": "holder exited early, see holder log", "verdict": "FAIL"}
+{"wall": "2026-11-26T13:29:37+07:00", "elapsed_s": 60.7, "step": "holder_clean_end", "clean": false}
+{"wall": "2026-11-26T13:29:39+07:00", "elapsed_s": 62.8, "step": "pill_released", "visible_after": null}
+{"wall": "2026-11-26T13:29:40+07:00", "elapsed_s": 63.3, "step": "pill_gone_grim", "rc": 0, "err": ""}
+{"wall": "2026-11-26T13:29:40+07:00", "elapsed_s": 63.3, "step": "drive_done", "verdict": "FAIL"}
