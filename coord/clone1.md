@@ -9055,3 +9055,12 @@ Không có comment mới trên PR #758, #756, #760 (đều 0 comment), không c�
 R3-L3: R3-027 INVALID chính thức (event 5 = cap, cả 2 scorer đồng ý), R3-028-L3 snapshot xong gate PASS, vị trí tiếp R3-029; clone1 vẫn chờ bộ calibration sealed để nhận 13 WU; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push 5c020298 lúc 07:38, main merge 4cdc623e lúc 07:26; câu hỏi equip Graphify 04:44 vẫn chưa trả lời (174 phút) nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 08:17 ngày 26/11 - WATCHDOG
+
+Không agent nào kẹt. Calibration 4/4 APPROVED đã nộp đủ 8 file, scorer trùng d516f5c7 bị hủy nhưng việc đã xong nên không cứu.
+Muse: không có yêu cầu mới. Main không có commit mới từ watermark 0e907fb8; todolist-push không có commit mới từ watermark 7208d97c; chưa có snapshot R3-037-L3 nên chưa chấm.
+Không có comment mới trên PR #771, #769, không có issue mở.
+R3-L3: vị trí 25, R3-029 HELD chờ mật khẩu; Rule-A 25 PASS / 0 FAIL, 5 INVALID; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 vẫn chưa có quyết định.
+Điều phối còn sống: todolist-push 7208d97c lúc 08:05; câu hỏi equip Graphify 04:44 vẫn chưa trả lời (213 phút) nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
