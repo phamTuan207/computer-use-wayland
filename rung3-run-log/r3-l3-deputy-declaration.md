@@ -629,3 +629,78 @@ Dry run result: 5/5 PASS.
 Standby statement: I am the deputy coordinator for epoch 23, on STANDBY under re-plan section 7 fencing. I take no run action, release nothing, drive nothing, score nothing. I act ONLY if the coordinator is confirmed unavailable or the parent directs takeover. While coordinator 0d5fb18c-c281-4c65-81a8-624e43de6595 is active, I hold no authority and issue no orders. If takeover is directed, a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.
 
 Standing rules acknowledged: English for all work; ydotool BANNED; pill "Computer use active" on any agent control (this deputy controls nothing); never close or navigate owner tabs, pinned tabs, essentials, or ws3; SSH to the laptop ONLY via ~/workspace/ssh-laptop.sh, short commands; no personal info on GitHub; git explicit pathspec on add and commit, never git add -A, never leave files staged, verify pushes via ls-remote; work in ~/workspace/r3l3-run-wt (branch todolist-push); Ponytail for any code work; Graphify for codebase context. This declaration was appended only; no commit or push by this deputy (the coordinator commits).
+
+---
+
+## Deputy declaration, epoch 24
+
+- Deputy session id: dee95d07-524e-4e10-8dcf-271d5b36c65c
+- Declaration timestamp (Asia/Ho_Chi_Minh): 2026-11-26T19:07:21+07:00
+- Role: deputy coordinator for R3-L3, epoch 24, STANDBY ONLY under re-plan section 7 fencing
+- Coordinator certified: 64030fac-dbec-4359-9fb5-21ae46f944f1 (epoch 24, takeover 2026-11-26T19:06:52+07:00)
+- G-24 freshness: this declaration timestamp (2026-11-26T19:07:21+07:00) is after the state file last_updated certified below (2026-11-26T19:06:52+07:00). Satisfied at time of writing. If the coordinator updates the state file after this declaration, that update is noted in the deputy report to the parent, and this deputy will re-declare if asked.
+
+## What this replaces
+
+This declaration REPLACES the declaration by deputy session b3cf2527-e98a-48ab-85bd-e752138fa15a (epoch 23, 2026-11-26T17:08:16+07:00), which is SUPERSEDED and holds no deputy authority. All earlier deputy sessions remain superseded. I am the new deputy for epoch 24, appointed by the parent after the epoch 24 coordinator takeover. I have NOT edited the state file. This declaration APPENDS to this file, never overwrites it. No commit or push by this deputy; the coordinator owns git.
+
+## State as read
+
+State file: ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json
+
+First read and parse at 2026-11-26T19:06:48+07:00:
+- coordinator_active: 0d5fb18c-c281-4c65-81a8-624e43de6595 (epoch 23, takeover 2026-11-26T17:08:00+07:00)
+- epoch: 23
+- current_position: 33
+- completed_positions: 32
+- last_updated: 2026-11-26T19:06:00+07:00
+- current_task: R3-055 DRIVE COMPLETED 19:02:23 (codex PID 3192315, 18:55:43-19:02:23). Snapshot R3-055-L3 sealed (11 files, manifest c679ba43, gate PASS, pii clean). Pair B scoring in progress.
+
+Coordinator takeover observed during the dry run. Re-parse at 2026-11-26T19:07:08+07:00 and again at 2026-11-26T19:07:12+07:00:
+- coordinator_active: 64030fac-dbec-4359-9fb5-21ae46f944f1 (epoch 24, takeover 2026-11-26T19:06:52+07:00)
+- epoch: 24
+- current_position: 33
+- completed_positions: 32
+- last_updated: 2026-11-26T19:06:52+07:00
+- current_task: R3-055 (position 33, Class L) DRIVE COMPLETED 2026-11-26T19:02:23+07 (codex PID 3192315, 18:55:43-19:02:23). Snapshot R3-055-L3 sealed (11 files, manifest c679ba43, gate PASS, pii clean, pushed 93ceeb8e). Pair B scoring: Mochi B1 PASS audited, Clone2 B2 PENDING. Class L tree on laptop left in place until scored (score-before-reset). task_start/runner_pid null (no drive running).
+
+This matches the brief expectation: coordinator_active epoch 23 (0d5fb18c) at first read time, epoch 24 after takeover; current_position 33; current_task R3-055 with drive completed 2026-11-26T19:02:23+07 and scoring in progress.
+
+## Dry run (G-24/G-38 pattern, read-only, 5 items)
+
+Timing: all times Asia/Ho_Chi_Minh, wall-clock with elapsed noted per item.
+
+a. Laptop SSH - PASS
+   - Command: ~/workspace/ssh-laptop.sh 'hostname; uptime' (short command only)
+   - Run: START 2026-11-26T19:06:50+07:00, END 2026-11-26T19:06:54+07:00
+   - Evidence: hostname omarchy; uptime "19:06:55 up 1 day, 10:22, 7 users, load average: 0.00, 0.15, 0.25"; exit 0.
+
+b. FCC tmux session r3-fcc-runner-L3 alive, pane PID 22399 - PASS
+   - Command: ~/workspace/ssh-laptop.sh 'tmux ls; ps -p 22399 -o pid,comm,etime'
+   - Run: START 2026-11-26T19:06:56+07:00, END 2026-11-26T19:07:00+07:00
+   - Evidence: tmux ls shows legacy-link, main, and r3-fcc-runner-L3 (1 windows, created Wed Nov 25 09:00:18 2026); ps shows PID 22399 fcc-claude, ELAPSED 1-10:06:42; exit 0. Session observed only, NOT touched, no keys sent, NOT killed. PID 22399 is PERSISTENT.
+
+c. Codex exec available - PASS
+   - Command: ~/workspace/ssh-laptop.sh 'codex --version'
+   - Run: START 2026-11-26T19:07:02+07:00, END 2026-11-26T19:07:05+07:00
+   - Evidence: codex-cli 0.172.0; exit 0. Matches expected 0.172.0.
+
+d. State file parse - PASS
+   - Command: python3 json.load of ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json
+   - Run: first parse 2026-11-26T19:06:48+07:00 (epoch 23, coordinator_active 0d5fb18c, current_position 33, last_updated 2026-11-26T19:06:00+07:00); re-parse 2026-11-26T19:07:08+07:00 and 2026-11-26T19:07:12+07:00 (epoch 24, coordinator_active 64030fac-dbec-4359-9fb5-21ae46f944f1, current_position 33, last_updated 2026-11-26T19:06:52+07:00)
+   - Evidence: json.load OK both times; values above. Coordinator takeover from epoch 23 to epoch 24 occurred during the dry run and was observed live.
+
+e. Snapshot and verdict paths exist - PASS
+   - Commands: ls ~/workspace/rung3-snapshots/R3-055-L3/ ; ls -ld ~/workspace/rung3-verdicts/ ; ls ~/workspace/rung3-verdicts/ filtered for R3-055
+   - Run: 2026-11-26T19:07:08+07:00 to 2026-11-26T19:07:12+07:00
+   - Evidence: ~/workspace/rung3-snapshots/R3-055-L3/ exists with 11 files: README.md, bao-cao.txt, drive-log.txt, end_time.txt, folder-permissions.txt, manifest.json, pill-gone.png, pill-visible.png, screenshot-20261126-190021.png, start_time.txt, tree-listing.txt. Count 11 confirmed. manifest.json contains manifest_sha256 c679ba432cf3370184f276ead9b48ee87904efba8901abec81d4ebf79f79736c, matching the expected c679ba43 prefix in the state file. ~/workspace/rung3-verdicts/ exists. R3-055 verdict files present at read time: R3-055-B1.json and R3-055-B1-grade.md. No R3-055 B2 verdict file present at read time, consistent with the state file (Clone2 B2 PENDING).
+
+Dry run result: 5/5 PASS. No failures. No fixes attempted beyond the dry-run scope (no self-healing).
+
+## Standby statement under section 7 fencing
+
+I am on STANDBY under re-plan section 7 fencing and will act only if the coordinator (epoch 24, agent 64030fac-dbec-4359-9fb5-21ae46f944f1) is confirmed unavailable or the parent directs me to take over. While coordinator 64030fac-dbec-4359-9fb5-21ae46f944f1 is active, I hold no authority and issue no orders. I will NOT start any task on my own. I will NOT release tasks, drive anything, score anything, message agents, write to the ledger, edit the state file run fields, or touch verdict files. I will NOT commit or push; the coordinator owns git. I will NOT touch the FCC tmux session r3-fcc-runner-L3 or pane PID 22399. If takeover is directed, a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id dee95d07-524e-4e10-8dcf-271d5b36c65c, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.
+
+Standing rules acknowledged: English for all agent work; ydotool BANNED; never close or navigate owner tabs; no personal info in any file or on GitHub; SSH to the laptop only via ~/workspace/ssh-laptop.sh with short commands; pill "Computer use active" on any agent control (this deputy controls nothing); timing and logging always on; no self-healing, record evidence and report only.
+
+This deputy stands by, ready.
