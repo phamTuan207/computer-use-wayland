@@ -771,3 +771,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 13. R3-029 released, KHAN da het (2026-11-26 12:17 +07)
 - Epoch 19 takeover 12:12:42 (coordinator 4eb5ee66, commit d9f00fba, parent released R3-029 hold); deputy 51154780 confirmed 342fb47b (dry run 5/5 PASS, G-24/G-38 closed); release commit e7a022db, R3-029 vi tri 25, Muse lane runner 1aa462ff, task_start 12:15:52, timeout 12:45:52. Heartbeat 12:14:13 xac nhan parent released hold, Rule-A 25/0. KHAN coordinator im lang tu 10:07 da het (lap lai 13 luot, im 64 den 174 phut, deu la false positive, khong leo thang). PR 751 van OPEN 0 comment, chi con phan tra loi viet ve discrepancy calibration set.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 14. R3-029 drive xong, dang cham (2026-11-26 12:49 +07)
+- Drive hoan thanh 12:42:14 (commit 7061a60c, states 5/4/5, khong block); snapshot 83b4fef5 (manifest 42d22dff, pii-scan 14 hits manual-review class, khong co secret); Pair A scoring dispatched 12:46:27 (commit 7f171b91, Mochi run 238 + Clone2 PWA). Epoch 20 takeover d390507d (coordinator 0ace6385), deputy 4b4924ac confirmed a2bb1659. A2 PASS audited, A1 pending, verdicts due ~13:16. Grade CHUA final cho den khi A1 xong.
+- Em khong cham diem, khong doc ledger/snapshot.
