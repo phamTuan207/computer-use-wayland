@@ -601,3 +601,31 @@ I am on STANDBY under re-plan section 7 fencing and will act only if the coordin
 Standing rules acknowledged: English only; ydotool BANNED; no personal info on GitHub; never close or navigate owner tabs, pinned tabs, essentials, or ws3 windows; ws2 is the work workspace; ws3 untouched; never restart Zen; pill "Computer use active" on any agent control; SSH to laptop ONLY via ~/workspace/ssh-laptop.sh with short commands; never assume an agent capability, verify live; git explicit pathspec on add and commit, never git add -A, verify pushes via ls-remote; Ponytail for code work; Graphify for codebase context; no credential values anywhere.
 
 This deputy stands by. If told to stand down, this deputy ends.
+
+---
+
+## Deputy declaration, epoch 23
+
+- Deputy session id: b3cf2527-e98a-48ab-85bd-e752138fa15a
+- Timestamp (Asia/Ho_Chi_Minh): 2026-11-26T17:08:16+07:00
+- Coordinator certified: 0d5fb18c-c281-4c65-81a8-624e43de6595
+- State certified (read from ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json, parsed OK):
+  - coordinator_active: 0d5fb18c-c281-4c65-81a8-624e43de6595 (epoch 23, takeover 2026-11-26T17:08:00+07:00)
+  - epoch: 23
+  - current_position: 30
+  - last_updated: 2026-11-26T17:08:00+07:00
+  - G-24 freshness: this declaration timestamp (2026-11-26T17:08:16+07:00) is after state last_updated (2026-11-26T17:08:00+07:00). Satisfied.
+
+Dry run (read-only, 5 items):
+
+- a. Laptop SSH: ~/workspace/ssh-laptop.sh 'hostname' returned "omarchy", exit 0. PASS.
+- b. FCC tmux: session r3-fcc-runner-L3 exists (1 windows, created Wed Nov 25 09:00:18 2026); pane PID 22399; ps shows 22399 fcc-claude alive, elapsed 1-08:07:46. Not touched. PASS.
+- c. Codex: ~/workspace/ssh-laptop.sh 'codex --version' returned "codex-cli 0.172.0", exit 0. PASS.
+- d. State file parse: ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json parses as JSON; coordinator_active 0d5fb18c-c281-4c65-81a8-624e43de6595, epoch 23, current_position 30, last_updated 2026-11-26T17:08:00+07:00. PASS.
+- e. Paths exist: ~/workspace/rung3-snapshots/ has 64 dirs (DP-02-L3, DP-03-L3, DP-05-L3, DP-06-L3, DP-07-L3, ...); ~/workspace/rung3-verdicts/ has 133 files (DP-02-A1.json, DP-02-A2.json, DP-06-A1.json, DP-06-A2.json, DP-07-A1.json, DP-07-A2.json, R3-001-A1.json, R3-001-A2.json, R3-002-A1.json, R3-002-A2.json, ...); ~/workspace/r3l3-run-wt/rung3-run-log/R3-L3-grades.jsonl has 36 lines. PASS.
+
+Dry run result: 5/5 PASS.
+
+Standby statement: I am the deputy coordinator for epoch 23, on STANDBY under re-plan section 7 fencing. I take no run action, release nothing, drive nothing, score nothing. I act ONLY if the coordinator is confirmed unavailable or the parent directs takeover. While coordinator 0d5fb18c-c281-4c65-81a8-624e43de6595 is active, I hold no authority and issue no orders. If takeover is directed, a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.
+
+Standing rules acknowledged: English for all work; ydotool BANNED; pill "Computer use active" on any agent control (this deputy controls nothing); never close or navigate owner tabs, pinned tabs, essentials, or ws3; SSH to the laptop ONLY via ~/workspace/ssh-laptop.sh, short commands; no personal info on GitHub; git explicit pathspec on add and commit, never git add -A, never leave files staged, verify pushes via ls-remote; work in ~/workspace/r3l3-run-wt (branch todolist-push); Ponytail for any code work; Graphify for codebase context. This declaration was appended only; no commit or push by this deputy (the coordinator commits).
