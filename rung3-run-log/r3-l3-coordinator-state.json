@@ -25,7 +25,7 @@
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
  "current_task": "EPOCH 16 (R3-029 position 25 HELD for parent password; release on password receipt)",
- "deputy": "1598992c-2fde-4aa7-af83-17803c0f61c0 (epoch 15 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:00:52+07:00, after state last_updated 2026-11-26T07:59:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 15 coordinator_active 4ede4016, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed ebecf830; epoch 14 deputy ca88fad1 SUPERSEDED; on STANDBY under section 7 fencing)",
+ "deputy": "c3fe4516-6143-4cbe-9b0f-45ceedbc806f (epoch 16 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:04:03+07:00, after state last_updated 2026-11-26T08:03:21.072508+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 16 coordinator_active 78fd6562, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed 58367bef; epoch 15 deputy 1598992c SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T08:03:21.072508+07:00",
+ "last_updated": "2026-11-26T08:04:41.542851+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1174,6 +1174,11 @@
    "ts": "2026-11-26T08:03:21.072508+07:00",
    "by": "coordinator-epoch-16",
    "text": "COORDINATOR TAKEOVER, EPOCH 16: epoch 15 (4ede4016) completed after clone1 calibration sign-off; parent appoints successor 78fd6562-236c-41ce-a301-836428f45b2d as coordinator epoch 16 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 78fd6562). Takeover verification (recomputed from ledgers, not from epoch 15's numbers): grades 31 rows (22 PASS, 5 INVALID: R3-011/022/024/026/027, 3 FAIL: R3-001/002/003, 1 TEST) + 3 re-run PASS (R3-001/002/003 replace the FAILs under rule A) = rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED; a sixth invalid event needs a new recorded decision via the parent before further releases. Valid 53 (55 original positions minus 2 dropped: R3-026, R3-027); bars 51/53 original and 52/54 with task 56; need 26 PASS from 28 remaining original positions; closure counts both ways. validate-ledger.py exit 0 (31 rows, 0 errors), ledger-cross-check.py exit 0 (61 verdict files). task_start/runner_pid/codex fields null (no drive running). R3-029 (position 25, Muse lane) HELD: parent asked the owner to re-verify the password at 07:47; on receipt the password goes in the runner spawn message ONLY, never in any file. R3-029 briefs spot-checked by epoch 16 (runner brief: ydotool ban, pill, user-path entry point + forbidden shortcuts, holder hashes + probe fail-loud, bot-check rule + invalid budget, password handling, no password value in file; scorer briefs: independence, key hashes, explicit delivery paths). Clone1 calibration APPROVED 4/4 (sign-off 555b5ddc); first clone1 scoring task R3-037. Checks 11-12 armed (checklist); R3-089 guard refresh 2026-11-30 12:00 owned by coordinator even if not reached. State fields refreshed at takeover (graded_count 30, current_position 25, completed_positions 24, ledger.rows 31); prior epoch counters left stale at 29/1/0/7, corrected here from the ledgers."
+  },
+  {
+   "ts": "2026-11-26T08:04:41.542851+07:00",
+   "by": "coordinator-epoch-16",
+   "text": "DEPUTY CONFIRMED, EPOCH 16: fresh deputy c3fe4516. Declaration 08:04:03 +07 (after state 08:03:21, G-24 satisfied), pushed 58367bef (ls-remote verified). Dry run 5/5 PASS (SSH omarchy, FCC tmux pane 22399 alive, codex-cli 0.172.0, state parse epoch 16, ledgers validate + cross-check exit 0). G-24/G-38 CLOSED for epoch 16. Deputy on STANDBY under section 7 fencing. R3-029 still HELD for parent password. Holder hashes on laptop verified by coordinator pre-check (holder 70bfe8ab...213, probe 5329a574...c1f9 match the brief pins); R3-029 releases immediately on password receipt."
   }
  ],
  "pass_count": 22,
