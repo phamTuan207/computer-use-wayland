@@ -1,0 +1,7 @@
+Bien | Run 1 | Run 2 | Run 3
+R3_TEN | An | An | An
+R3_TUOI | 25 | 30 | 25
+R3_THANH_PHO | Ha Noi | Ha Noi | Ha Noi
+
+So sanh run1 vs run2: chi khac dung 1 dong (R3_TUOI), da xac nhan: yes.
+So sanh run1 vs run3: giong het nhau, da xac nhan: yes.

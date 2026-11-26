@@ -1,0 +1,62 @@
+{
+ "files": [
+  {
+   "mtime": 1795720664,
+   "name": "bao-cao.txt",
+   "sha256": "11b785678c45ef51438893d390bd6bd2c80286a661d659a59712df846d75efcf",
+   "size": 1918
+  },
+  {
+   "mtime": 1795720668,
+   "name": "desktop-after.png",
+   "sha256": "102aaba2ea61e256cf26f8dff9f1b45fc62712828d04a52b35c4322fb1af7d50",
+   "size": 230745
+  },
+  {
+   "mtime": 1795720670,
+   "name": "drive-log.txt",
+   "sha256": "a6a559a9e5e7ff7e3e24ab827509fa035eb35bd38e1be97d9109cd216864e0f2",
+   "size": 4034
+  },
+  {
+   "mtime": 1795720666,
+   "name": "end_time.txt",
+   "sha256": "186c6c058256d4516b37d227916790f45d59a27d10af86a253cc40e0a6c90a15",
+   "size": 26
+  },
+  {
+   "mtime": 1795720660,
+   "name": "lan-1-20261127-021147.txt",
+   "sha256": "2ee7a3375d6040f33da17356733a5d8f25018a439bc1196cb7bbf3a60279065d",
+   "size": 32
+  },
+  {
+   "mtime": 1795720661,
+   "name": "lan-2-20261127-021220.txt",
+   "sha256": "e801562258173eb6eda5922f4f90ee239bacdaeddaa07f1bf5dafacca860631f",
+   "size": 32
+  },
+  {
+   "mtime": 1795720662,
+   "name": "lan-3-20261127-021232.txt",
+   "sha256": "2ee7a3375d6040f33da17356733a5d8f25018a439bc1196cb7bbf3a60279065d",
+   "size": 32
+  },
+  {
+   "mtime": 1795720663,
+   "name": "report.txt",
+   "sha256": "4442dfb4eff87fd807aeedb63327df297463944cb67ddd8e995aa50e627fc8fe",
+   "size": 243
+  },
+  {
+   "mtime": 1795720659,
+   "name": "start_time.txt",
+   "sha256": "90707e8302543da27c1147cee5d0eff6f1badb4f6c14f1c46fdabf0990e07aef",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "b7c9b94c1b5e5f050408e307a0d17d057424abfa19f300ae24701810513134f0",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-094-L3",
+ "source_dir": "/tmp/r3-094-evidence",
+ "task": "r3-094-evidence"
+}
