@@ -24,7 +24,7 @@
  "completed_positions": 31,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 32,
- "current_task": "R3-049 attempt 1 INFRASTRUCTURE FAILURE (ungraded): codex PID 3129049, 18:05:48-18:09:04, first act-now refused (overlay daemon did not answer within 15s), no input sent, site never navigated, no task content attempted. Probe PASS (shim bb49ff3f). Pill shown + released cleanly. Evidence /tmp/r3-049-evidence/. Infrastructure re-run path: attempt 2 after independent daemon diagnosis (no-self-healing rule). Rule-A 30/1, our-side invalid budget 5/5 (attempt 1 not graded, no cap spent).",
+ "current_task": "R3-049 attempt 2 RELEASED 18:17 (attempt 1 infrastructure failure diagnosed + fixed by independent worker afb80694). Rule-A 30/1, need 20 PASS from 21, slack 1 FAIL, our-side invalid budget 5/5. Pre-flight added: hyprctl configerrors must be empty before every drive.",
  "deputy": "b3cf2527-e98a-48ab-85bd-e752138fa15a (epoch 23 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T17:08:16+07:00, after state last_updated 2026-11-26T17:08:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 23 coordinator_active 0d5fb18c, snapshot + verdict paths exist; epoch 22 deputy c6bc61fa SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T18:13:00+07:00",
+ "last_updated": "2026-11-26T18:17:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1394,6 +1394,11 @@
    "ts": "2026-11-26T18:13:00+07:00",
    "by": "coordinator-epoch23",
    "text": "R3-049 ATTEMPT 1 INFRASTRUCTURE FAILURE, UNGRADED (driver 88c7c739 report 18:12:07): codex exec PID 3129049, launch 2026-11-26T18:05:48+07:00 (LAUNCHED logged 18:05:53), runner start 18:06:29, end 18:09:04, PID gone by 18:10:31. First computer-use act-now call refused: \"overlay daemon did not answer within 15s\", input_sent=null. No input ever sent to Zen; calculator.net never navigated; no bot-wall. Probe PASS (webdriver false, own_on_proto true, own_on_navigator false, get_name \"get webdriver\", toString verbatim, shim bb49ff3f). Holder clean shutdown. Pill acquired visible \"Computer use active\", released (visible=false, grim-verified gone, independent post-run grim 6d4fc9f0). No ket-qua.txt, no loan screenshots. Evidence /tmp/r3-049-evidence/ (start/end times, probe-ready.json, holder.log, report.txt, codex log, post-grim) sha256-verified; laptop originals ~/rung3-chung-cu/R3-049/. CLASSIFICATION: our-side tooling failure (overlay daemon timeout) BEFORE any task content was attempted; not a task failure, not a site block. Per R3-046 attempt-1 precedent and the infrastructure re-run path, attempt 1 is UNGRADED and R3-049 re-runs as attempt 2; no invalid cap spent (our-side budget stays 5/5). Per the no-self-healing rule (2026-11-22), an independent worker diagnoses the overlay daemon before attempt 2; coordinator only records evidence. task_start/runner_pid recorded from launch line and CLEARED at drive end (18:09:04)."
+  },
+  {
+   "ts": "2026-11-26T18:17:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "R3-049 ATTEMPT 1 DIAGNOSED (independent worker afb80694, 18:12:57-18:15:52): root cause NOT a dead daemon. Overlay daemon spawns on first acquire; Daemon.serve() calls apply_holders() before the accept loop, spawning the native indicator, whose init waits up to 30 s for BOTH hyprctl configerrors empty AND liquid backend ready. A stale Lua configerror (failed old-form string dispatch: hl.dispatch(\"closewindow\", \"address:0x5614f08a2ab0\")) appeared between 17:53:53 and 18:06:29 (DP-03 window; DP-03 Codex reported two failed Hyprland close attempts). Every fresh native spawn burned 30 s and failed (native_spawn_failed 18:06:59, 18:07:29, 18:08:24, 18:08:55) while _ensure_daemon waits only 15 s, hence \"overlay daemon did not answer within 15s\". FIX (investigator, no code change): hyprctl eval \"return true\" cleared configerrors; verified live: acquire native_spawned 209 ms, pill label exact, act-now wait-only batch ok (1670 ms), release clean, Zen 578117 untouched. CAVEAT: poison recurs if any agent uses string-form dispatch; PRE-FLIGHT for every drive from now: hyprctl configerrors must be empty (no-op eval clears it); hl.dsp object form only (standing rule). Structural fragility noted for post-run team decision: 30 s blocking native spawn inside serve() vs 15 s _ensure_daemon deadline. Attempt 2 released 18:17; attempt-1 evidence preserved in ~/rung3-chung-cu/R3-049/attempt1-infra-fail/ on the laptop."
   }
  ],
  "pass_count": 24,
