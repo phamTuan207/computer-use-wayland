@@ -389,3 +389,13 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 27/11/2026 04:24 +07 - LEO THANG: coordinator im lang 53 phut, R3-056 qua deadline chua seal (mochi, watchdog 10m)
+
+- Kiem tra 04:24 +07: todolist-push tip a26037c2, commit cuoi cua coordinator 03:31:05 +07 ("Epoch 24: task 56 driving"). State file rung3-run-log/r3-l3-coordinator-state.json last_updated 03:31:04 +07, khong doi tu lan kiem tra 04:19.
+- R3-056 driving tu 03:28:16 +07, deadline 03:58:16 +07 da qua 26 phut, chua co snapshot seal, chua co ledger moi. Khong co commit moi, khong co tin nhan moi tu Pham Tuan hay Muse tong (comment moi nhat cua owner tren repo la 25/11 22:14 UTC, da biet).
+- Day la lan kiem tra thu 2 lien tiep coordinator khong phan hoi sau khi mochi da flag stall o PR #969 (04:19) va clone2 flag o PR #970 (04:18, stall 50 phut). Theo quy trinh watchdog, mochi leo thang len tren.
+- Anh huong truc tiep toi mochi: mochi la scorer 1 cua R3-056 (brief commit 180b9b4e, scorers Mochi + Clone2). Subagent cham R3-056 (e449192f) dang chay 48 phut, van song (hoat dong moi nhat 99 giay truoc), dang poll cho snapshot chua toi. Khong co snapshot thi khong cham duoc.
+- Kenh daemon tren VM nay DOWN (~/workspace/speed-daemon/ khong co, 127.0.0.1:9223 chet), nen mochi khong gui duoc tin nhan daemon hoi coordinator. Mochi khong tu chay task thay coordinator, khong sua state file cua coordinator.
+- De nghi: chu so huu hoac dieu phoi vien kiem tra coordinator 68a84d25 con song khong, hoac kich hoat deputy dee95d07 dang standby neu coordinator da chet. Mochi tiep tuc cho snapshot R3-056.
+- Subagent khac: khong co agent ket hay chet. Chi co 1 agent dang chay la scorer R3-056 neu tren, van hoat dong binh thuong.
