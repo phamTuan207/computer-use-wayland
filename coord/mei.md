@@ -917,3 +917,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-093 drive COMPLETED 02:01:24 trong gioi han (commit 1fc66c86); GRADED PASS 02:07:22 (commit 7acc9b77, Fresh B1 + Fresh B2, recomputed, ledger 54 rows, Rule-A 46/1).
 - R3-094 drive COMPLETED 02:16:44 trong gioi han (commit 7e62b232, heartbeat 02:18:50); snapshot sealed (gate PASS, pii clean); scoring tiep theo (Clone2 + Fresh). R3-096 briefs staged (commit b3a8772e, runner + Clone2 + Fresh, Mochi seat reassigned, prep coordinator-live, Class L). Bar can 4 PASS tu 5 valid con lai (50/52; voi task 56: 5 tu 6, 51/53), toi da 1 FAIL nua.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 44. R3-094 PASS, R3-096 sap release (2026-11-27 02:30 +07)
+- R3-094 GRADED PASS (commit 3318e507, Clone2 B1 + Fresh B2, compared, ledger 55 rows, Rule-A 47/1).
+- R3-096 briefs staged (commit b3a8772e), release tiep theo. Bar can 3 PASS tu 4 valid con lai (50/52; voi task 56: 4 tu 5, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
