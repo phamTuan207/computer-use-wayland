@@ -25,7 +25,7 @@
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
  "current_task": "EPOCH 18 (R3-029 position 25 HELD for parent password; release on password receipt)",
- "deputy": "aa7cf6b1-cc2b-476f-b551-10edf5623f73 (epoch 17 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:28:15+07:00, after state last_updated 2026-11-26T08:27:04+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399 untouched, codex-cli 0.172.0, state parse epoch 17 coordinator_active 99914724, ledgers validate + cross-check exit 0; declaration pushed ce2ebb7e; epoch 16 deputy c3fe4516 SUPERSEDED; on STANDBY under section 7 fencing)",
+ "deputy": "79db2d8c-860c-4cd6-af4f-9eac380e3574 (epoch 18 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T09:03:02+07:00, after state last_updated 2026-11-26T09:00:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399 untouched, codex-cli 0.172.0, state parse epoch 18 coordinator_active 8ba3ee09, ledgers validate + cross-check exit 0; declaration pushed 290073d4; epoch 17 deputy aa7cf6b1 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T09:00:52.749174+07:00",
+ "last_updated": "2026-11-26T09:03:56.136997+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1199,6 +1199,11 @@
    "ts": "2026-11-26T09:00:52.749174+07:00",
    "by": "coordinator-epoch-18",
    "text": "COORDINATOR TAKEOVER, EPOCH 18: epoch 17 (99914724) completed 08:29; coordinator gap since then held by parent; parent appoints successor 8ba3ee09-30a1-44e0-ae56-10900f4be03b as coordinator epoch 18 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 8ba3ee09). Recomputed from ledgers: 31 grade rows (22 PASS, 5 INVALID: R3-011/022/024/026/027, 3 FAIL: R3-001/002/003, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 + 52/54 (task 56); need 26 PASS from 28 remaining original positions. validate-ledger.py + ledger-cross-check.py both exit 0 (epoch 18 takeover re-run). R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47); release on password receipt, password in runner spawn message only, never in any file. Clone1 calibration APPROVED 4/4 (epoch 15); first clone1 scoring task R3-037. Checks 11-12 armed; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator even if not reached."
+  },
+  {
+   "ts": "2026-11-26T09:03:56.136997+07:00",
+   "by": "coordinator-epoch-18",
+   "text": "DEPUTY CONFIRMED, EPOCH 18: fresh deputy 79db2d8c. Declaration 09:03:02 +07 (after state 09:00:52, G-24 satisfied), pushed 290073d4 (ls-remote verified). Dry run 5/5 PASS. G-24 and G-38 CLOSED for epoch 18. Deputy on STANDBY under section 7 fencing."
   }
  ],
  "pass_count": 22,
