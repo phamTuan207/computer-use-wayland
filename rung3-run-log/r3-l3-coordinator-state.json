@@ -24,7 +24,7 @@
  "completed_positions": 24,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
- "current_task": "EPOCH 19 TAKEOVER 2026-11-26T12:12:42+07:00: parent released the R3-029 hold (credential received in spawn message only, never in any file). R3-029 (position 25, Muse lane) releasing now. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
+ "current_task": "R3-029 (position 25, Muse lane, runner 1aa462ff) DRIVING since 2026-11-26T12:15:52+07:00 (30-min timeout to 12:45:52). Epoch 19 coordinator 4eb5ee66, deputy 51154780 on standby. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
  "deputy": "51154780-ef5c-4fab-bb75-755eeec66760 (epoch 19 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T12:14:45+07:00, after state last_updated 2026-11-26T12:12:42+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive untouched, codex-cli 0.172.0, state parse epoch 19 coordinator_active 4eb5ee66, snapshot + verdict paths exist; declaration pushed f452b3e1; epoch 18 deputy 79db2d8c SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T12:15:32+07:00",
+ "last_updated": "2026-11-26T12:15:52+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1262,7 +1262,7 @@
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 26 PASS from 28 remaining original positions. Next drive R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3 (epoch 19, takeover 2026-11-26T12:12:42+07:00)",
  "epoch": 19,
- "task_start": null,
+ "task_start": "2026-11-26T12:15:52+07:00",
  "runner_pid": null,
  "codex_task": "R3-042",
  "codex_task_start": null,
@@ -1362,7 +1362,7 @@
   "rerun_verdicts_dir": "~/workspace/rung3-verdicts/rerun/",
   "rerun_snapshots": "~/workspace/rung3-snapshots/R3-xxx-L3-rerun/ (original FAIL snapshots preserved: R3-001-L3 507086e2, R3-002-L3 0741a1aa, R3-003-L3 e0d416d0)"
  },
- "claude_runner_session": null,
+ "claude_runner_session": "1aa462ff-7823-4f79-ba64-7512ce44b4cb (R3-029 Muse lane runner, released 2026-11-26T12:15:52+07:00 by epoch 19)",
  "replan_total_20261126": {
   "file": "improvements/r3-l3-replan-total-20261126.md",
   "gate": "DELEGATED TEAM GATE (owner 04:53): council + redteam unanimous. Redteam reconvene 06:30: tools sufficient YES with conditions, plan good enough YES with conditions. Checks 1-9 (redteam section 6.4) must pass before R3-027 releases; checks 1-2 done by replan coordinator at synthesis (this write).",
