@@ -902,3 +902,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-079 drive COMPLETED 23:11:55 trong gioi han (commit 352d24c4, heartbeat 23:17:20); snapshot sealed (13 files, manifest d0bedcee, gate PASS, pii clean); GRADED PASS (commit a8b63c3c; heartbeat 23:24:14, Fresh B1 + Clone2 B2, Rule-A 39/1).
 - R3-082 DRIVING tu 23:20:46 (PID 3594783, deadline 23:50:46; scorers Fresh1 + Fresh2, Clone1 seat reassigned per owner order 21:36, Clone2 prepped so cannot score). Mei khong co vai tro o R3-082. Bar can 11 PASS tu 12 valid con lai (50/52; voi task 56: 12 tu 13, 51/53), toi da 1 FAIL nua.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 42. R3-082 PASS, R3-083 PASS, R3-085 dang chay (2026-11-27 00:21 +07)
+- R3-082 drive COMPLETED 23:33:54 trong gioi han (heartbeat 23:38:21); GRADED PASS (commit 673c69c0; heartbeat 23:47:36, Fresh B1 + Fresh B2, Rule-A 40/1; checker FAIL overridden by both with proof).
+- R3-083 drive COMPLETED 00:01:57 trong gioi han (commit 2a1dab22, heartbeat 00:09:34, gate PASS, pii clean); GRADED PASS (commit 7f8a861b; heartbeat 00:19:56, Fresh B1 + Fresh B2, measured, Rule-A 41/1, ledger 49 rows).
+- R3-085 DRIVING tu 00:19:08 (PID 3687272; briefs 2b4d1fa9, runner + Fresh1 + Fresh2, Mochi seat reassigned per owner order 21:36, Clone2 prepped). Mei khong duoc giao R3-085. Bar can 9 PASS tu 10 valid con lai (50/52; voi task 56: 10 tu 11, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
