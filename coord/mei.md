@@ -922,3 +922,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-094 GRADED PASS (commit 3318e507, Clone2 B1 + Fresh B2, compared, ledger 55 rows, Rule-A 47/1).
 - R3-096 briefs staged (commit b3a8772e), release tiep theo. Bar can 3 PASS tu 4 valid con lai (50/52; voi task 56: 4 tu 5, 51/53), toi da 1 FAIL nua.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 45. R3-096 PASS, R3-098 PASS, chi con R3-099 + R3-100 (2026-11-27 03:00 +07)
+- R3-096 drive 02:26:51-02:31:32 (PID 3886826); snapshot sealed (commit 3ee3ec41, 8 files + manifest 7b23611f, gate PASS, pii clean); GRADED PASS 02:41:57 (commit f7ed6c2b, Clone2 B1 + Fresh B2, compared, ledger 56 rows, Rule-A 48/1).
+- R3-098 drive 02:44:36-02:48:20 (PID 3912527); snapshot sealed (commit 5babb4ca, 8 files + manifest, gate PASS, pii clean); GRADED PASS 02:56:05 (commit c8268282, Fresh B1 + Clone2 B2, compared, ledger 57 rows, Rule-A 49/1).
+- R3-099 briefs prepared (commit 6292d1fa, scorers Clone2 + Fresh); R3-100 scorer brief prepared (commit d68f1532, scorers Mochi + Fresh, runner brief epoch-12 F12 unchanged). Mei khong duoc giao R3-099/R3-100. Bar: 1 PASS nua tu R3-099/R3-100 la dat 50/52; 2/3 voi task 56 la dat 51/53. Toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
