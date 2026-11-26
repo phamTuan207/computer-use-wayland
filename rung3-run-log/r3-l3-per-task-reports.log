@@ -78,3 +78,13 @@
 - Evidence: snapshot R3-074-L3 (16 files + manifest, manifest sha256 36e440e8, gate PASS, pii clean; codex-R3-074.log included, pii-clean this time).
 - Reset (Class L, after scoring): original buggy script restored from ~/rung3-goc (sha256 f3b09ca0 verified), ~/rung3/d40-ket-qua.txt removed.
 - Score after: Rule-A 35 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 15 PASS from 16 remaining original positions, 16 from 17 with task 56; slack 1 further FAIL).
+
+## R3-075 (position 37) - GRADED PASS 2026-11-26T21:37:47+07:00
+- Lane: Codex exec PID 3378155 (driver 241bb105), 21:07:50-21:25:05 +07, elapsed 17m15s, within the 30-min limit. Task fields recorded in state at launch verification (7e0bbcfa), cleared at drive end.
+- Task: create venv at ~/rung3/d41-venv, install requests==2.32.3 from d41-requirements.txt, run d41-app.py in the venv (prints "Xin chao rung 3" + requests version), deactivate, venv intact. All 3 required terminal screenshots present and readable (Python 3.14.10, venv python path, app output).
+- Scoring: Mochi B1 PASS (branch mochi/verdict-R3-075-L3 c78a6e3d, audited) + Clone2 B2 PASS (21:31, branch clone2/verdict-R3-075-L3 2285e331, audited); no tiebreaker.
+- Noted discrepancy (recorded, scorers judged): bao-cao.txt says idna-3.10 while the pip-install screenshot and pip list show idna-3.20 (transcription error in bao-cao only; the keyed package requests 2.32.3 is correct everywhere).
+- Anomalies (full chains in drive-log.txt): first launch died on duplicate stdin redirects (relaunched with single redirect); codex observe without --screen errored, then --screen 0 rejected (fixed with --screen eDP-2); Super-only key refused (Super+Space launcher); first "terminal" launcher result closed without opening an app (searched kitty); first Python-version capture had a stray "py" line (cleared, re-ran); runner's own VM-transfer attempt failed (SSH to VM refused from laptop; driver completed the transfer via scp from the VM).
+- Evidence: snapshot R3-075-L3 (12 files + manifest, manifest sha256 dd67e4b0, gate PASS, pii clean).
+- Reset (Class L, after scoring): ~/rung3/d41-venv removed from the laptop.
+- Score after: Rule-A 36 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 14 PASS from 15 remaining original positions, 15 from 16 with task 56; slack 1 further FAIL).
