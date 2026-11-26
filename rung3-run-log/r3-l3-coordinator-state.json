@@ -24,7 +24,7 @@
  "completed_positions": 27,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 28,
- "current_task": "EPOCH 21: R3-036 (position 27) GRADED PASS 14:09 (A1 Mochi PASS 14:06:24 + A2 Fresh PASS 14:06:14, agree, no tiebreaker; shared_cause_confirmed false, no block occurred; validators exit 0; verdicts filed R3-036-A1/A2.json). Rule-A 28/0. Next: release R3-037 (position 28, FCC lane). No drive in progress.",
+ "current_task": "EPOCH 21: R3-037 (position 28, FCC lane) RELEASED 2026-11-26T14:08:24+07:00 via FCC driver 8d044b59 (brief to tmux r3-fcc-runner-L3; task_start provisional, correct to FCC actual start when driver reports). Scorers Mochi + Clone1 (clone1 first scoring task). Rule-A 28/0.",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T14:07:58+07:00",
+ "last_updated": "2026-11-26T14:08:24+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "34 rows (1 TEST + 25 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 67 verdict files)",
@@ -1284,6 +1284,11 @@
    "ts": "2026-11-26T14:07:58+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-036 GRADED PASS (ledger row recorded 14:09:00). Scorer 1 (Mochi 70cd99d1) PASS scored 14:06:24; scorer 2 (Fresh 861775d2) PASS scored 14:06:14; both audited PASS (key hashes match freeze, manifest f857cf4f, files read = snapshot + key + brief, independence declarations present), agree, no tiebreaker. Shared-cause: NO block occurred (timeanddate loaded normally), scorer 2 shared_cause_confirmed false, INVALID candidate not triggered, 0 cap events consumed. Verdicts filed ~/workspace/rung3-verdicts/R3-036-A1.json + R3-036-A2.json (+ grade mds) before the ledger row. validate-ledger PASS (34 rows, 0 errors), ledger-cross-check OK (67 verdict files, 0 errors). Drive 13:28:36-13:55:07 (26m31s), snapshot R3-036-L3 manifest f857cf4f. Rule-A 28 PASS / 0 FAIL. Next: release R3-037 (position 28, FCC lane; scorers Mochi + Clone1, clone1 first scoring task, calibration APPROVED 4/4)."
+  },
+  {
+   "ts": "2026-11-26T14:08:24+07:00",
+   "by": "coordinator-epoch-21",
+   "text": "R3-037 RELEASED 2026-11-26T14:08:24+07:00 (position 28, FCC lane). FCC driver 8d044b59-7592-412b-919b-2de0ac5d0f63 spawned to hand brief rung3-run-log/briefs/R3-037-fcc-runner-brief.md to FCC (tmux r3-fcc-runner-L3, pane PID 22399 persistent) and verify evidence on disk (FCC fabrication history R3-001/002: grade from files, never the report). Brief spot-checked: ydotool ban, pill, user-path entry (who.is via SERP) + forbidden shortcuts, holder discipline, reCAPTCHA stop rule, bot-check rule, invalid budget 5/5. task_start provisional 2026-11-26T14:08:24+07:00; runner_pid null (FCC pane 22399 is NOT the recorded runner PID, never left as such). Scorers: Mochi scorer 1 + Clone1 scorer 2 (first clone1 scoring task, calibration APPROVED 4/4). One driver on shared Zen."
   }
  ],
  "pass_count": 24,
@@ -1332,7 +1337,7 @@
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 34 grade rows (25 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 28 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 23 PASS from 25 remaining original positions. Next drive R3-037 (position 28, FCC lane; scorers Mochi + Clone1 first scoring task). Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00)",
  "epoch": 21,
- "task_start": null,
+ "task_start": "2026-11-26T14:08:24+07:00",
  "runner_pid": null,
  "codex_task": "R3-042",
  "codex_task_start": null,
