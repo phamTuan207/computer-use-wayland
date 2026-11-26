@@ -16,11 +16,16 @@ Usage:
   required file is present; otherwise exit 1 and print MISSING lines.
 
 A timestamped screenshot is a .png/.jpg file whose name contains
-YYYYMMDD-HHMMSS. manifest.json lists every file in the folder with
-sha256, size, and mtime, plus the check result. The manifest hash is
-recorded in the run ledger for the task. Files in subdirectories
-are listed by path relative to the evidence folder, so a pattern
-such as dp02-code/dp02-*.txt matches the files under dp02-code/.
+YYYYMMDD-HHMMSS (YYYYMMDD-HHMM also accepted: both timestamp
+precisions appear in real evidence names, R9). manifest.json lists
+every file in the folder with sha256, size, and mtime, plus the
+check result; the manifest never lists or hashes itself. Identical
+non-empty file content under two different names is flagged as a
+duplicate and fails the collect (R9: a copied screenshot under a
+new name is the cheapest fabrication shape). Files in
+subdirectories are listed by path relative to the evidence folder,
+so a pattern such as dp02-code/dp02-*.txt matches the files under
+dp02-code/.
 For DP-02, before checking, any of the 12 fixture files missing
 from dp02-code/ is copied there from the fixture source
 (~/rung3/dp02-code by default, --fixture-source to override).
@@ -35,7 +40,7 @@ import re
 import shutil
 import sys
 
-TS_RE = re.compile(r"\d{8}-\d{6}")
+TS_RE = re.compile(r"\d{8}-\d{6}|\d{8}-\d{4}(?!\d)")
 IMG_EXT = (".png", ".jpg", ".jpeg")
 
 
@@ -115,26 +120,41 @@ def main():
         missing.append("timestamped screenshots: found %d, need %d"
                        % (len(shots), need_shots))
 
-    manifest = {
-        "task": args.task,
-        "evidence_dir": ev_dir,
-        "requirements": req,
-        "files": [],
-        "missing": missing,
-        "status": "PASS" if not missing else "FAIL",
-    }
+    entries = []
     for name in files:
         if name == "manifest.json":
             continue
         path = os.path.join(ev_dir, name)
         st = os.stat(path)
-        manifest["files"].append({
+        entries.append({
             "name": name,
             "sha256": sha256_file(path),
             "size": st.st_size,
             "mtime": int(st.st_mtime),
         })
-    manifest["files"].sort(key=lambda e: e["name"])
+    entries.sort(key=lambda e: e["name"])
+    # R9 duplicate detection: identical non-empty content under two
+    # different names fails the collect. Zero-byte files are exempt:
+    # they share a hash by construction and carry no evidence.
+    by_hash = {}
+    for entry in entries:
+        if entry["size"] > 0:
+            by_hash.setdefault(entry["sha256"], []).append(entry["name"])
+    duplicates = [sorted(names) for names in by_hash.values()
+                  if len(names) > 1]
+    duplicates.sort()
+    for group in duplicates:
+        missing.append("duplicate file content: %s"
+                       % " == ".join(group))
+    manifest = {
+        "task": args.task,
+        "evidence_dir": ev_dir,
+        "requirements": req,
+        "files": entries,
+        "duplicates": duplicates,
+        "missing": missing,
+        "status": "PASS" if not missing else "FAIL",
+    }
     blob = json.dumps(manifest, sort_keys=True).encode("utf-8")
     manifest["manifest_sha256"] = hashlib.sha256(blob).hexdigest()
 
