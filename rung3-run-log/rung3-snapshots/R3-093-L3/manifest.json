@@ -1,0 +1,80 @@
+{
+ "files": [
+  {
+   "mtime": 1795719862,
+   "name": "bao-cao.txt",
+   "sha256": "4080494fb974a8085dcd3201751a00717074ff202343d2df36c03520a19d163a",
+   "size": 3930
+  },
+  {
+   "mtime": 1795719867,
+   "name": "desktop-after-release.png",
+   "sha256": "3a8cfb6ce54366639b6f6c90bcdb731897f4e0de88b89704a3b2b6e7c1a13a1c",
+   "size": 702209
+  },
+  {
+   "mtime": 1795719868,
+   "name": "drive-log.txt",
+   "sha256": "c8cbe4f852f34981237d0bf0938f92ebdb2cb6e67df65b023c94bde94061552d",
+   "size": 6262
+  },
+  {
+   "mtime": 1795719870,
+   "name": "end_time.txt",
+   "sha256": "141d392dbedc8a1fa66d2f0e7946f2c0b566924a99136e211028ef6c9c0c017b",
+   "size": 26
+  },
+  {
+   "mtime": 1795719871,
+   "name": "nd13-bao-cao.txt",
+   "sha256": "37ebd123dc5174359dcf44e008a73b59d1ad507cfae403b90cba83f2e2f0a002",
+   "size": 280
+  },
+  {
+   "mtime": 1795719876,
+   "name": "nd13-ghep-lai.bin",
+   "sha256": "81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9",
+   "size": 3000000
+  },
+  {
+   "mtime": 1795719879,
+   "name": "phan-01",
+   "sha256": "c35b0ed7eb30378dd04fbb5ef2cf9f04cf9b2cc5c58837fd19a18aa83c62f78b",
+   "size": 1000000
+  },
+  {
+   "mtime": 1795719882,
+   "name": "phan-02",
+   "sha256": "776eb615665db56e0233ecbf43e65d8401133d30ab1a482e427dbd26e32533ac",
+   "size": 1000000
+  },
+  {
+   "mtime": 1795719885,
+   "name": "phan-03",
+   "sha256": "a63db4929620a98af4c32f09fd643898a350bce59a78b69703df258217de6779",
+   "size": 1000000
+  },
+  {
+   "mtime": 1795719887,
+   "name": "start_time.txt",
+   "sha256": "78d615cb641b34ad2e371d1a328d6f27bae976fc120618b349323ebe0d72b291",
+   "size": 26
+  },
+  {
+   "mtime": 1795719889,
+   "name": "task-path-checks-terminal.jpg",
+   "sha256": "0fe220fd2a112dcb42c5e1b9d7f885b6b409d80bad37dee12fbf06754625e680",
+   "size": 161811
+  },
+  {
+   "mtime": 1795719892,
+   "name": "task-path-checks-with-pill.png",
+   "sha256": "da483c0e2b434e9ebe2c406cf58912a37dd9f67b093c06481242ce7947cfc677",
+   "size": 1070743
+  }
+ ],
+ "manifest_sha256": "246b1747408f936e7f25739aa0595a75f29bc7d9b00c67f5c118d7fa8b84ac05",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-093-L3",
+ "source_dir": "/tmp/r3-093-evidence",
+ "task": "r3-093-evidence"
+}

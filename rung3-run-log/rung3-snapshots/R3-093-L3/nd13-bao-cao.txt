@@ -1,0 +1,6 @@
+Source size: 3000000 bytes
+phan-01 size: 1000000 bytes
+phan-02 size: 1000000 bytes
+phan-03 size: 1000000 bytes
+Source SHA-256: 81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9
+Rejoined file SHA-256: 81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9

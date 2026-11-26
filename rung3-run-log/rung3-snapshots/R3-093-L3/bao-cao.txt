@@ -1,0 +1,40 @@
+R3-093 — R3-L3 acceptance run (Class S)
+
+Steps taken
+- Opened a foot terminal on ws2 with Super+Return using computer-use.
+- Checked the source size and SHA-256 in the terminal.
+- Split the source into three parts with the required split command.
+- Verified there are exactly three part files, each 1000000 bytes, totaling 3000000 bytes.
+- Rejoined the parts with the required cat command.
+- Checked source and rejoined file sizes and SHA-256 values; they match.
+- Wrote ~/rung3/nd13-bao-cao.txt and copied it, all three parts, and the rejoined file into ~/rung3-chung-cu/R3-093/.
+
+Commands used
+ls -l ~/rung3/nd13-file-lon.bin && stat -c '%s bytes' ~/rung3/nd13-file-lon.bin && sha256sum ~/rung3/nd13-file-lon.bin
+split -n 3 -d --numeric-suffixes=1 -a 2 ~/rung3/nd13-file-lon.bin ~/rung3/phan-
+find ~/rung3 -maxdepth 1 -type f -name 'phan-*' -printf '%f %s bytes\n' | sort
+stat -c '%s' ~/rung3/phan-01 ~/rung3/phan-02 ~/rung3/phan-03 | awk '{total += $1} END {printf "count: %d; total: %d bytes\n", NR, total}'
+cat ~/rung3/phan-01 ~/rung3/phan-02 ~/rung3/phan-03 > ~/rung3/nd13-ghep-lai.bin
+stat -c '%n %s bytes' ~/rung3/nd13-file-lon.bin ~/rung3/nd13-ghep-lai.bin && sha256sum ~/rung3/nd13-file-lon.bin ~/rung3/nd13-ghep-lai.bin
+printf '%s\n' 'Source size: 3000000 bytes' 'phan-01 size: 1000000 bytes' 'phan-02 size: 1000000 bytes' 'phan-03 size: 1000000 bytes' 'Source SHA-256: 81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9' 'Rejoined file SHA-256: 81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9' > ~/rung3/nd13-bao-cao.txt
+mkdir -p ~/rung3-chung-cu/R3-093 && cp ~/rung3/nd13-bao-cao.txt ~/rung3-chung-cu/R3-093/nd13-bao-cao.txt && cp ~/rung3/phan-01 ~/rung3/phan-02 ~/rung3/phan-03 ~/rung3/nd13-ghep-lai.bin ~/rung3-chung-cu/R3-093/
+
+Results
+Source size: 3000000 bytes
+Each part size: 1000000 bytes
+Source SHA-256: 81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9
+Rejoined SHA-256: 81015d05ed1232b72bb6cd835b3b0ea11c7b049f9c2d01321ffbb91eefa995d9
+
+Anomalies and full resolution chains
+1. Failure: first screen observation used computer-use --screen 0 and returned “monitor no longer exists”; the session ended before any input. Reasoning: the argument expects a monitor name, not its numeric index. Attempts: ran computer-use doctor, which listed eDP-2 (1920x1200). Decision: restart the session and observe eDP-2. Fix: used --screen eDP-2. Outcome: observation succeeded; no UI input was sent by the failed attempt.
+2. Failure: one verification act request used a placeholder observation path and empty JSON actions; preflight returned recoverable=true, completed=0, “empty JSON input”. Reasoning: request construction mistake. Attempts: did not replay the malformed request; obtained a fresh observation for the foot terminal. Decision: submit a complete action batch against that observation. Fix: entered a valid verification command. Outcome: split outputs were verified; failed request sent no input and caused no UI change.
+3. Failure: a shell history display showed unrelated pre-existing commands, because the interactive shell retained history across runs. Reasoning: I assumed it would show only this run. Attempts: did not save or copy the output. Decision: clear the terminal and rebuild a task-specific proof view. Fix: re-ran split and cat in this task, then generated a clean command/result view. Outcome: unrelated history is absent from all evidence and logs; acceptance outputs were regenerated and checked.
+
+Evidence captures
+- task-path-checks-terminal.jpg: clean terminal observation showing task commands and results.
+- task-path-checks-with-pill.png: grim capture while the active pill was visible.
+- desktop-after-release.png: grim capture after releasing the pill; pill absent.
+
+Screenshot commands used
+grim -o eDP-2 ~/rung3-chung-cu/R3-093/task-path-checks-with-pill.png
+grim -o eDP-2 ~/rung3-chung-cu/R3-093/desktop-after-release.png
