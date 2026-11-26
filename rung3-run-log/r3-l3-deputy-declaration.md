@@ -349,3 +349,18 @@ I am on STANDBY. I will NOT start any task on my own. I will NOT message the own
   e. Ledgers parse PASS: R3-L3-grades.jsonl 31 rows, R3-L3-reruns.jsonl 3 rows; `python3 rung3-ci/validate-ledger.py` exit 0 (31 rows, 0 errors); `python3 rung3-ci/ledger-cross-check.py` exit 0 (61 verdict files, 0 errors).
 - Standing rules acknowledged: English only; Ponytail for code work; ydotool BANNED; pill on any agent control; SSH to laptop only via ~/workspace/ssh-laptop.sh; never close owner tabs, pinned, essentials, or ws3 windows; verdict files in ~/workspace/rung3-verdicts (VM-local, never committed); no personal info on GitHub; never assume an agent's capabilities.
 - This deputy stands by. If told to stand down, this deputy ends.
+
+## Deputy declaration, epoch 13, 2026-11-26T07:56:01+07:00
+
+- Deputy session id: af43c55e-7393-4c28-ae2c-10601f835bf6 (label 036cb097-4eac-4684-ba53-e54e261e38c0)
+- Coordinator active: a9dd3f91-834e-41ad-ab47-bae693595e9f, epoch 13, takeover 2026-11-26T07:55:32+07:00
+- Role: DEPUTY on STANDBY under re-plan section 7 fencing. Takeover ONLY on parent-verified coordinator death plus parent direction. No run orders, no task releases, no ledger edits. Coordinator commits run state centrally.
+- State confirmation: coordinator_active a9dd3f91-834e-41ad-ab47-bae693595e9f, epoch 13, task_start null, runner_pid null, codex_task_start null, codex_runner_pid null, current_task `EPOCH 13 TAKEOVER (R3-029 held for parent password; clone1 calibration pending, deadline ~08:45)`. Declaration timestamp after state last_updated 2026-11-26T07:55:32.098848+07:00, G-24 freshness satisfied.
+- Dry run (all 5 PASS):
+  a. Laptop SSH PASS: `~/workspace/ssh-laptop.sh "hostname"` returned `omarchy`, exit 0.
+  b. FCC tmux session PASS: `tmux ls` shows `r3-fcc-runner-L3: 1 windows (created Wed Nov 25 09:00:18 2026)`; pane PID 22399 (python) confirmed PERSISTENT, not touched.
+  c. Codex exec PASS: `codex --version` returned `codex-cli 0.172.0`, exit 0.
+  d. State file parse PASS: epoch 13, coordinator_active a9dd3f91-834e-41ad-ab47-bae693595e9f, invalid_count 5, pass_count 22 (grades), fail_count 3, rule_a_pass 25, rule_a_fail 0.
+  e. Ledgers parse PASS: R3-L3-grades.jsonl 31 rows, R3-L3-reruns.jsonl 3 rows; `python3 rung3-ci/validate-ledger.py` exit 0 (31 rows, 0 errors); `python3 rung3-ci/ledger-cross-check.py` exit 0 (61 verdict files, 0 errors).
+- Standing rules acknowledged: English only; Ponytail for code work; ydotool BANNED; pill on any agent control; SSH to laptop only via ~/workspace/ssh-laptop.sh; never close owner tabs, pinned, essentials, or ws3 windows; verdict files in ~/workspace/rung3-verdicts (VM-local, never committed); no personal info on GitHub; never assume an agent's capabilities.
+- This deputy stands by. If told to stand down, this deputy ends.
