@@ -211,14 +211,28 @@ def check_sql_order_total(text, key, reasons, ev_dir):
         reasons.append("missing ket-qua-truy-van.csv")
     else:
         lines = [l for l in read_text(csv_path).splitlines() if l.strip()]
-        if len(lines) - 1 != len(order):
+        # Header row is optional (R3-021: headerless quoted CSV was
+        # counted as if it had a header). The first line is a data
+        # row when its last cell is an integer; otherwise it is a
+        # header. Union-only: with-header files count as before.
+        data_rows = len(lines)
+        if lines:
+            cells = [c.strip().strip('"')
+                     for c in lines[0].split(",")]
+            if not (len(cells) >= 2 and cells[-1].isdigit()):
+                data_rows -= 1
+        if data_rows != len(order):
             reasons.append("CSV has %d data rows, expected %d"
-                           % (len(lines) - 1, len(order)))
+                           % (data_rows, len(order)))
 
 
 def check_image_sizes(text, key, reasons):
     found = {}
-    for name, w, h in re.findall(r"(\S+\.png)\s+(\d+)\s*x\s*(\d+)", text):
+    # Separators between file name and size may be whitespace, a
+    # pipe (R3-072 table rows), a colon or a dash (numbered rows).
+    # Union-only: plain "name.png 800x600" still matches.
+    for name, w, h in re.findall(
+            r"(\S+\.png)[\s|:\-\u2013\u2014]*(\d+)\s*x\s*(\d+)", text):
         found[name] = "%sx%s" % (w, h)
     for want in key["rows"]:
         got = found.get(want["file"])
@@ -271,22 +285,34 @@ def check_report_consistency(ev_dir, key, reasons):
     # Bilingual labels (owner order 2026-11-25): Vietnamese
     # "Dia con trong:" / "RAM con trong:" and English
     # "Disk free:" / "Free disk:" / "RAM free:" / "Free RAM:".
-    # Acceptance only broadens.
-    m = re.search(r"(?:Dia con trong|Disk free|Free disk)\s*:\s*(\S+)",
-                  bao, re.IGNORECASE)
+    # R3-076 adds the section forms "Free on /:" (disk) and
+    # "Free (free column):" (RAM). Acceptance only broadens.
+    m = re.search(r"(?:Dia con trong|Disk free|Free disk|Free on \S+)"
+                  r"\s*:\s*(\S+)", bao, re.IGNORECASE)
     if not m or m.group(1) not in texts["d42-lenh-dia.txt"]:
         reasons.append("disk free value in bao-cao not found in lenh-dia")
-    m = re.search(r"(?:RAM con trong|RAM free|Free RAM)\s*:\s*(\S+)",
+    m = re.search(r"(?:RAM con trong|RAM free|Free RAM|"
+                  r"Free \(free column\))\s*:\s*(\S+)",
                   bao, re.IGNORECASE)
     if not m or m.group(1) not in texts["d42-lenh-ram.txt"]:
         reasons.append("RAM free value in bao-cao not found in lenh-ram")
-    proc_lines = [l for l in bao.splitlines()
-                  if re.match(r"\S+\s+\d+\s+[\d.]+\s+[\d.]+", l.strip())]
-    if len(proc_lines) < 5:
+    # Process rows: whitespace form ("name PID cpu mem") or pipe
+    # form ("name | PID | cpu | rss ...", R3-076). Union-only.
+    procs = []
+    for line in bao.splitlines():
+        s = line.strip()
+        if re.match(r"\S+\s+\d+\s+[\d.]+\s+[\d.]+", s):
+            name, pid = s.split()[:2]
+            procs.append((name, pid))
+            continue
+        cells = [c.strip() for c in s.split("|")]
+        if len(cells) >= 4 and cells[1].isdigit() and \
+                re.fullmatch(r"[\d.]+", cells[2]):
+            procs.append((cells[0], cells[1]))
+    if len(procs) < 5:
         reasons.append("bao-cao has %d process rows, need 5"
-                       % len(proc_lines))
-    for line in proc_lines:
-        name, pid = line.split()[:2]
+                       % len(procs))
+    for name, pid in procs:
         if name not in texts["d42-lenh-tien-trinh.txt"] or \
                 pid not in texts["d42-lenh-tien-trinh.txt"]:
             reasons.append("process %s PID %s not in lenh-tien-trinh"
@@ -438,7 +464,9 @@ def check_keyword_counts(ev_dir, key, reasons):
         return
     report_name = os.path.basename(report_path)
     lines = read_text(report_path).splitlines()
-    detail_re = re.compile(r"^(dp02-\d+\.txt)\s*\(\d+\s*dong\)\s*:\s*(.*)$")
+    # The "(N dong)" parenthetical is optional (DP-02).
+    detail_re = re.compile(
+        r"^(dp02-\d+\.txt)(?:\s*\(\d+\s*dong\))?\s*:\s*(.*)$")
     for entry in keywords:
         kw = entry["keyword"]
         strict_re = re.compile(
@@ -506,10 +534,17 @@ def check_keyword_counts(ev_dir, key, reasons):
             if m and kw in want and int(m.group(1)) != want[kw]:
                 reasons.append("report %s in %s: %d, expected %d"
                                % (kw, fname, int(m.group(1)), want[kw]))
-    for name in expected_names:
-        if name not in detail_seen:
-            reasons.append("report per-file detail missing for %s in %s"
-                           % (name, report_name))
+    # The DP-02 brief requires only the summary table, grand total
+    # and files-with-keyword count; the per-file detail block is
+    # optional as a whole because the fixture recount above already
+    # verifies the per-file matrix. A partial detail block still
+    # FAILS: once any detail line is present, all files are required.
+    if detail_seen:
+        for name in expected_names:
+            if name not in detail_seen:
+                reasons.append(
+                    "report per-file detail missing for %s in %s"
+                    % (name, report_name))
 
 
 CHECKERS = {
