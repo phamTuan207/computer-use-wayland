@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T20:33:34+07:00",
+ "last_updated": "2026-11-26T20:37:50+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "41 rows (1 TEST + 30 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 81 verdict files)",
@@ -1534,7 +1534,7 @@
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
- "status": "RUNNING under epoch 24. Rule-A 33 PASS / 1 FAIL (R3-037); valid 52; bars 50/52 original, 51/53 with task 56; need 17 PASS from 18 remaining positions (18 from 19 with task 56); slack 1 FAIL. All 6 invalids EXTERNAL per owner ruling 2026-11-26 17:05; our-side invalid budget 5/5 intact. R3-067 (position 34) GRADED PASS. R3-072 (position 35) drive completed 20:17:42 (overran 30-min deadline 20:15:07; see note). Check 11 ARMED; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
+ "status": "RUNNING",
  "coordinator_active": "64030fac-dbec-4359-9fb5-21ae46f944f1 (epoch 24, takeover 2026-11-26T19:06:52+07:00)",
  "epoch": 24,
  "task_start": "2026-11-26T20:29:20+07:00",
@@ -1655,5 +1655,16 @@
   "resume_order": "RESUME when redteam section 6.4 checks 3-9 pass (holder hash verify, FCC holder dry start, probe per drive, warm-profile + sign-in record, clone2 calibration sign-off before scoring, pii-scan.py + test push, brief fields). Checks 10-12 before touched tasks (R3-028 fallback brief, re-proof trigger armed, R3-079/089/100 guards; R3-089 guard refresh 2026-11-30 12:00 even if not reached)."
  },
  "rule_a_pass": 25,
- "rule_a_fail": 0
+ "rule_a_fail": 0,
+ "score": {
+  "rule_a_pass": 34,
+  "rule_a_fail": 1,
+  "valid": 52,
+  "bar_original": "50/52",
+  "bar_with_task56": "51/53",
+  "need_original": "16 PASS from 17 remaining",
+  "need_with_task56": "17 PASS from 18 remaining",
+  "slack_fails": 1
+ },
+ "last_graded": "R3-072 (position 35) PASS at 2026-11-26T20:37:50+07:00 (Fresh B1 + Clone1 B2, Tier A checker false negative overridden openly by both; overrun 1m29s graded on evidence per R3-036 precedent)"
 }
