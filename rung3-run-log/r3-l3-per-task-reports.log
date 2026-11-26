@@ -88,3 +88,13 @@
 - Evidence: snapshot R3-075-L3 (12 files + manifest, manifest sha256 dd67e4b0, gate PASS, pii clean).
 - Reset (Class L, after scoring): ~/rung3/d41-venv removed from the laptop.
 - Score after: Rule-A 36 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 14 PASS from 15 remaining original positions, 15 from 16 with task 56; slack 1 further FAIL).
+
+## R3-076 (position 38) - GRADED PASS 2026-11-26T22:16:43+07:00
+- Lane: Codex exec PID 3426515 (driver 866ea4d6), 21:34:44-21:59:17 +07, elapsed 24m33s, within the 30-min limit. Task fields recorded in state at launch verification, cleared at drive end.
+- Task: disk/RAM/top-5-process report (d42-bao-cao.txt) judged only against the saved command files. All values match: disk free 225G, RAM free 1.3Gi / available 18Gi, 5 process rows identical (name, PID, CPU, RSS, %MEM), recording time present.
+- Scoring: Fresh B1 PASS (22:10:13, audited) + Clone2 B2 PASS (22:09, branch clone2/verdict-R3-076-L3 2c802afb, audited); no tiebreaker. Scorer 2 seat reassigned Clone1 -> Clone2 per owner order 21:36 (Clone2 main burner).
+- Tier A checker artifact (recorded for post-run fix, no mid-run integration): tier-a-check.py report-consistency said FAIL (3 reasons). Root cause per Fresh B1: the checker read bao-cao.txt (the runner log) instead of d42-bao-cao.txt (the report); its label/row patterns also do not match the report's English labels ("Free on /:", "Free (free column):") or pipe-separated rows. Both scorers explicitly overrode it with proof. Checker output preserved as tier-a-output.json inside the snapshot.
+- Anomalies (full chains in drive-log.txt): first launch died on duplicate stdin redirects (relaunched single redirect, same chain as R3-075); Super-only key refused (Super+Space); typing "terminal" appended to a focused unsaved VS Code line (Escape + Ctrl+Z restored "Hello grouping.", nothing saved); computer-use session ended mid-drive ~21:41 with the process-list action unconfirmed (read-only checks, ~10-min wait, fresh session, process command re-entered once and saved 21:54:34; disk/RAM files saved before, not rerun); first self-check parser counted the header as a row (fixed read-only); terminal-close refused on stale observation (fresh observe, typed exit); one SSH proxy drop during driver poll (retry ok).
+- Evidence: snapshot R3-076-L3 (11 files + manifest, manifest sha256 95ef1fa8, gate PASS, pii clean).
+- Reset (Class S, after scoring): ~/rung3/d42-bao-cao.txt, d42-lenh-dia.txt, d42-lenh-ram.txt, d42-lenh-tien-trinh.txt removed from the laptop.
+- Score after: Rule-A 37 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 13 PASS from 14 remaining original positions, 14 from 15 with task 56; slack 1 further FAIL).
