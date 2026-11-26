@@ -133,3 +133,4 @@
 2026-11-26T12:47:39+07:00 epoch 20 takeover (coordinator 0ace6385); R3-029 scoring pending, verdicts due ~13:16; Rule-A 25/0
 2026-11-26T12:49:30+07:00 epoch 20 deputy confirmed (4b4924ac, G-24/G-38 closed); R3-029 A2 PASS audited, A1 pending
 2026-11-26T12:55:00+07:00 epoch 20: R3-029 GRADED PASS (A1+A2 agree); ledger 32 rows, validators exit 0; releasing R3-035 next
+2026-11-26T12:54:03+07:00 epoch 20: R3-035 RELEASED (runner 069510f3, task_start set); R3-029 PASS filed
