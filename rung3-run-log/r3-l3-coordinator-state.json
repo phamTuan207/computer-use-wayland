@@ -24,7 +24,7 @@
  "completed_positions": 29,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 30,
- "current_task": "R3-046 RELEASED 2026-11-26T17:12:00+07:00 (position 30, Codex lane, driver 78a68733 launching codex exec on laptop; briefs pushed 10589447). Awaiting driver launch report (codex PID + task start) to set task_start/runner_pid. Scorers: Fresh+Fresh (fix A F5.2). No other drive in progress.",
+ "current_task": "R3-046 ATTEMPT 1 INTERRUPTED (not graded): codex PID 3050373, start 2026-11-26T17:09:57+07:00, end 17:18:04. Completed 1/6 lookups (Ha Noi 2026-12-02), then at ~17:15:40 a foreign Google Docs window became active on ws2 and act-now refused input; Codex stopped safely, no ket-qua.txt, no service block. Attempt-1 evidence preserved in attempt1-interrupted/. Attempt 2 launching with fresh 30-min clock and focus-verify before each act.",
  "deputy": "b3cf2527-e98a-48ab-85bd-e752138fa15a (epoch 23 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T17:08:16+07:00, after state last_updated 2026-11-26T17:08:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 23 coordinator_active 0d5fb18c, snapshot + verdict paths exist; epoch 22 deputy c6bc61fa SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T17:12:00+07:00",
+ "last_updated": "2026-11-26T17:21:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1349,6 +1349,11 @@
    "ts": "2026-11-26T17:12:00+07:00",
    "by": "coordinator-epoch23",
    "text": "R3-046 RELEASED 2026-11-26T17:12:00+07:00 (position 30, Codex lane). Briefs written by epoch 23 and pushed 10589447 (runner + Fresh1/Fresh2 scorer briefs; scorer briefs carry the new mandatory infrastructure re-run consideration record before any INVALID verdict; scorer 2 confirms shared cause). Driver 78a68733 spawned to launch codex exec detached on the laptop. task_start/runner_pid to be set from the driver launch report (event log line on laptop). 30-min timeout from task start. R3-046 is timeanddate class, remaining INVALID candidate, per-event counting."
+  },
+  {
+   "ts": "2026-11-26T17:21:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "R3-046 ATTEMPT 1 INTERRUPTED, NOT GRADED (driver 78a68733 report 17:19:43): codex exec PID 3050373, task_start 2026-11-26T17:09:57+07:00 (start_time.txt 17:10:28), end 17:18:04, ~8 min, inside timeout. Probe clean (webdriver false, own_on_proto true, own_on_navigator false, get_name \"get webdriver\", shim bb49ff3f). Completed 1/6 lookups (Ha Noi 2026-12-02 sunrise 06:17 sunset 17:14 day length 10:56:38). At ~17:15:40 desktop focus changed: an untitled Google Docs Zen window became active on ws2 (still active at 17:20 check; ws3 agents untouched); act-now refused the London search before sending input; Codex stopped immediately without driving a shared window (correct fail-closed). No bot check, no 429/403, no block-evidence.txt, no ket-qua.txt. Pill acquired 17:10:33, released 17:16:27, grim-verified gone; holder ended cleanly. NOT a FAIL, NOT an INVALID (no service block; interruption external to the task). Precedent R3-040 fail-closed attempts re-run ungraded. Attempt-1 evidence moved to ~/rung3-chung-cu/R3-046/attempt1-interrupted/ (7 files, sha256-verified, VM copy /tmp/r3-046-evidence/). DECISION: re-run attempt 2 with fresh 30-min clock; driver brief adds focus-verify (holder window focused before each act; stop and report on focus theft). Possible focus thief: agents-watch 15-min screen look at 17:15 boundary; not confirmed."
   }
  ],
  "pass_count": 24,
