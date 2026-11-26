@@ -1,0 +1,44 @@
+{
+ "files": [
+  {
+   "mtime": 1795690763,
+   "name": "bao-cao.txt",
+   "sha256": "d644ab2b099a3fd2e4c09cceb663e645968f13e98fad0e7d8b0a65f275b8d7f7",
+   "size": 254
+  },
+  {
+   "mtime": 1795690784,
+   "name": "dp03-pillcheck.png",
+   "sha256": "2701a1c903d85e24bfe3fa74d9f7cc2da42c694afd0e3a186df39eaf9465f050",
+   "size": 1517557
+  },
+  {
+   "mtime": 1795690764,
+   "name": "end_time.txt",
+   "sha256": "8ce8cd248fab87bc069b61281d1149647b449859fe182d26959785fabefd58fc",
+   "size": 26
+  },
+  {
+   "mtime": 1795690766,
+   "name": "ss-output.txt",
+   "sha256": "91797897b80246019c08c134f012482b2dc3455207da336589c536f1f4ed4947",
+   "size": 1898
+  },
+  {
+   "mtime": 1795690767,
+   "name": "start_time.txt",
+   "sha256": "a81a5da3b260fed4daf2ba0a97e04495f9cd9b24da4e87e5c6891d7985ff9a55",
+   "size": 26
+  },
+  {
+   "mtime": 1795690771,
+   "name": "terminal-2026-11-26T17-54-45+07-00.jpg",
+   "sha256": "2933e6d99a273b8dc41831e8805cb62e8ebdc149238707b19c29c843696730d0",
+   "size": 229342
+  }
+ ],
+ "manifest_sha256": "71cea95f99ac606fc282ff701235a16925950362042604759d5792dae09571a6",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/DP-03-L3",
+ "source_dir": "/tmp/dp-03-evidence",
+ "task": "dp-03-evidence"
+}

@@ -1,0 +1,11 @@
+Listening TCP ports
+Source: ss -tlnp (non-sudo; process names were shown).
+N = 5
+
+Port | Protocol | Process name
+-----|----------|-------------
+2828 | TCP | zen-bin
+4096 | TCP | opencode
+8082 | TCP | fcc-server
+9222 | TCP | zen-bin
+9223 | TCP | chromium
