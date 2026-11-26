@@ -24,7 +24,7 @@
  "completed_positions": 33,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 34,
- "current_task": "R3-055 GRADED PASS 2026-11-26T19:08:08+07:00 (Mochi B1 19:08:00 + Clone2 B2 19:06:00, agree, no tiebreaker; ledger 40 rows, validate + cross-check exit 0). Class L reset (remove ~/rung3/d06-du-an-moi on laptop) by coordinator. Next release: R3-067 (position 34, Codex lane). Foreign Google Docs window on ws2: cleanup before/with next drive, never mid-drive.",
+ "current_task": "R3-067 (position 34, Class S, Codex lane) RELEASED 2026-11-26T19:09:52+07:00: briefs committed 9f5eaa82 (runner + scorers Mochi/Fresh; disjointness checked: scorers Mochi+Fresh, prep Clone2, reviewer Mei, no overlap). Clone2 prep assigned via PWA (advisory, drive proceeds in parallel). Driver f6ced820 spawned; awaiting launch report with task_start + runner PID (to be recorded here at once). R3-055 reset done (tree removed, verified). Foreign Google Docs window on ws2: cleanup folded into R3-067 pre-drive (pill on, unambiguous ID only).",
  "deputy": "dee95d07-524e-4e10-8dcf-271d5b36c65c (epoch 24 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T19:07:21+07:00, after state last_updated 2026-11-26T19:06:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 24 coordinator_active 64030fac, snapshot + verdict paths exist; epoch 23 deputy b3cf2527 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T19:08:08+07:00",
+ "last_updated": "2026-11-26T19:09:52+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "40 rows (1 TEST + 29 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 79 verdict files)",
@@ -1449,6 +1449,11 @@
    "ts": "2026-11-26T19:08:08+07:00",
    "by": "coordinator-epoch-24",
    "text": "R3-055 GRADED PASS 2026-11-26T19:08:08+07:00. Mochi B1 PASS (19:08:00, session 70cd99d1, branch mochi/verdict-R3-055-L3 280eeee8) and Clone2 B2 PASS (19:06:00, session clone2-main-ad85548c, branch clone2/verdict-R3-055-L3 f1da50f8) agree, no tiebreaker; both audited PASS (parse, key hashes 5059f6c4/21f8b61a, manifest c679ba43, snapshot+key only). Ledger row appended (40 rows), validate-ledger exit 0, ledger-cross-check exit 0 (79 verdict files). Deputy dee95d07 declared 19:07:21, dry run 5/5 PASS, G-24/G-38 CLOSED for epoch 24. Rule-A 32/1; need 18 PASS from 19 remaining; slack 1 FAIL. Next: R3-055 reset + R3-067 release."
+  },
+  {
+   "ts": "2026-11-26T19:09:52+07:00",
+   "by": "coordinator-epoch-24",
+   "text": "R3-055 RESET DONE: ~/rung3/d06-du-an-moi verified present (8 folders + README + .gitignore) then removed via ssh-laptop.sh, verified gone. R3-067 RELEASED: briefs rung3-run-log/briefs/R3-067-{runner,scorer-mochi,scorer-fresh}-brief.md committed 9f5eaa82, ls-remote verified. Assignment per replan-fixes F5.2: scorers Mochi + Fresh, prep Clone2 (sent via PWA, delivery verified by prep commit landing), reviewer Mei + analyst on-call Mei/Clone2. Disjointness re-checked by coordinator: no scorer preps/analyzes/reviews R3-067. Driver f6ced820 spawned. Rule-A 32/1; need 18 PASS from 19 remaining; slack 1 FAIL."
   }
  ],
  "pass_count": 24,
