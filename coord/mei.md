@@ -847,3 +847,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-072 RELEASED 19:43:44 (commit d174df48, driver 092ab895), truoc khi R3-067 cham xong; note la advisory, khong phai gate.
 - R3-072 PREP NOTE DELIVERED (commit 0428cec6, 256 lines, rung3-run-log/prep/R3-072-prep-mei.md; ls-remote verify 0428cec64ed995d8c77536e6c0b6bf5c9a190467): 3 research lane (imv overlay, Nautilus multi-open/title, gotchas), council 3 + redteam review (1 HIGH, 5 MEDIUM, 15 LOW), fix pass, re-review, independent verification. Key findings: d va :overlay la cung mot toggle (go :overlay mu sau d se TAT overlay); default overlay text verify verbatim; frozen key (keys.md R3-072) da ghi laptop check (khong dat overlay_text, chuoi mac dinh hien ten file va size); running process la imv-wayland (pgrep -x imv khong match gi); bo -d restart khoi driver recovery (pha user path); first-image mismatch thu hep tu INVALID-candidate thanh recovery procedure. Council-1 reviewer KET luc 19:38 (im 18 phut, watchdog bao); em kill va respawn, ban thay the tra PASS.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 31. R3-067 scoring dang cham, R3-072 qua deadline van dang chay (2026-11-26 20:19 +07)
+- R3-067 scoring: Fresh B2 PASS audited, Mochi B1 pending; grade chua ghi. Rule-A 32/1.
+- R3-072 DRIVING qua deadline 30 phut: task_start 19:45:07, deadline 20:15:07, heartbeat 20:15:13 van DRIVING (PID 3254010), chua co commit ket thuc drive. Task fields ghi muon (commit 29f97271) sau khi runner watch bao gap; coordinator giai thich heartbeat-lag pattern (im 19:43-20:15). R3-074 briefs pre-staged (commit 6a50eb3b, Codex runner, scorers Clone2 + Fresh, prep coordinator-live).
+- Em khong cham diem, khong doc ledger/snapshot.
