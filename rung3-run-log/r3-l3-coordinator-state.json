@@ -24,7 +24,7 @@
  "completed_positions": 0,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 1,
- "current_task": "EPOCH 15 (R3-029 held for parent password; clone1 calibration sign-off verifier running)",
+ "current_task": "EPOCH 15 (R3-029 held for parent password; clone1 calibration APPROVED 4/4)",
  "deputy": "1598992c-2fde-4aa7-af83-17803c0f61c0 (epoch 15 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:00:52+07:00, after state last_updated 2026-11-26T07:59:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 15 coordinator_active 4ede4016, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed ebecf830; epoch 14 deputy ca88fad1 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T08:01:19.736092+07:00",
+ "last_updated": "2026-11-26T08:02:23.804229+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1164,6 +1164,11 @@
    "ts": "2026-11-26T08:01:19.736092+07:00",
    "by": "coordinator-epoch-15",
    "text": "DEPUTY CONFIRMED, EPOCH 15: fresh deputy 1598992c. Declaration 08:00:52 +07 (after state 07:59:52, G-24 satisfied), pushed ebecf830 (ls-remote verified). Dry run 5/5 PASS (SSH omarchy, FCC tmux pane 22399 untouched, codex 0.172.0, state parse epoch 15, validate + cross-check exit 0). G-24/G-38 CLOSED for epoch 15. Deputy on STANDBY under section 7 fencing. Clone1 sign-off verifier still running. R3-029 still held for parent password."
+  },
+  {
+   "ts": "2026-11-26T08:02:23.804229+07:00",
+   "by": "coordinator-epoch-15",
+   "text": "CLONE1 CALIBRATION SIGN-OFF APPROVED 4/4 (fix A F6, check 7 clone1 rule): independent verifier f92b9212 re-graded sealed set R3-002/013/016/024 from scratch (allowlist only, recorded before reading sealed or clone1 verdicts; Tier A via tier-a-check.py + direct recompute; all snapshot hashes MATCH; key hashes frozen). Verifier re-grade vs sealed 4/4; clone1 vs sealed 4/4 (clone1 branch clone1/calibration-sealed-20261126 tip dbc7e3f6, 8 files audited: key/manifest hashes match, files_read allowlist-only, independence declarations present, session ids recorded, no false checker claim). Sign-off filed rung3-run-log/r3-l3-clone1-calibration-signoff-20261126.md, pushed 555b5ddc (ls-remote verified). Clone1 may score real tasks, first R3-037 (Pair A scorer 2). Per-task report row appended (CLONE1-CALIBRATION, pushed 24318a75). R3-029 still held for parent password."
   }
  ],
  "pass_count": 22,
@@ -1209,7 +1214,7 @@
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
- "status": "RESUMED under re-plan (gate passed 06:30, checks 3-9 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL (recomputed by epoch 15). Invalid events 5/5 EXHAUSTED (R3-027 namechk = event 5); a 6th event needs a new recorded team decision via parent before further releases. Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Next: R3-029 frozen position 25, HELD for parent password. Checks 11-12 prepped (checklist + F12 briefs filed). Clone1 calibration grades filed (branch clone1/calibration-sealed-20261126, dbc7e3f6); sign-off verifier spawned by epoch 15.",
+ "status": "RESUMED under re-plan (gate passed 06:30, checks 3-9 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk = event 5); a 6th event needs a new recorded team decision via parent before further releases. Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Next: R3-029 frozen position 25, HELD for parent password. Checks 11-12 prepped (checklist + F12 briefs filed). Clone1 calibration APPROVED 4/4 (sign-off pushed 555b5ddc); clone1 may score from R3-037. Epoch 15 deputy 1598992c on standby (G-24/G-38 closed).",
  "coordinator_active": "4ede4016-5f7b-4fd2-8b19-71a5e0039d48 (epoch 15, takeover 2026-11-26T07:59:52.252828+07:00)",
  "epoch": 15,
  "task_start": null,
