@@ -163,3 +163,4 @@
 2026-11-26T19:42:55+07:00 | epoch24 | R3-067 DRIVE COMPLETED, snapshot sealed 31da7629, scoring assigned | Rule-A 32/1 | position 34 | task fields cleared | our-side invalid budget 5/5
 2026-11-26T19:43:44+07:00 | epoch24 | R3-067 scoring (Mochi run 243 + Fresh 78ac621a); R3-072 RELEASED (driver 092ab895) | Rule-A 32/1 | position 35 | our-side invalid budget 5/5
 2026-11-26T20:15:13+07:00 | epoch24 | R3-072 DRIVING (PID 3254010, start 19:45:07) task fields recorded late after watch flag | Rule-A 32/1 | position 35 | R3-067 Fresh B2 PASS audited, Mochi B1 pending | our-side invalid budget 5/5
+2026-11-26T20:21:01+07:00 | epoch24 | R3-067 GRADED PASS Rule-A 33/1; R3-072 drive completed (overrun recorded), fields cleared | position 35 | our-side invalid budget 5/5

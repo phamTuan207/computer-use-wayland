@@ -21,10 +21,10 @@
  ],
  "class_l_count": 9,
  "class_s_count": 46,
- "completed_positions": 33,
+ "completed_positions": 34,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 35,
- "current_task": "R3-072 (position 35, Class S, Tier A, Codex lane) DRIVING since 2026-11-26T19:45:07+07 (codex exec PID 3254010, driver 092ab895; 30-min deadline 20:15:07). task_start + runner_pid recorded in state (late: written 2026-11-26T20:15:13+07:00 after runner-process watch flagged the gap at 20:11; fields verified live via ps). R3-067 scoring: Fresh B2 PASS audited; Mochi B1 pending.",
+ "current_task": "R3-072 (position 35, Class S, Tier A) DRIVE COMPLETED 2026-11-26T20:17:42+07 (codex PID 3254010, start 19:45:07; task_complete 20:16:50, ket-qua.txt 20:12). OVERRAN the 30-min deadline (20:15:07) by ~1m43s at completion: the timeout watcher could not kill because task fields were recorded late (20:15:13, coordinator gap, closed same minute). Evidence complete on laptop ~/rung3-chung-cu/R3-072/ (7 files); driver 092ab895 pulling to VM. Snapshot + Tier A check + scoring (Fresh B1 + Clone1 B2) next. task fields CLEARED at drive end. R3-067 GRADED PASS, reset done.",
  "deputy": "dee95d07-524e-4e10-8dcf-271d5b36c65c (epoch 24 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T19:07:21+07:00, after state last_updated 2026-11-26T19:06:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 24 coordinator_active 64030fac, snapshot + verdict paths exist; epoch 23 deputy b3cf2527 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,11 +42,11 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T20:15:13+07:00",
+ "last_updated": "2026-11-26T20:21:01+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
-  "note": "40 rows (1 TEST + 29 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 79 verdict files)",
-  "rows": 40
+  "note": "41 rows (1 TEST + 30 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 81 verdict files)",
+  "rows": 41
  },
  "notes": [
   "Phase 0 coordinator. Run NOT started. No task has run.",
@@ -1479,6 +1479,11 @@
    "ts": "2026-11-26T20:15:13+07:00",
    "by": "coordinator-epoch-24",
    "text": "STATE-FILE GAP CLOSED 2026-11-26T20:15:13+07:00: R3-072 task_start 2026-11-26T19:45:07+07:00 + runner_pid 3254010 (+ codex fields) written after the runner-process watch flagged null fields at 20:11. Verified live: ps shows PID 3254010 codex exec elapsed ~29:49 at check. Root cause: the R3-072 driver launched without the launch record reaching the coordinator before the coordinator went quiet waiting on handoffs (state last_updated froze at 19:43:44; liveness alerts 20:02/20:07 are the known heartbeat-lag pattern, coordinator alive). Permanent fix restated: for EVERY future release, task_start + runner PID are written at drive start and cleared at drive end; the coordinator verifies the launch record in the master event log within minutes of every release instead of waiting for the driver handoff."
+  },
+  {
+   "ts": "2026-11-26T20:21:01+07:00",
+   "by": "coordinator-epoch-24",
+   "text": "R3-067 GRADED PASS (ledger 41 rows, validate + cross-check exit 0 after fixing scorer2 session field to 78ac621a from B2 JSON scorer_session). Mochi B1 PASS 19:45:39 + Fresh B2 PASS agree, no tiebreaker. Reset done (~/rung3/nd23-hinh-ve.png removed, verified gone). Rule-A 33/1; need 17 PASS from 18 remaining; slack 1 FAIL. R3-072 OVERRUN DECISION: drive completed 20:16:50/20:17:42 vs deadline 20:15:07. Cause chain: coordinator recorded task_start/PID only at 20:15:13 (after the 20:11 watch flag), so the 30-min kill could not fire; runner finished the work (ket-qua.txt 20:12, inside limit; finalization overran). Following the R3-036 precedent (23s overrun graded on evidence, recorded), R3-072 will be sealed and scored on its evidence with the overrun recorded in the per-task report; scorers see start/end times in the snapshot and grade per rubric. Flagged to parent as a coordinator judgment call. task fields CLEARED."
   }
  ],
  "pass_count": 24,
@@ -1524,14 +1529,14 @@
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
- "status": "RUNNING under epoch 24. Rule-A 32 PASS / 1 FAIL (R3-037); valid 52; bars 50/52 original, 51/53 with task 56; need 18 PASS from 19 remaining positions (19 from 20 with task 56); slack 1 FAIL. All 6 invalids EXTERNAL per owner ruling 2026-11-26 17:05; our-side invalid budget 5/5 intact. R3-055 (position 33) GRADED PASS 2026-11-26T19:08:08+07:00. Next: R3-067 (position 34, Codex lane). Check 11 ARMED; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
+ "status": "RUNNING under epoch 24. Rule-A 33 PASS / 1 FAIL (R3-037); valid 52; bars 50/52 original, 51/53 with task 56; need 17 PASS from 18 remaining positions (18 from 19 with task 56); slack 1 FAIL. All 6 invalids EXTERNAL per owner ruling 2026-11-26 17:05; our-side invalid budget 5/5 intact. R3-067 (position 34) GRADED PASS. R3-072 (position 35) drive completed 20:17:42 (overran 30-min deadline 20:15:07; see note). Check 11 ARMED; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "64030fac-dbec-4359-9fb5-21ae46f944f1 (epoch 24, takeover 2026-11-26T19:06:52+07:00)",
  "epoch": 24,
- "task_start": "2026-11-26T19:45:07+07:00",
- "runner_pid": 3254010,
+ "task_start": null,
+ "runner_pid": null,
  "codex_task": "R3-072 (position 35, Class S, Tier A, Codex lane; driver 092ab895; 30-min deadline 2026-11-26T20:15:07+07:00)",
- "codex_task_start": "2026-11-26T19:45:07+07:00",
- "codex_runner_pid": 3254010,
+ "codex_task_start": null,
+ "codex_runner_pid": null,
  "graded_count": 30,
  "graded": 6,
  "pass": 22,
