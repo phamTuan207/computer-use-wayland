@@ -1,0 +1,7 @@
+Initial differences from diff -u ~/rung3/nd16-cu.conf ~/rung3/nd16-moi.conf:
+- cong: old 8080, new 9090
+- che_do: old dem, new ngay
+- ngon_ngu: old vi, new en
+- bo_nho: old 512, new 1024
+Merged line: cong=9090
+Remaining differing lines: 3 (che_do, ngon_ngu, bo_nho)

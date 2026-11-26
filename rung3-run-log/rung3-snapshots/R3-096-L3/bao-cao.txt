@@ -1,0 +1,51 @@
+Task R3-096 report
+Start: 2026-11-27T02:26:58+07:00
+
+Steps executed in the terminal:
+1. Ran `diff -u ~/rung3/nd16-cu.conf ~/rung3/nd16-moi.conf`; it showed four differing config lines.
+2. Read `~/rung3/nd16-yeu-cau.txt`. It required merging only cong=9090 and keeping the other three values.
+3. Ran `sed -i 's/^cong=8080$/cong=9090/' ~/rung3/nd16-cu.conf`.
+4. Re-ran the diff; three differing config lines remained.
+5. Read `~/rung3/nd16-cu.conf` and confirmed cong=9090 while che_do=dem, ngon_ngu=vi, and bo_nho=512 remain unchanged.
+6. Wrote `~/rung3/nd16-bao-cao.txt` and copied it and the merged config into this evidence directory.
+
+Initial differences:
+- cong: old 8080, new 9090
+- che_do: old dem, new ngay
+- ngon_ngu: old vi, new en
+- bo_nho: old 512, new 1024
+
+First diff output:
+--- /home/james/rung3/nd16-cu.conf 2026-11-23 19:20:08.130000314 +0700
++++ /home/james/rung3/nd16-moi.conf 2026-11-23 19:20:08.130764206 +0700
+@@ -1,7 +1,7 @@
+-cong=8080
+-che_do=dem
+-ngon_ngu=vi
+-bo_nho=512
++cong=9090
++che_do=ngay
++ngon_ngu=en
++bo_nho=1024
+ ghi_log=bat
+ thoi_gian_cho=30
+ may_chu=localhost
+
+Second diff output after merge:
+--- /home/james/rung3/nd16-cu.conf 2026-11-27 02:27:40.033115532 +0700
++++ /home/james/rung3/nd16-moi.conf 2026-11-23 19:20:08.130764206 +0700
+@@ -1,7 +1,7 @@
+ cong=9090
+-che_do=dem
+-ngon_ngu=vi
+-bo_nho=512
++che_do=ngay
++ngon_ngu=en
++bo_nho=1024
+ ghi_log=bat
+ thoi_gian_cho=30
+ may_chu=localhost
+
+Merged line: cong=9090
+Remaining differing lines: 3 (che_do, ngon_ngu, bo_nho)
+Anomaly chain: Initial `release --agent Codex` reported released, but status still showed holder Codex:3886826 and visible=true; reasoning: this was a PID-keyed holder, so a pid-less release may not remove it. Attempt 1: checked status after a 2-second wait; still visible=true. Attempt 2: read `overlay.py release --help`, which states a PID-keyed holder needs its own `--pid`. Decision: release the matching long-lived PID. Fix: ran `python3 ~/computer-use-wayland/scripts/overlay.py release --agent Codex --pid 3886826`, then captured pill-off.png and checked status. Outcome: holders empty, visible=false; pill-off.png visually shows no pill.

@@ -1,0 +1,63 @@
+R3-096 drive log; wall clock Asia/Ho_Chi_Minh; run start 2026-11-27T02:26:58+07:00.
+
+2026-11-27T02:26:58+07:00 (elapsed 00:00:00) - Recorded run start. Checked working directory and fixture paths; all three required inputs existed.
+2026-11-27T02:27:11+07:00 (elapsed 00:00:13) - Identified long-lived Codex exec PID 3886826; ran `python3 ~/computer-use-wayland/scripts/overlay.py acquire --agent Codex --method Codex --pid 3886826` and `python3 ~/computer-use-wayland/scripts/overlay.py status`. Result: acquired by Codex PID 3886826; label `Computer use active`; visible=true.
+2026-11-27T02:27:19+07:00 (elapsed 00:00:21) - Created evidence directory and start_time.txt; read fresh Hyprland signature via `ls /run/user/1000/hypr/ | head -n1`; inspected windows read-only using `hyprctl clients`; captured pill-on.png using `grim`. No windows were interacted with.
+2026-11-27T02:27:31+07:00 (elapsed 00:00:33) - In the persistent terminal shell, ran exactly: `diff -u ~/rung3/nd16-cu.conf ~/rung3/nd16-moi.conf`.
+Output:
+--- /home/james/rung3/nd16-cu.conf 2026-11-23 19:20:08.130000314 +0700
++++ /home/james/rung3/nd16-moi.conf 2026-11-23 19:20:08.130764206 +0700
+@@ -1,7 +1,7 @@
+-cong=8080
+-che_do=dem
+-ngon_ngu=vi
+-bo_nho=512
++cong=9090
++che_do=ngay
++ngon_ngu=en
++bo_nho=1024
+ ghi_log=bat
+ thoi_gian_cho=30
+ may_chu=localhost
+Result: 4 differing config lines.
+2026-11-27T02:27:35+07:00 (elapsed 00:00:37) - Ran `cat ~/rung3/nd16-yeu-cau.txt`.
+Output: Dong can ghep tu file moi vao file cu: cong (gia tri moi 9090); 3 dong khac con lai giu nguyen gia tri cu.
+2026-11-27T02:27:40+07:00 (elapsed 00:00:42) - Ran `sed -i 's/^cong=8080$/cong=9090/' ~/rung3/nd16-cu.conf`; exit=0. This changed only the specified line.
+2026-11-27T02:27:42+07:00 (elapsed 00:00:44) - Mid-drive `python3 ~/computer-use-wayland/scripts/overlay.py status`: visible=true, label=`Computer use active`, holder Codex:3886826. Pill remained active.
+2026-11-27T02:27:46+07:00 (elapsed 00:00:48) - Re-ran exactly: `diff -u ~/rung3/nd16-cu.conf ~/rung3/nd16-moi.conf`.
+Output:
+--- /home/james/rung3/nd16-cu.conf 2026-11-27 02:27:40.033115532 +0700
++++ /home/james/rung3/nd16-moi.conf 2026-11-23 19:20:08.130764206 +0700
+@@ -1,7 +1,7 @@
+ cong=9090
+-che_do=dem
+-ngon_ngu=vi
+-bo_nho=512
++che_do=ngay
++ngon_ngu=en
++bo_nho=1024
+ ghi_log=bat
+ thoi_gian_cho=30
+ may_chu=localhost
+Result: 3 differing config lines (che_do, ngon_ngu, bo_nho).
+2026-11-27T02:27:53+07:00 (elapsed 00:00:55) - Ran `cat ~/rung3/nd16-cu.conf`.
+Output:
+cong=9090
+che_do=dem
+ngon_ngu=vi
+bo_nho=512
+ghi_log=bat
+thoi_gian_cho=30
+may_chu=localhost
+phien_ban=1.0
+Verified specified merge and the other three old values.
+2026-11-27T02:28:00+07:00 (elapsed 00:01:02) - Wrote `~/rung3/nd16-bao-cao.txt`; read it back; copied it and the merged config to the evidence directory. Wrote bao-cao.txt and drive-log.txt.
+2026-11-27T02:28:10+07:00 (elapsed 00:01:12) - At this point, no anomaly had occurred. (A pill-release anomaly occurred later and is logged below.) No ydotool used; no Zen, ws3, or browser window touched; no repo commit made.
+2026-11-27T02:28:58+07:00 (elapsed 00:02:00) - Read back start_time.txt, bao-cao.txt, drive-log.txt, nd16-bao-cao.txt, and nd16-cu.conf; ran `cmp` on each copied deliverable against its source. Contents matched. Recorded mtimes for the evidence files; all were after the run start.
+2026-11-27T02:29:12+07:00 (elapsed 00:02:14) - Corrected start_time.txt to the first task command time, 2026-11-27T02:26:58+07:00, and corrected the evidence setup timestamp to the screenshot/directory creation time. Read the corrected values back.
+2026-11-27T02:29:34+07:00 (elapsed 00:02:36) - Rechecked pill status (visible=true, label=`Computer use active`) and evidence mtimes. Visually reviewed pill-on.png; the active pill is visible.
+2026-11-27T02:29:57+07:00 (elapsed 00:02:59) - Ran the instructed `python3 ~/computer-use-wayland/scripts/overlay.py release --agent Codex`; it reported `released`, but the immediate status still showed holder Codex:3886826 and visible=true. Captured an initial pill-off.png; it was not pill-free.
+2026-11-27T02:30:05+07:00 (elapsed 00:03:07) - Retried status after a 2-second wait; it still showed visible=true. This confirmed the holder remained.
+2026-11-27T02:30:10+07:00 (elapsed 00:03:12) - Read `python3 ~/computer-use-wayland/scripts/overlay.py --help` and `python3 ~/computer-use-wayland/scripts/overlay.py release --help`. Help states pid-keyed holders need `--pid` to release.
+2026-11-27T02:30:20+07:00 (elapsed 00:03:22) - Fixed release by running `python3 ~/computer-use-wayland/scripts/overlay.py release --agent Codex --pid 3886826`; output reported `daemon_exiting: true`, `holders: {}`, `visible: false`. Took a replacement `grim` screenshot at `~/rung3-chung-cu/R3-096/pill-off.png`; visually verified the pill is gone.
+2026-11-27T02:31:32+07:00 (elapsed 00:04:34) - Wrote end_time.txt after the corrected pill-off capture, report updates, source-copy comparisons, and evidence review. Read back the final text files and timestamps; all evidence mtimes are within this run window.
