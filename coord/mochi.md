@@ -389,3 +389,9 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 12:46 +07 - Scorer 1: R3-029 assigned, scoring started (mochi)
+
+- Coordinator epoch 19 assigned R3-029 to mochi as Pair A scorer 1 at 12:46 +07. Snapshot on todolist-push commit 83b4fef5 (manifest 42d22dff), pushed 12:45:46 +07, after drive completed 12:42:14 +07.
+- Scorer subagent started 12:48 +07, per the R3-029 scorer brief. Verdict file due within 30 minutes of assignment. Branch mochi/verdict-R3-029-L3.
+- Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Day chi la tin trang. Verdict se gui rieng cho dieu phoi vien theo kenh trong brief.
