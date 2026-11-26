@@ -24,7 +24,7 @@
  "completed_positions": 24,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
- "current_task": "EPOCH 16 (R3-029 position 25 HELD for parent password; release on password receipt)",
+ "current_task": "EPOCH 17 (R3-029 position 25 HELD for parent password; release on password receipt)",
  "deputy": "c3fe4516-6143-4cbe-9b0f-45ceedbc806f (epoch 16 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:04:03+07:00, after state last_updated 2026-11-26T08:03:21.072508+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 16 coordinator_active 78fd6562, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed 58367bef; epoch 15 deputy 1598992c SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T08:05:44.629324+07:00",
+ "last_updated": "2026-11-26T08:27:04.511782+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1184,6 +1184,11 @@
    "ts": "2026-11-26T08:05:44.629324+07:00",
    "by": "coordinator-epoch-16",
    "text": "BRIEFS PREPPED while R3-029 held: runner + scorer briefs for R3-035 (Muse lane; scorers Mochi + Clone2), R3-036 (Muse lane, named INVALID candidate timeanddate shared cause; scorers Mochi + Fresh with shared_cause_confirmed), R3-037 (FCC lane; scorers Mochi + Clone1, clone1 first real scoring task) written to rung3-run-log/briefs/ following the epoch 10 R3-029 template; task inputs extracted from the frozen list + key input lines only (035: 100 USD, 50 EUR, 200 GBP to VND; 036: Hanoi/Tokyo/Sydney, 2026-12-02; 037: example.com, wikipedia.org); no expected answers in runner briefs. Check 9 spot-check by epoch 16: all 9 briefs carry ydotool ban, pill rule, user entry point, forbidden shortcuts, event-log duty, ponytail text, 30-min timeout, explicit delivery paths; runner briefs carry holder hashes + probe fail-loud + bot-check rule + invalid budget. R3-029 still HELD for parent password."
+  },
+  {
+   "ts": "2026-11-26T08:27:04.511782+07:00",
+   "by": "coordinator-epoch-17",
+   "text": "COORDINATOR TAKEOVER, EPOCH 17: epoch 16 (78fd6562) completed; coordinator gap since 08:06 held by parent; parent appoints successor 99914724-3cbb-4fe2-ba5a-a223c09c9de1 as coordinator epoch 17 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 99914724). Takeover verification recomputed by epoch 17 from ledgers: grades 31 rows (22 PASS, 5 INVALID R3-011/022/024/026/027, 3 FAIL R3-001/002/003, 1 TEST) + 3 re-run PASS; Rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk hCaptcha = event 5); a sixth invalid event needs a new recorded decision via the parent before further releases (R3-036/R3-046 timeanddate shared-cause drops add 0 events only with browser evidence + scorer-2 confirmation). Valid 53; bars 51/53 original and 52/54 with task 56; need 26 PASS from 28 remaining original positions; closure counts both ways. validate-ledger.py exit 0 (31 rows, 0 errors), ledger-cross-check.py exit 0 (61 verdict files). task_start/runner_pid/codex fields null (no drive running). R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47, pending); on receipt the password goes in the runner spawn message ONLY, never in any file; holder hashes pre-verified by epoch 16. Briefs for R3-035/036/037 ready (pushed 7208d97c). Clone1 calibration APPROVED 4/4 (555b5ddc); first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator even if not reached. Fresh deputy to be spawned (G-24/G-38). State written via temp file then rename (G-48 atomic write)."
   }
  ],
  "pass_count": 22,
@@ -1230,8 +1235,8 @@
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 26 PASS from 28 remaining original positions. Next drive R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
- "coordinator_active": "78fd6562-236c-41ce-a301-836428f45b2d (epoch 16, takeover 2026-11-26T08:03:21.072508+07:00)",
- "epoch": 16,
+ "coordinator_active": "99914724-3cbb-4fe2-ba5a-a223c09c9de1 (epoch 17, takeover 2026-11-26T08:27:04.511782+07:00)",
+ "epoch": 17,
  "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",

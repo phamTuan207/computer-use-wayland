@@ -123,3 +123,4 @@
 2026-11-26T08:03:21.072508+07:00 | epoch 16 takeover | coordinator_active 78fd6562 | rule-A 25/0 | invalid 5/5 | R3-029 held (password) | clone1 approved 4/4
 2026-11-26T08:04:41.542851+07:00 | epoch 16 deputy confirmed c3fe4516 (G-24/G-38 closed) | holder hashes verified | R3-029 held (password)
 2026-11-26T08:05:44.629324+07:00 | epoch 16 briefs prepped R3-035/036/037 (9 files, check 9 spot-check pass) | R3-029 held (password)
+2026-11-26T08:27:04+07:00 epoch 17 takeover (coordinator 99914724); R3-029 held for parent password; Rule-A 25/0
