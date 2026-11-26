@@ -24,7 +24,7 @@
  "completed_positions": 33,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 34,
- "current_task": "R3-067 (position 34, Class S, Codex lane) DRIVING since 2026-11-26T19:10:50+07 (codex exec PID 3209975, driver f6ced820; 30-min deadline 19:40:50). task_start + runner_pid recorded in state at launch. Scoring (after snapshot): Mochi B1 + Fresh B2; prep Clone2 assigned; reviewer Mei. R3-072 briefs pre-staged (6675c6bd).",
+ "current_task": "R3-067 (position 34, Class S) DRIVE COMPLETED 2026-11-26T19:40:21+07 (codex PID 3209975, 19:10:56-19:40:21, 29m25s). Snapshot R3-067-L3 sealed (10 files, manifest 31da7629, gate PASS, pii clean; codex-exec.log held out of snapshot: pii-scan high-entropy hit on HYPRLAND_INSTANCE_SIGNATURE line, raw log kept at /tmp + laptop only). Pair B scoring: Mochi B1 + Fresh B2. Triangle method deviation recorded by runner (multi-drag + bucket fill; computer-use drag is 2-point) for scorers. Foreign Docs item resolved: it is a TAB inside the main Zen window, not a separate window; correctly untouched. task fields CLEARED.",
  "deputy": "dee95d07-524e-4e10-8dcf-271d5b36c65c (epoch 24 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T19:07:21+07:00, after state last_updated 2026-11-26T19:06:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 24 coordinator_active 64030fac, snapshot + verdict paths exist; epoch 23 deputy b3cf2527 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T19:11:31+07:00",
+ "last_updated": "2026-11-26T19:42:55+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "40 rows (1 TEST + 29 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 79 verdict files)",
@@ -1464,6 +1464,11 @@
    "ts": "2026-11-26T19:11:31+07:00",
    "by": "coordinator-epoch-24",
    "text": "R3-067 Clone2 prep DELIVERED: prep note committed 05b9e17a on todolist-push (Pinta Freeform drag-only, Fill Style default, Ellipse+Shift, coordinate gotchas). Coordinator state commit rebased on top (f49ed149) after non-fast-forward rejection, pushed + ls-remote verified. R3-072 prep assigned to Mei via daemon run 35 (19:11:25, outcome=sent verified=True, V12 found in thread); delivery to be verified by her prep commit landing (rung3-run-log/prep/R3-072-prep-mei.md). Mei also notified as R3-067 reviewer + R3-072 analyst on-call. R3-067 drive in flight (PID 3209975, deadline 19:40:50)."
+  },
+  {
+   "ts": "2026-11-26T19:42:55+07:00",
+   "by": "coordinator-epoch-24",
+   "text": "R3-067 DRIVE COMPLETED 2026-11-26T19:40:21+07 (29m25s, inside 30-min limit). PNG 800x600 saved, reopened + verified by runner; driver independently viewed VM copy (red rect, blue circle, green triangle, white bg). Anomalies (full chains in drive-log.txt): (1) triangle drawn via multiple Freeform drags + Paint Bucket fill because computer-use drag accepts exactly 2 points (single held 3-vertex path not expressible); runner recorded the deviation in bao-cao.txt; scorers judge. (2) Ellipse Fill Style is per-tool (first circle outline-only, undone, redrawn filled). (3) monitor guess DP-1 failed, doctor showed eDP-2. (4) save-dialog path fumble, recovered, no stray file. (5) session PTY relaunch. Foreign-window cleanup: NOT closed, the untitled Docs is a tab inside the main Zen window (ws2), not a separate window; left untouched per hard rule. Snapshot sealed 10 files manifest 31da7629975d0f5072e1da5f0a75dfa725a3535d5c114ac508bde1420a2b1f17, gate PASS, pii clean (codex-exec.log excluded after pii-scan high-entropy hit; precedent R3-055 snapshot also carried no raw codex log). task_start/runner_pid CLEARED at drive end. Scoring assigned: Mochi B1 (daemon) + Fresh B2."
   }
  ],
  "pass_count": 24,
@@ -1512,11 +1517,11 @@
  "status": "RUNNING under epoch 24. Rule-A 32 PASS / 1 FAIL (R3-037); valid 52; bars 50/52 original, 51/53 with task 56; need 18 PASS from 19 remaining positions (19 from 20 with task 56); slack 1 FAIL. All 6 invalids EXTERNAL per owner ruling 2026-11-26 17:05; our-side invalid budget 5/5 intact. R3-055 (position 33) GRADED PASS 2026-11-26T19:08:08+07:00. Next: R3-067 (position 34, Codex lane). Check 11 ARMED; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "64030fac-dbec-4359-9fb5-21ae46f944f1 (epoch 24, takeover 2026-11-26T19:06:52+07:00)",
  "epoch": 24,
- "task_start": "2026-11-26T19:10:50+07:00",
- "runner_pid": 3209975,
+ "task_start": null,
+ "runner_pid": null,
  "codex_task": "R3-067 (position 34, Class S, Codex lane; driver f6ced820; wrapper PID 3209968; log ~/rung3-chung-cu/R3-067/codex-exec.log on laptop; 30-min deadline 2026-11-26T19:40:50+07:00)",
- "codex_task_start": "2026-11-26T19:10:50+07:00",
- "codex_runner_pid": 3209975,
+ "codex_task_start": null,
+ "codex_runner_pid": null,
  "graded_count": 30,
  "graded": 6,
  "pass": 22,

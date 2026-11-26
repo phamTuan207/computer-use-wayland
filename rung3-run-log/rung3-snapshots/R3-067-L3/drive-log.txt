@@ -1,0 +1,65 @@
+R3-067 drive log (Asia/Ho_Chi_Minh, +07:00)
+Start: 2026-11-26T19:10:56+07:00. All times below are local wall-clock times shown during the run. No scoring or coordinator state was written.
+
+1) Preflight / protected window
+- Event: initial `hyprctl -j clients` and `hyprctl configerrors` were run before explicitly re-reading HYPRLAND_INSTANCE_SIGNATURE, contrary to the brief.
+- Reasoning: signature needed to be refreshed before any further Hyprland calls.
+- Attempt/fix: read the active instance directory under /run/user/1000/hypr and exported its signature before subsequent hyprctl use.
+- Outcome: configerrors output was empty. Workspace 2 showed Zen titled “Tài liệu không có tiêu đề - Google Tài liệu — Zen Browser.”
+- Decision: did not close it. It was the main Zen window and therefore protected by the hard rule, despite matching the untitled Google Docs description. Verified later that it remained open.
+
+2) Computer-use startup and monitor identification
+- Event: first `computer-use session -- computer-use session-driver` was started without a PTY; it printed ready and exited.
+- Reasoning: the session protocol requires a persistent stdin driver.
+- Attempts/fix: relaunched with a PTY and kept one driver session. The session pill appeared.
+- Outcome: persistent control was available.
+- Event: first screen observation guessed monitor `DP-1` and failed with “monitor no longer exists.”
+- Reasoning: monitor name was unknown; no input had been sent by that failed observation.
+- Attempts/fix: ran read-only `computer-use doctor`, which listed eDP-2 at 1920 x 1200; started a fresh session and observed eDP-2.
+- Outcome: the correct screen observation worked. The unsuccessful session had ended cleanly.
+
+3) App entry through launcher
+- Event: Super+2 produced no visible workspace change in the first screenshot.
+- Reasoning: keyboard shortcut alone had not established the desired app entry path.
+- Attempts/fix: used Super+Space to open the visible Omarchy launcher, typed “Pinta,” and pressed Enter on the Pinta result.
+- Outcome: `computer-use windows` showed Pinta on workspace 2. It was placed beside Zen; Zen was not closed or navigated. No direct application launch command was used.
+
+4) Color Picker focus changes
+- Event: clicking Pinta’s foreground-color chip opened a separate “Color Picker” window. Acting against the Pinta parent observation was refused by the screen/focus guard.
+- Reasoning: the modal had its own window address and had taken focus; replaying against the stale parent observation was unsafe.
+- Attempts/fix: inspected the window list, observed the exact Color Picker window, and entered color through its visible Hex field. Verified red as FF0000FF, blue as 0000FFFF, and green as 00FF00FF before confirming.
+- Outcome: color changes were applied through Pinta’s visible UI; no internal setters or config edits were used.
+
+5) Rectangle
+- Action: selected Rectangle; opened Fill Style and chose Fill Shape; set red and dragged from image coordinate (50, 50) to (350, 250).
+- Outcome: filled red rectangle appeared in the requested region. Pinta history showed Closed Curve Shape Added. No retry was needed.
+
+6) Ellipse fill-style default
+- Event: Ellipse defaulted to Outline Shape even though Fill Shape had been selected for Rectangle. The first Shift-drag from (300, 200) to (500, 400) produced a blue outline circle.
+- Reasoning: Fill Style is per-tool and had not carried over to Ellipse.
+- Attempts/fix: undid the outline, opened Ellipse Fill Style, explicitly selected Fill Shape, set blue in the Color Picker, and repeated the same Shift-drag.
+- Outcome: solid blue circle appeared in the center region. Reopened view confirmed its size and overlap with the rectangle as specified.
+
+7) Freeform triangle and fill attempts
+- Event: the Freeform Shape tool was selected and Fill Shape/green were set. The desktop action interface accepts a drag with exactly two points and releases at its end; it has no held-button move sequence for a multi-vertex path.
+- Reasoning: one continuous press-drag through three vertices and back could not be expressed by this interface. Separate freeform drags create separate strokes and leave seams.
+- Attempts: dragged the three requested edges separately. The first attempt created only a straight edge, as expected for one two-point drag. Added the remaining two edges. The outline showed open seams.
+- Decision: joined the seams with additional short Freeform drags while staying in Pinta. Tried contiguous Paint Bucket inside the triangle; it escaped and filled the white canvas green.
+- Fix/outcome: immediately undid the spill. Added a short apex join; a second bucket fill still escaped and was undone. Increased Freeform brush width to 10, joined the apex and base, and retried; the background still filled, so that spill was undone too. Identified a remaining lower-left seam, added a final joining drag, then used contiguous Paint Bucket again. This time only the triangle filled green. The final pre-save screenshot shows white background, red rectangle, blue circle, and green triangle.
+- Deviation: final appearance is correct, but triangle input was multiple drags plus a contiguous bucket fill, not the requested single uninterrupted hold-and-drag. This limitation and workaround are reported explicitly.
+
+8) Save As path and format
+- Event: Ctrl+Shift+S opened the GTK Save dialog in Pictures with JPEG selected by default.
+- Reasoning: the destination and format both needed explicit selection.
+- Attempts: an early Ctrl+L sequence entered `/home/james/rung3` into the Name field, which displayed `rung3.jpg`; it did not navigate the folder. The dialog reached a JPEG Quality window. Canceled that window and checked; `/home/james/rung3.jpg` did not exist.
+- A stale observation/focus transition ended the first driver session while handling the save dialog. The next attempt targeted an old dialog address and also ended; a fresh `computer-use windows` listing showed the actual Save Image File portal window. Started a new persistent session and observed the current dialog before continuing.
+- Fix: navigated normally in the visible chooser by double-clicking the `rung3` folder, set the Name field to `nd23-hinh-ve.png`, then used the format dropdown’s keyboard navigation until the bottom filter read “PNG image (*.png, *.PNG).” Clicked Save.
+- Outcome: Pinta title changed to nd23-hinh-ve.png. `file` confirmed PNG, 800 x 600, RGBA. No stray `~/rung3.jpg` existed.
+
+9) Reopen and cleanup
+- Action: used Ctrl+O; the visible Open Image dialog showed nd23-hinh-ve.png selected in ~/rung3 with a thumbnail of all three shapes. Clicked Open.
+- Outcome: Pinta history showed Open Image; reopened canvas displayed all three filled shapes. Saved screenshot and a byte-for-byte copy of the PNG into the evidence directory.
+- Cleanup: closed only the task’s Pinta window. `computer-use status` reported `cancelled:false`. Captured the desktop with grim after session finish; no pill was visible. Refreshed HYPRLAND_INSTANCE_SIGNATURE before final `hyprctl -j clients`; no Pinta window remained and protected Zen remained open. No computer-use session driver, cursor guard, or indicator process remained (the process search matched only its own shell command line).
+
+Evidence directory: /home/james/rung3-chung-cu/R3-067/
+Save path: /home/james/rung3/nd23-hinh-ve.png

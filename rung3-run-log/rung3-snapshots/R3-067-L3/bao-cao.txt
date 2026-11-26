@@ -1,0 +1,30 @@
+R3-067 — Codex lane, R3-L3, position 34, Class S
+
+Status: PNG saved and reopened in Pinta. The reopened image shows a red rectangle in the upper-left, a blue circle in the center, and a green filled triangle in the lower-right. The PNG is 800 x 600 pixels.
+
+Entry and canvas
+- Opened Pinta through the Omarchy launcher by searching for “Pinta” and selecting the application. Pinta opened on workspace 2 beside the existing Zen window.
+- Created a new white image in Pinta. The status bar showed 800 x 600; the new blank canvas is captured in 2026-11-26_19-13-44-new-800x600-canvas.jpg.
+
+Shapes
+- Rectangle: Rectangle tool; Fill Style = Fill Shape; primary color red (#FF0000); image-coordinate drag (50, 50) to (350, 250).
+- Circle: Ellipse tool; Fill Style = Fill Shape; primary color blue (#0000FF); held Shift while dragging (300, 200) to (500, 400). An initial outline-only ellipse was undone after observing the per-tool default; Fill Shape was selected for Ellipse and the circle was redrawn filled.
+- Triangle: Freeform Shape tool; Fill Style = Fill Shape; primary color green (#00FF00). The requested edges were made with drags: (650, 350) to (750, 550), (750, 550) to (550, 550), and (550, 550) to (650, 350). Short joining drags were also needed at the seams. The computer-use desktop interface only supports a straight two-point drag and releases the mouse after each drag, so one continuous held path through all three vertices was unavailable. A contiguous Paint Bucket fill was used after closing the seams. Two fill attempts escaped into the white background and were undone; the final attempt filled only the triangle. This is a recorded deviation from the brief’s single continuous Freeform drag.
+
+Save and reopen
+- Saved from Pinta as PNG at /home/james/rung3/nd23-hinh-ve.png.
+- Reopened the saved PNG using Pinta’s Open Image dialog. The Open Image preview and reopened canvas both showed all three colored shapes in the expected regions.
+- `file` reported PNG image data, 800 x 600, 8-bit/color RGBA, non-interlaced. The saved copy is included as nd23-hinh-ve.png.
+
+Evidence files
+- 2026-11-26_19-13-44-new-800x600-canvas.jpg — blank 800 x 600 canvas in Pinta.
+- 2026-11-26_19-30-50-three-shapes-before-save.jpg — three shapes before saving.
+- 2026-11-26_19-37-40-reopened-png-verification.jpg — reopened PNG in Pinta.
+- 2026-11-26_19-38-20-desktop-after-release.png — desktop after computer-use finished; pill absent.
+- nd23-hinh-ve.png — copy of the saved PNG.
+
+Cleanup
+- Pre-drive cleanup found the untitled Google Docs page inside the main Zen window on workspace 2. It was not closed because the brief forbids closing the main Zen window or touching an owner tab. No other separate foreign Google Docs window was identified.
+- Closed the Pinta window opened for this task. `computer-use status` reported cancelled=false, and the post-release desktop screenshot shows no computer-use pill. The remaining windows were the existing desktop windows; no Pinta window remained.
+
+Times are recorded in start_time.txt and end_time.txt (Asia/Ho_Chi_Minh, ISO 8601 with +07:00).
