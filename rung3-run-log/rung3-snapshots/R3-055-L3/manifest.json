@@ -1,0 +1,74 @@
+{
+ "files": [
+  {
+   "mtime": 1795694600,
+   "name": ".gitignore",
+   "sha256": "4cad133d4f0a6cf4bba15f1b8bbae48d6a55f20b94f75487c51a93cc6a5af59f",
+   "size": 26
+  },
+  {
+   "mtime": 1795694599,
+   "name": "README.md",
+   "sha256": "3a66200783a8fc31a21326b587f93d32323ed4516b86332a58a2c51b71b4686c",
+   "size": 176
+  },
+  {
+   "mtime": 1795694604,
+   "name": "bao-cao.txt",
+   "sha256": "4aca5edbbc71cf36d5b0cb5a4103b8303ca8a2985582846f938bb6c5c182a26d",
+   "size": 1731
+  },
+  {
+   "mtime": 1795694597,
+   "name": "drive-log.txt",
+   "sha256": "a1578dc6322f46d52db7a2a622ab72041a21a7cedd5b0dee8f5e40305c5f4ba0",
+   "size": 5204
+  },
+  {
+   "mtime": 1795694612,
+   "name": "end_time.txt",
+   "sha256": "55e0da9070aabcc40d6a5f915fb15d80fc5babd25ef44111cee538b122a72db6",
+   "size": 26
+  },
+  {
+   "mtime": 1795694603,
+   "name": "folder-permissions.txt",
+   "sha256": "3fe45cda4820599fbbabde336cd104a50d3ad5da76f9435228799b263e64fcc0",
+   "size": 752
+  },
+  {
+   "mtime": 1795694611,
+   "name": "pill-gone.png",
+   "sha256": "ed906a70f64386aff38ee1856b33663d7479ed2f85899efb7232885555993593",
+   "size": 9952
+  },
+  {
+   "mtime": 1795694598,
+   "name": "pill-visible.png",
+   "sha256": "ae88e57244fea8916d866a30126a5d2c5327e8c296f7797b4124d82a78af3b35",
+   "size": 12855
+  },
+  {
+   "mtime": 1795694609,
+   "name": "screenshot-20261126-190021.png",
+   "sha256": "02672a73bb2457d82045f156f64172de2cc559a6bfda6813a97e4547b4bbdf73",
+   "size": 715422
+  },
+  {
+   "mtime": 1795694595,
+   "name": "start_time.txt",
+   "sha256": "ef45086c716264c3c3a9d9acf663f6e70ed2984bbabcca498d309403053c7498",
+   "size": 26
+  },
+  {
+   "mtime": 1795694602,
+   "name": "tree-listing.txt",
+   "sha256": "8fe1d0d3c6b3ae3769433dad22ca5546b68e909196c13f29a7872e95386f65be",
+   "size": 598
+  }
+ ],
+ "manifest_sha256": "c679ba432cf3370184f276ead9b48ee87904efba8901abec81d4ebf79f79736c",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-055-L3",
+ "source_dir": "/tmp/r3-055-evidence",
+ "task": "r3-055-evidence"
+}

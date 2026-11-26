@@ -1,0 +1,9 @@
+drwxr-xr-x 1 1000 1000 114 Nov 26 18:56 /home/james/rung3/d06-du-an-moi
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Cong-cu
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Du-lieu
+drwxr-xr-x 1 1000 1000  30 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Kiem-thu
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Kiem-thu/kiem-thu-don-vi
+drwxr-xr-x 1 1000 1000  32 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Ma-nguon
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Ma-nguon/thu-vien
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Ma-nguon/ung-dung
+dr-xr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Tai-lieu

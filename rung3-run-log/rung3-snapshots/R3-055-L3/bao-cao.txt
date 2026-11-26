@@ -1,0 +1,51 @@
+Template structure read (verbatim):
+Du an: <ten du an>
+Thu muc goc: d06-du-an-moi
+Thu muc con cap 1 (5): Tai-lieu, Ma-nguon, Kiem-thu, Du-lieu, Cong-cu
+Thu muc con cap 2 (3): Ma-nguon/thu-vien, Ma-nguon/ung-dung, Kiem-thu/kiem-thu-don-vi
+.gitignore:
+__pycache__/
+*.pyc
+.venv/
+
+Created tree (full paths):
+/home/james/rung3/d06-du-an-moi/Cong-cu
+/home/james/rung3/d06-du-an-moi/Du-lieu
+/home/james/rung3/d06-du-an-moi/Kiem-thu
+/home/james/rung3/d06-du-an-moi/Kiem-thu/kiem-thu-don-vi
+/home/james/rung3/d06-du-an-moi/Ma-nguon
+/home/james/rung3/d06-du-an-moi/Ma-nguon/thu-vien
+/home/james/rung3/d06-du-an-moi/Ma-nguon/ung-dung
+/home/james/rung3/d06-du-an-moi/Tai-lieu
+
+README.md contents:
+# d06-du-an-moi
+
+Creation date: 2026-11-26
+
+## Folders
+
+- Tai-lieu
+- Ma-nguon
+- Ma-nguon/thu-vien
+- Ma-nguon/ung-dung
+- Kiem-thu
+- Kiem-thu/kiem-thu-don-vi
+- Du-lieu
+- Cong-cu
+
+.gitignore contents:
+__pycache__/
+*.pyc
+.venv/
+
+Folder permissions (ls -ldn output; project root and all 8 folders):
+drwxr-xr-x 1 1000 1000 114 Nov 26 18:56 /home/james/rung3/d06-du-an-moi
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Cong-cu
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Du-lieu
+drwxr-xr-x 1 1000 1000  30 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Kiem-thu
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Kiem-thu/kiem-thu-don-vi
+drwxr-xr-x 1 1000 1000  32 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Ma-nguon
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Ma-nguon/thu-vien
+drwxr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Ma-nguon/ung-dung
+dr-xr-xr-x 1 1000 1000   0 Nov 26 18:56 /home/james/rung3/d06-du-an-moi/Tai-lieu

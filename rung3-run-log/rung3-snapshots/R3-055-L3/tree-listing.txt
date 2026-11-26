@@ -1,0 +1,11 @@
+-rw-r--r-- /home/james/rung3/d06-du-an-moi/.gitignore
+-rw-r--r-- /home/james/rung3/d06-du-an-moi/README.md
+dr-xr-xr-x /home/james/rung3/d06-du-an-moi/Tai-lieu
+drwxr-xr-x /home/james/rung3/d06-du-an-moi
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Cong-cu
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Du-lieu
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Kiem-thu
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Kiem-thu/kiem-thu-don-vi
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Ma-nguon
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Ma-nguon/thu-vien
+drwxr-xr-x /home/james/rung3/d06-du-an-moi/Ma-nguon/ung-dung
