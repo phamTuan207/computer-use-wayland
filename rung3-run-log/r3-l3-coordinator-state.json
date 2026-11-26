@@ -24,7 +24,7 @@
  "completed_positions": 28,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 29,
- "current_task": "EPOCH 21: R3-045 (position 29, Codex lane) drive ENDED 15:09:37 BLOCKED at ezgif URL-upload stage (service-side fetch failure, INVALID candidate). Snapshot sealed ae8b7299 (8 files; gate FAIL expected: ket-qua.txt + anh-dong.gif never produced). Scoring next (Clone2 + Fresh). Rule-A 28/1. 6TH INVALID EVENT THREAT: budget 5/5 exhausted; if graded INVALID, a new recorded team decision via parent is required BEFORE further releases.",
+ "current_task": "EPOCH 21: R3-045 (position 29) snapshot pushed cfc1e63c (manifest ae8b7299, 9 files). Pair B scoring dispatched: Clone2 scorer 1 (PWA sent) + Fresh scorer 2 (501248a2). Verdicts due ~15:45 on branches clone2/verdict-R3-045-L3 + fresh/verdict-R3-045-L3. Rule-A 28/1. HOLD further releases after grading if INVALID (event 6 needs new recorded decision via parent).",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T15:12:20+07:00",
+ "last_updated": "2026-11-26T15:12:50+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "35 rows (1 TEST + 25 PASS + 5 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 69 verdict files)",
@@ -1314,6 +1314,11 @@
    "ts": "2026-11-26T15:12:20+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-045 DRIVE ENDED 2026-11-26T15:09:37+07:00 (Codex exec PID 2892216, runner start 14:54:14, corrected from provisional 14:52:08; 15m23s, inside timeout). BLOCKED at ezgif URL-upload stage: page https://ezgif.com/maker?err=http, \"The HTTP request has failed. The URL may be incorrect, or the remote server has blocked our access.\" No Ray ID. Runner waited 60s, screenshotted block (20261126-150806-block.jpg, driver viewed it), wrote block-evidence.txt, stopped per bot-check rule. No GIF created; ket-qua.txt + anh-dong.gif correctly absent. Probe clean (webdriver false, shim bb49ff3f); pill released, grim proof; no cookies cleared; owner tabs untouched. Evidence pulled laptop->VM (scp -p, 8 files sha256-verified); collect-evidence FAIL + manifest-gate FAIL (required ket-qua.txt + anh-dong.gif missing, expected on the block path); snapshot R3-045-L3 manifest ae8b7299f91b2c86c6939ed77d9c54b518e45e0fb9462aa3b8c11c7a86e55de1 (8 files) sealed as-is for scoring (R3-026 precedent); pii-scan clean. task_start/runner_pid cleared at drive end. INVALID BUDGET: 5/5 EXHAUSTED. If R3-045 grades INVALID it is event 6: new recorded team decision via parent REQUIRED before further releases; parent notified at scoring dispatch. Check 11 note: block is ezgif server-side fetch failure (picsum), not a bot wall on our shimmed browser (probe clean, page loaded); re-proof trigger not fired on this evidence, scorers + coordinator to confirm at grading."
+  },
+  {
+   "ts": "2026-11-26T15:12:50+07:00",
+   "by": "coordinator-epoch-21",
+   "text": "R3-045 SCORING DISPATCHED 2026-11-26T15:12:50+07:00. Clone2 scorer 1 via PWA (sent, textareaCleared). Fresh scorer 2 spawned (501248a2-7704-4aec-86b9-b9e3beef2fa6). Verdicts due ~15:45 on branches clone2/verdict-R3-045-L3 + fresh/verdict-R3-045-L3. Parent notified of 6th-invalid threat at dispatch."
   }
  ],
  "pass_count": 24,

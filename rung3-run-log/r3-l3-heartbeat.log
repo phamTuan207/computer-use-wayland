@@ -147,3 +147,4 @@
 2026-11-26T14:51:15+07:00 epoch 21: R3-037 GRADED FAIL (A1+A2 agree, timeout); ledger 35 rows, validators exit 0; Rule-A 28/1; releasing R3-045 next
 2026-11-26T14:52:08+07:00 epoch 21: R3-045 RELEASED (Codex lane, driver 1db67099, task_start provisional); R3-037 FAIL filed
 2026-11-26T15:12:20+07:00 epoch 21: R3-045 drive ENDED BLOCKED (ezgif fetch failure, INVALID candidate); snapshot sealed ae8b7299; scoring dispatching; 6th-invalid threat notified
+2026-11-26T15:12:50+07:00 epoch 21: R3-045 scoring dispatched (Clone2 PWA + Fresh 501248a2); verdicts due ~15:45
