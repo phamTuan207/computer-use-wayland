@@ -117,3 +117,4 @@
 - Evidence: snapshot R3-079-L3 (13 files + manifest, manifest sha256 d0bedcee, gate PASS, pii clean).
 - Reset (Class L, after scoring): ~/rung3/d46-restored/bao-cao-tuan.txt removed; evidence dir ~/rung3-chung-cu/R3-079 cleared; diff -r -q ~/rung3/ ~/rung3-goc/ empty again.
 - Score after: Rule-A 39 PASS / 1 FAIL (valid 52, bars 50/52 and 51/53; need 11 PASS from 12 remaining original positions, 12 from 13 with task 56; slack 1 further FAIL).
+2026-11-26T23:44:08+07:00 | R3-082 | position 41 | PASS | Fresh B1 + Fresh B2 PASS, audits PASS, no tiebreaker | Rule-A 40/1
