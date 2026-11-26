@@ -151,11 +151,20 @@ All commits on todolist-push, ls-remote verified. Final tip 914ad171.
 - R8 machine-layer anomalies: laptop fastest-paths.md (R8 block) +
   keybinds.md golden rules 10-12, corroborated items only, each cited.
 
-Deferred with owners recorded: R13 (batch with R11 follow-up), R14 ops
-cleanup (after R6, verify-first), R15 daemon diagnosis (instrument
-first), R16 (alert first; restart authority is owner's), R17 Zen folder
-tooling (Clone2 artifact exists: improvements/zen-sidebar/, commits
-c045bfe4 + 8bc66191; laptop throwaway-profile proof owed before any
-integration), R20/R21/R23 (laptop batch / process / experiment).
+- R14 ops cleanup: DONE 05:07 27/11. Foreign untitled Google Docs tab
+  (R3-046 leftover) verified empty twice via BiDi (editor text empty,
+  0 paragraphs), closed by full context ID; all 7 owner essentials
+  confirmed present after; ws2 has only the owner Zen window. Note:
+  the zen_live pinned dump failed with a raw Marionette client error
+  during this cleanup (retried, same error) - first live data point
+  for the R17 verification (Marionette session coexistence caveat in
+  Clone2's report section 2).
+
+Deferred with owners recorded: R13 (batch with R11 follow-up), R15
+daemon diagnosis (instrument first), R16 (alert first; restart
+authority is owner's), R17 Zen folder tooling (Clone2 artifact exists:
+improvements/zen-sidebar/, commits c045bfe4 + 8bc66191; laptop
+throwaway-profile proof owed before any integration), R20/R21/R23
+(laptop batch / process / experiment).
 Owner-decision items: R19, R10 durable direction, R16 restart
 authority, R22, R15 service-manager move (section above).
