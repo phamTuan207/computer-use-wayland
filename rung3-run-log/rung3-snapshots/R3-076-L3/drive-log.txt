@@ -1,0 +1,39 @@
+Event 1 — launcher input refusal
+Failure: at 21:37:19+07:00 the driver rejected Super alone with “key action needs a non-modifier key”; completed=0 and no input was sent.
+Reasoning: the desktop driver requires a non-modifier in each key action.
+Attempts: requested Super followed by typing “terminal”.
+Decision: refresh the observation and use Super+Space to open the launcher.
+Fix: use the valid Super+Space chord and click the visible Applications entry.
+Outcome: the launcher opened and Foot was started from Applications on ws2.
+
+Event 2 — unintended editor text
+Failure: at 21:38:05+07:00 typing “terminal” while the launcher was open appended it to a focused unsaved VS Code line.
+Reasoning: Super+Space opened the launcher without moving keyboard focus from the editor.
+Attempts: close the launcher with Escape, then issue Ctrl+Z in the visible editor.
+Decision: undo the single insertion immediately.
+Fix: Ctrl+Z, then inspect the editor line.
+Outcome: the line visibly returned to its prior text (“Hello grouping.”); no file was saved or changed.
+
+Event 3 — driver ended during process command
+Failure: around 21:41:20+07:00 the computer-use relay process exited while the process-list action had no returned completion response; d42-lenh-tien-trinh.txt was absent.
+Reasoning: the command was not confirmed and the saved output did not exist.
+Attempts: read-only session status and file check; no timeout kill, SIGTERM, command replay, or file overwrite. Waited about 10 minutes, then checked CLI help and searched for session.new; no session.new artifact was present.
+Decision: start one fresh computer-use session after the recovery wait; verify terminal state and file absence first.
+Fix: re-enter the process command once in the visible terminal after confirming the file was absent.
+Outcome: timestamped process output was saved at 21:54:34+07:00; it contains exactly five rows. Report was written in the terminal and the final self-check passed. Disk and RAM commands were not rerun.
+
+Event 4 — initial self-check parser counted the header
+Failure: the first read-only check asserted because its process parser included the command header as a row.
+Reasoning: the process file begins with a timestamp, then a header, then five data rows.
+Attempts: inspected the saved command and report rows; values aligned.
+Decision: change the check to skip both the timestamp and header.
+Fix: parse proc[2:] and rerun the read-only assertions.
+Outcome: PASS: all 3 sections; recording time present; disk and RAM values match saved command files; exactly 5 process rows and name/PID/CPU/RSS/%MEM match; all four evidence copies are byte-identical. No command file was edited or rerun after saving.
+
+Event 5 — stale observation refusal while closing terminal
+Failure: at about 21:57:39+07:00 the terminal-close action was refused because its observation had expired; completed=0 and no input was sent.
+Reasoning: the desktop action guard requires a fresh observation before input.
+Attempts: requested type “exit” and Enter using the prior report-write observation.
+Decision: do not replay from stale state; observe the desktop again.
+Fix: capture a fresh screen observation, click the visible terminal prompt, then type exit and press Enter.
+Outcome: the terminal exited cleanly; computer-use windows --class foot returned an empty list.

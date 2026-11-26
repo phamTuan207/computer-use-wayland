@@ -1,0 +1,16 @@
+Disk
+Free on /: 225G
+
+RAM
+Free (free column): 1.3Gi
+Available: 18Gi
+
+Top 5 processes by CPU
+Name | PID | CPU % | RAM RSS (KiB; %MEM)
+zen-bin | 578117 | 2.7 | 806632 (2.4%)
+Hyprland | 1756 | 1.9 | 209600 (0.6%)
+quickshell | 1866 | 0.9 | 718316 (2.2%)
+python3 | 3455932 | 0.8 | 60292 (0.1%)
+chromium | 12605 | 0.7 | 242240 (0.7%)
+
+Recording time: 2026-11-26T21:55:26+07:00

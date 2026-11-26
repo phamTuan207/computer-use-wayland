@@ -1,0 +1,7 @@
+2026-11-26T21:54:34+07:00
+COMMAND             PID %CPU %MEM   RSS
+zen-bin          578117  2.7  2.4 806632
+Hyprland           1756  1.9  0.6 209600
+quickshell         1866  0.9  2.2 718316
+python3         3455932  0.8  0.1 60292
+chromium          12605  0.7  0.7 242240

@@ -1,0 +1,3 @@
+2026-11-26T21:40:54+07:00
+Filesystem                Size  Used Avail Use% Mounted on
+/dev/mapper/omarchy_root  385G  157G  225G  42% /

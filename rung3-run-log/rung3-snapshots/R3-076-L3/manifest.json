@@ -1,0 +1,74 @@
+{
+ "files": [
+  {
+   "mtime": 1795705435,
+   "name": "bao-cao.txt",
+   "sha256": "af9bc865312f45fb9bee1ded2eafced0c22bee66ab89ab7331a84ccfdc8b3af8",
+   "size": 4050
+  },
+  {
+   "mtime": 1795705554,
+   "name": "codex-R3-076.log",
+   "sha256": "f1cebc632cd367e850eec4a9693c9adf7e2c53f06a5dc01ab87fc669e6242bd0",
+   "size": 415351
+  },
+  {
+   "mtime": 1795705439,
+   "name": "d42-bao-cao.txt",
+   "sha256": "3d8ef6410abb531b198fe311657366594cd156bad25714a1963c476d7641a74e",
+   "size": 371
+  },
+  {
+   "mtime": 1795705442,
+   "name": "d42-lenh-dia.txt",
+   "sha256": "1ab5cfb34c0bbf8f3a4e28b2bca814d9b0f8a94b23a52f5cf901f3d016347b00",
+   "size": 135
+  },
+  {
+   "mtime": 1795705445,
+   "name": "d42-lenh-ram.txt",
+   "sha256": "501793d05e3c4b34f8a71d1a4162c7e18487d4aacbf119564031d19e49386501",
+   "size": 233
+  },
+  {
+   "mtime": 1795705449,
+   "name": "d42-lenh-tien-trinh.txt",
+   "sha256": "db5d1865a8f0a48376d1443fa290436b626373f58ee93d62d737904a0cae76fb",
+   "size": 270
+  },
+  {
+   "mtime": 1795705524,
+   "name": "desktop-after-release.png",
+   "sha256": "7ef049ce0a300964be972ad61309474bce147be1286d4482dbd02763530316c1",
+   "size": 702294
+  },
+  {
+   "mtime": 1795705452,
+   "name": "drive-log.txt",
+   "sha256": "b4cc8df0076ea892e1806f0f75884191633050b32b4551a98e50b6fe8a28885a",
+   "size": 3368
+  },
+  {
+   "mtime": 1795705455,
+   "name": "end_time.txt",
+   "sha256": "3ec7a7c80320f5a5c961a8e66447c4ef8e90b427aa8b2de1b28dcc70b8d26a3c",
+   "size": 26
+  },
+  {
+   "mtime": 1795705422,
+   "name": "start_time.txt",
+   "sha256": "040ca0a66cc1df61355fa6b6d651c1ddb14abad77a5dd749180db234e8ac09ba",
+   "size": 26
+  },
+  {
+   "mtime": 1795705676,
+   "name": "tier-a-output.json",
+   "sha256": "430a4080f77f702c512980d4023b81f390a62015e8182f5a1f9c42ccad1fd16c",
+   "size": 515
+  }
+ ],
+ "manifest_sha256": "a1536801b5b3ba3d1d564fa6e3b56281237619529cc652f6ccd1122c7a8b469f",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-076-L3",
+ "source_dir": "/tmp/r3-076-evidence",
+ "task": "r3-076-evidence"
+}
