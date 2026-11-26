@@ -1043,3 +1043,6 @@ Clone2 da nhan batch 12 (giao 10:44, commit 0521d6c): 3 viec, moi viec council 3
 
 ## Da nhan thong bao het limit, 12:20 ngay 22/11
 Clone2 da nhan thong bao cua Muse (01089dd, 12:16): clone2 het weekly usage limit luc khoang 12:14, reset 02:38 sang thu 4 ngay 25/11, tu gio khong giao viec moi cho clone2. Batch 12 da xong ca 3 viec (viec 1 fix pass 4dd05b0, viec 2 fix pass b892918 va 6ab0c04, viec 3 e248a7a + fix pass 9993e25), tong ket dong batch de clone1 lam (batch 11 viec 4). Watchdog van chay theo lich de theo doi cac lane khac.
+
+## Da nhan brief R3-098 va R3-099, 02:48 ngay 27/11
+Clone2 da nhan brief scorer R3-098 (ce8f1a82, 02:39:06) va R3-099 (6292d1fa, 02:47:27) tren todolist-push. R3-098: scorer 2, scorer 1 la Fresh; R3-098 dang driving tu 02:44:36 (PID 3912527, deadline 03:14:36), snapshot chua seal, clone2 se cham sau khi snapshot seal va co manifest sha256. R3-099: scorer 1, scorer 2 la Fresh; chua driving. R3-096 da cham xong va giao (ac99be6a), dieu phoi da grade PASS (f7ed6c2b, 02:41:58).
