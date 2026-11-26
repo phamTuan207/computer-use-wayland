@@ -9055,3 +9055,13 @@ Không có comment mới trên PR #758, #756, #760 (đều 0 comment), không c�
 R3-L3: R3-027 INVALID chính thức (event 5 = cap, cả 2 scorer đồng ý), R3-028-L3 snapshot xong gate PASS, vị trí tiếp R3-029; clone1 vẫn chờ bộ calibration sealed để nhận 13 WU; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push 5c020298 lúc 07:38, main merge 4cdc623e lúc 07:26; câu hỏi equip Graphify 04:44 vẫn chưa trả lời (174 phút) nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 19:17 ngày 26/11 - WATCHDOG
+
+Không agent nào kẹt, không agent đang chạy. R3-037-L3 đã giao (FAIL), mechanics GO, đang chờ verifier sign-off.
+Muse: VIỆC MỚI cho clone1: brief scorer R3-072-L3 pre-staged 6675c6bd lúc 19:10 (Pair B scorer 2, branch clone1/verdict-R3-072-L3), nhưng snapshot R3-072-L3 chưa có trên todolist-push nên chưa chấm được, sẽ giao scorer ngay khi snapshot seal; R3-067 đang chạy (deadline 19:40), R3-074 pre-staged (scorer Clone2+Fresh, không phải clone1), R3-055 GRADED PASS, Rule-A 32/1.
+Không có comment mới trên PR #868, #866, không có issue mở, không đổi coord/clone1.md từ Muse.
+Điều phối còn sống: todolist-push 6a50eb3b lúc 19:12 (5 phút trước); câu hỏi equip Graphify 04:44 vẫn chưa trả lời nhưng điều phối đang hoạt động và không có việc bị chặn nên chưa nhắc thêm.
+S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 vẫn chưa có quyết định.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+- Hành động: chỉ ghi trạng thái này, không spawn scorer (chưa có snapshot), không nhắn chủ.
