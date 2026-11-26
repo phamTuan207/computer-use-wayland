@@ -1,0 +1,86 @@
+R3-074 drive log
+Timezone: Asia/Ho_Chi_Minh (+07:00)
+Task start: 2026-11-26T20:29:44+07:00
+Elapsed values are measured from that start.
+
+Preflight — 20:29:44 (+00:00)
+Observed: workspace 2 was active, computer-use status was free, and hyprctl configerrors was empty. A Python formatting command used to print the window list failed with SyntaxError: '(' was never closed.
+Reasoning: this was a read-only diagnostic formatting error, not a desktop/configuration failure.
+Attempts: discarded that command and queried the windows with a simpler read-only Python expression; checked configerrors again.
+Decision: continue after confirming configerrors stayed empty and the computer-use session was free.
+Fix: simplified the diagnostic command.
+Outcome: preflight completed without changing the desktop or config.
+
+Pill session 1 — acquired 20:29:55 (+00:11)
+The session driver started. A grim screenshot at 20:30:03 showed the exact label “Computer use active” (pill-during-drive.png).
+
+Terminal launch anomaly — 20:30:04 to 20:31:11 (+00:20 to +01:27)
+Failure: Ctrl+Alt+T did not open a terminal. A Super-only key action was refused before input with “key action needs a non-modifier key”. Super+Space opened the app launcher but did not open a terminal.
+Reasoning: the assumed shortcut was not configured; the refused Super-only action sent no input.
+Attempts: tried Ctrl+Alt+T, then Super by itself, then Super+Space.
+Decision: use the visible launcher/desktop shortcut sequence rather than run a shell command outside the terminal.
+Fix: Super+Return opened Kitty on workspace 2.
+Outcome: Kitty was visible and used for the required initial run.
+
+Unexpected session exit — 20:31:22 (+01:38)
+Failure: the first session driver exited while an observation of Kitty was pending; the relay process handle then returned “Unknown process id”.
+Reasoning: the process had ended on its own. No timeout kill or SIGTERM was used.
+Attempts: checked computer-use status, listed windows, and captured the desktop with grim.
+Decision: preserve the still-open Kitty window and start a fresh session driver.
+Fix: started a new computer-use session at 20:31:49 (+02:05).
+Outcome: pill was visible again (confirmed by grim screenshot pill-during-drive.png); work resumed in Kitty.
+
+Initial error — 20:32:45 (+03:01)
+Entered python3 ~/rung3/d40-tinh-toan.py in Kitty. It failed with NameError: name 'tongue' is not defined. Did you mean: 'tong'? The terminal screenshot was saved before editing as 2026-11-26T20-33-02+07-00-initial-error.png.
+
+Editor search anomaly — 20:33 to 20:36 (approximately +03:16 to +06:16)
+Failure: searching “text editor” highlighted a Sublime Text setup/defaults result; pressing Enter opened an Omarchy terminal that requested a sudo password instead of an editor.
+Reasoning: the selected result was a setup action, not the text editor. No password was entered.
+Attempts: tried Escape, Alt+F4, and clicking the dialog then Escape; those did not close the prompt. Ctrl+C cancelled the pending prompt, then Alt+F4 on the focused task-created window closed it.
+Decision: use the desktop search result explicitly labeled “Visual Studio Code — Text Editor”.
+Fix: searched “Visual Studio Code” and clicked that result.
+Outcome: VS Code opened on workspace 2. No credentials were entered and no owner/browser tab was closed or navigated.
+
+File-open navigation anomaly — approximately 20:37 to 20:40 (+07:16 to +10:16)
+Failure: Ctrl+O opened the GUI file picker in /tmp. Ctrl+L followed by the full script path left the picker showing a file list instead of opening the file.
+Reasoning: the location shortcut did not navigate in that picker.
+Attempts: selected Home, opened the rung3 folder, and used the picker's visible search control with d40-tinh-toan.py.
+Decision: open the exact matching file shown by the picker.
+Fix: double-clicked d40-tinh-toan.py in the rung3 folder.
+Outcome: the script opened in the VS Code editor. The complete 12-line file was visible. Screenshot 2026-11-26T20-41-08+07-00-editor-faulty-line.png shows line 8 and the prior line 7 assignment.
+
+Fault identification and fix — 20:41:00 to 20:41:21 (+11:16 to +11:37)
+Failure: line 8 referenced undefined tongue; line 7 assigns the sum to tong.
+Reasoning: the single misspelled reference caused the NameError; changing it to the existing name preserves the loop, inputs, output format, and file-writing logic.
+Attempts: read all code in VS Code and compared the reference with the adjacent assignment.
+Decision: make the smallest one-token correction.
+Fix: replaced {tongue} with {tong} in the line 8 f-string and saved with Ctrl+S.
+Outcome: the editor showed the corrected line; no variable was renamed and no other logic was changed.
+
+Launcher text reached terminal prompt — before run 1, approximately 20:41:46 (+12:02)
+Failure: when Kitty was focused again, “Visual Studio” was present as unsubmitted prompt text.
+Reasoning: launcher search text had reached the terminal prompt after focus changed; it had not been executed.
+Attempts: inspected the prompt before entering a command.
+Decision: clear the unsubmitted text before running the fixture.
+Fix: Ctrl+U cleared the line, then entered python3 ~/rung3/d40-tinh-toan.py.
+Outcome: only the intended script command was submitted. Run 1 completed without an error and printed all 10 expected result lines.
+
+Run 1 evidence — 20:42:24 to 20:42:31 (+12:40 to +12:47)
+Displayed the generated result with cat in Kitty. Saved 2026-11-26T20-42-43+07-00-run1-terminal.png and copied the generated result to ket-qua-run1.txt. Copied the fixed working script to d40-tinh-toan.py in the evidence folder.
+
+Run 2 — 20:43 to 20:44 (+13:16 to +14:16)
+Ran python3 ~/rung3/d40-tinh-toan.py again in Kitty. It returned to the prompt with no error. Displayed the result file again and copied it to ket-qua-run2.txt. Saved 2026-11-26T20-44-02+07-00-run2-terminal.png.
+Verification outcome: each result file has 10 lines; run 1 and run 2 compare byte-for-byte identical; the working result matches d40-ket-qua-ky-vong.txt; the evidence script copy compares byte-for-byte identical to the working script.
+
+Cleanup — 20:44 to 20:46 (+14:16 to +16:34)
+Failure: Alt+F4 did not close the task-created Kitty window.
+Reasoning: the shell remained open at its prompt.
+Attempts: focused the exact Kitty window and used Ctrl+D at the shell prompt.
+Decision: exit only the task-created shell.
+Fix: Ctrl+D.
+Outcome: Kitty closed. In VS Code, Ctrl+W closed only the task script tab. The window still contained a pre-existing unsaved “Hello grouping” tab, so the window was left open to avoid discarding that work.
+
+Pill session 2 — acquired 20:31:49 (+02:05), released 20:46:18 (+16:34)
+Sent finish and received {"ok": true, "driver": "finished"}. Grim screenshot desktop-after-pill-release.png was captured at 20:46:26 and visibly shows no pill. computer-use status returned ok with cancelled=false. The fixed script and result file were left in place; no fixture reset was performed.
+
+Task completion recorded: 2026-11-26T20:49:44+07:00 (+20:00 elapsed). The post-release desktop screenshot was captured at 20:46:26+07:00.

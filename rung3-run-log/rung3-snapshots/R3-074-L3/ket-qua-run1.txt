@@ -1,0 +1,10 @@
+dong 1: tong = 7
+dong 2: tong = 9
+dong 3: tong = 15
+dong 4: tong = 11
+dong 5: tong = 14
+dong 6: tong = 24
+dong 7: tong = 13
+dong 8: tong = 18
+dong 9: tong = 15
+dong 10: tong = 13

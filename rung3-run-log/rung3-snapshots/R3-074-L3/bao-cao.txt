@@ -1,0 +1,35 @@
+Task ID: R3-074
+
+Initial error
+Command entered in the terminal: python3 ~/rung3/d40-tinh-toan.py
+Error: NameError: name 'tongue' is not defined. Did you mean: 'tong'?
+The traceback pointed to line 8, in main.
+
+Faulty line identified in the GUI editor
+Line 7 assigns the sum to tong:
+    tong = a[i] + b[i]
+Line 8 used the undefined name tongue:
+    ket_qua.append(f"dong {i+1}: tong = {tongue}")
+
+Exact fix
+Old: {tongue}
+New: {tong}
+Only that reference was changed. No variable was renamed and the main logic was unchanged.
+
+Run 1
+The fixed script completed without an error. The result file contained 10 lines and matched d40-ket-qua-ky-vong.txt. The run 1 copy is ket-qua-run1.txt.
+
+Run 2
+The fixed script completed without an error. The result file again contained 10 lines. ket-qua-run1.txt and ket-qua-run2.txt compare byte-for-byte identical; the result also matches d40-ket-qua-ky-vong.txt. The fixed script evidence copy compares byte-for-byte identical to the working script.
+
+Result lines
+dong 1: tong = 7
+dong 2: tong = 9
+dong 3: tong = 15
+dong 4: tong = 11
+dong 5: tong = 14
+dong 6: tong = 24
+dong 7: tong = 13
+dong 8: tong = 18
+dong 9: tong = 15
+dong 10: tong = 13

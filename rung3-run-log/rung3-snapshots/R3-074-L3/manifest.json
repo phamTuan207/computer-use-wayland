@@ -1,0 +1,104 @@
+{
+ "files": [
+  {
+   "mtime": 1795701104,
+   "name": "2026-11-26T20-33-02+07-00-initial-error.png",
+   "sha256": "c171ac18a979586d5649463b281ed86e9d8645e8d2e4b62c452f3620b7bacc0e",
+   "size": 1446264
+  },
+  {
+   "mtime": 1795701107,
+   "name": "2026-11-26T20-41-08+07-00-editor-faulty-line.png",
+   "sha256": "fc9f15d9336411bcd4a636d13afab299baa22739692700f21834fd76478795b5",
+   "size": 678802
+  },
+  {
+   "mtime": 1795701111,
+   "name": "2026-11-26T20-42-43+07-00-run1-terminal.png",
+   "sha256": "d96865502e8b3330afc313c362b476c2b54245bb1c78646a4f6032b3334e7b86",
+   "size": 1146780
+  },
+  {
+   "mtime": 1795701114,
+   "name": "2026-11-26T20-44-02+07-00-run2-terminal.png",
+   "sha256": "e463e505176b256a913c71ecfd42aabb7b493135a4a42e364e5f558d102f2c27",
+   "size": 1112255
+  },
+  {
+   "mtime": 1795701116,
+   "name": "bao-cao.txt",
+   "sha256": "72d6728a1abc4692d112fd0b959429fe324d98d9af3ac7f92fdd1c9a3780c840",
+   "size": 1178
+  },
+  {
+   "mtime": 1795701143,
+   "name": "codex-R3-074.log",
+   "sha256": "5a37cbb2e8a0c5bbaefee843584f982de7e5ed0a871346012d1fe01c01cc9e23",
+   "size": 813380
+  },
+  {
+   "mtime": 1795701314,
+   "name": "d40-ket-qua.txt",
+   "sha256": "f737a14b0e450ed29e2b5842ca7a967a6c93cae20a500462dae027006a68d091",
+   "size": 179
+  },
+  {
+   "mtime": 1795701118,
+   "name": "d40-tinh-toan.py",
+   "sha256": "01b2b00f3c57cb6960e2746015ab01705424e5c0bdcf8dced5857226e6cdac9c",
+   "size": 375
+  },
+  {
+   "mtime": 1795701121,
+   "name": "desktop-after-pill-release.png",
+   "sha256": "a40baafad59ccc122dd5a6926e8bfe1419039db13c9b67b131d9b6acfdaaba9e",
+   "size": 702182
+  },
+  {
+   "mtime": 1795701123,
+   "name": "drive-log.txt",
+   "sha256": "303557bce438dfbad00ea894f32d1aa9c48ae4cc27dcb0c503d0e07a61bc065a",
+   "size": 7182
+  },
+  {
+   "mtime": 1795701124,
+   "name": "end_time.txt",
+   "sha256": "8def805c4e6c6ff63e6b89a542aed15f5b17a738e2af14c50e05a48008835e6e",
+   "size": 26
+  },
+  {
+   "mtime": 1795701126,
+   "name": "ket-qua-run1.txt",
+   "sha256": "f737a14b0e450ed29e2b5842ca7a967a6c93cae20a500462dae027006a68d091",
+   "size": 179
+  },
+  {
+   "mtime": 1795701127,
+   "name": "ket-qua-run2.txt",
+   "sha256": "f737a14b0e450ed29e2b5842ca7a967a6c93cae20a500462dae027006a68d091",
+   "size": 179
+  },
+  {
+   "mtime": 1795701131,
+   "name": "pill-during-drive.png",
+   "sha256": "7f8dfd84c57455c6a92e9397f3a95614e07700eb73ec15b327c8a493ead5f356",
+   "size": 532522
+  },
+  {
+   "mtime": 1795701170,
+   "name": "r3-074-pill-gone-check.png",
+   "sha256": "c26a0eaebcfc25943e1da33d773c2692d60be24e3713f4cd550bb8c4e6eab28f",
+   "size": 702205
+  },
+  {
+   "mtime": 1795701132,
+   "name": "start_time.txt",
+   "sha256": "024a36337794a765a61aa2297953cf1c84b2291429db4463e70065c52d431b15",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "1ee10926325f80f26094000190eaaca751225542afd9cb8932d422fba1a83950",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-074-L3",
+ "source_dir": "/tmp/r3-074-evidence",
+ "task": "r3-074-evidence"
+}
