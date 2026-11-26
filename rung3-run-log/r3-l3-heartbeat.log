@@ -139,3 +139,4 @@
 2026-11-26T13:26:00+07:00 epoch 21: R3-035 GRADED PASS (A1+A2 agree); ledger 33 rows, validators exit 0; releasing R3-036 next
 2026-11-26T13:25:33+07:00 epoch 21: R3-036 RELEASED (runner 1e25ec14, task_start set); R3-035 PASS filed
 2026-11-26T14:04:51+07:00 epoch 21: R3-036 drive COMPLETED, snapshot sealed f857cf4f, no bot block; scoring dispatching
+2026-11-26T14:05:23+07:00 epoch 21: R3-036 scoring dispatched (Mochi run 240 + Fresh 861775d2); verdicts due ~14:35
