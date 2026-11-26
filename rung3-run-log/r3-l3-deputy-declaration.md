@@ -531,3 +531,38 @@ I am on STANDBY under section 7 fencing; I issue NO orders unless the coordinato
 Standing rules acknowledged: English only; ydotool BANNED; no personal info on GitHub; never close or navigate owner tabs, pinned tabs, essentials, or ws3 windows; ws2 is the work workspace; never restart Zen; pill "Computer use active" on any agent control; SSH to laptop ONLY via ~/workspace/ssh-laptop.sh with short commands; never assume an agent capability, verify live; git explicit pathspec on add and commit, never git add -A, verify pushes via ls-remote; Ponytail for code work; Graphify for codebase context; no credential values anywhere.
 
 This deputy stands by. If told to stand down, this deputy ends.
+
+---
+
+## Deputy declaration, epoch 21 (2026-11-26T13:22:22+07:00)
+
+- Session id: 7dc113ac-e18d-42bd-96e4-ca580731e587
+- Declaration timestamp: 2026-11-26T13:22:22+07:00 (after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied)
+- Epoch: 21
+- coordinator_active: f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00, commit b93cfa4b on todolist-push)
+- Role: fresh deputy coordinator for R3-L3, epoch 21, STANDBY ONLY under re-plan section 7 fencing. I hold NO authority while coordinator f79cb9eb-9eee-4419-a5cf-31524d7340ad is alive. I issue NO orders while the coordinator is alive.
+
+## What this replaces
+
+This declaration REPLACES the declaration by deputy session 4b4924ac-9e6c-48fd-936a-20ad6786c5bb (epoch 20, 2026-11-26T12:48:30+07:00), which is SUPERSEDED and holds no deputy authority. All earlier deputy sessions remain superseded. I am the new deputy, appointed by the parent after the epoch 21 coordinator takeover. I have NOT edited the state file; the coordinator records my identity. This declaration APPENDS to this file, never overwrites it. I do NOT commit or push; the coordinator does that.
+
+## What I read
+
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-coordinator-state.json (epoch 21 state, last_updated 2026-11-26T13:22:00+07:00, verified live, parses as JSON: coordinator_active f79cb9eb-9eee-4419-a5cf-31524d7340ad, epoch 21, current_position 26, task_start null)
+- ~/workspace/r3l3-run-wt/rung3-run-log/r3-l3-deputy-declaration.md (existing declarations; this declaration APPENDS)
+
+## Dry run (all 5 PASS, 2026-11-26T13:22:01+07:00 to 2026-11-26T13:22:22+07:00)
+
+1. Laptop SSH PASS: `~/workspace/ssh-laptop.sh hostname` returned `omarchy`, exit 0 (~3.1s). Short command only via ssh-laptop.sh.
+2. FCC tmux session PASS: `tmux ls` on laptop shows `r3-fcc-runner-L3: 1 windows (created Wed Nov 25 09:00:18 2026)`; `tmux list-panes -t r3-fcc-runner-L3` shows pane PID 22399, command python, pane_dead 0; `ps -p 22399` confirms PID 22399 alive (etime 1-04:21:56, fcc-claude --dangerously-skip-permissions). Observe only, session NOT touched, no keys sent.
+3. Codex exec PASS: `codex --version` on laptop returned `codex-cli 0.172.0`, exit 0.
+4. State file parse PASS: json.load OK; epoch == 21, coordinator_active starts with f79cb9eb, task_start null, current_position 26, last_updated 2026-11-26T13:22:00+07:00.
+5. Paths PASS: `~/workspace/rung3-snapshots/R3-035-L3/` exists (62 files incl screenshots and act jsons, manifest 976ef57d per state current_task); `~/workspace/rung3-verdicts/` exists (VM-local). R3-035-A1.json and R3-035-A2.json correctly ABSENT (verdicts due ~13:51; Pair A scoring dispatched 13:20, Mochi scorer 1 daemon run 239 + Clone2 scorer 2 PWA, per state current_task).
+
+## Standby statement under section 7 fencing
+
+I am on STANDBY under section 7 fencing and will act only if the coordinator is confirmed dead and the parent appoints me. I issue NO orders unless the coordinator dies and the parent appoints me. I hold no authority while coordinator f79cb9eb-9eee-4419-a5cf-31524d7340ad is alive. I will NOT start any task on my own. I will NOT message any agent. I will NOT write to the ledger, the state file run fields, or any verdict file. I will NOT issue run orders while on standby. I will NOT drive anything. I will NOT touch the laptop beyond the dry-run reads above. I will only act as coordinator if the parent verifies the coordinator is DEAD (not merely silent) and directs me to take over under re-plan section 7 fencing; then a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.
+
+Standing rules acknowledged: English only; ydotool BANNED; no personal info on GitHub; never close or navigate owner tabs, pinned tabs, essentials, or ws3 windows; ws2 is the work workspace; never restart Zen; pill "Computer use active" on any agent control; SSH to laptop ONLY via ~/workspace/ssh-laptop.sh with short commands; never assume an agent capability, verify live; git explicit pathspec on add and commit, never git add -A, verify pushes via ls-remote; Ponytail for code work; Graphify for codebase context; no credential values anywhere.
+
+This deputy stands by. If told to stand down, this deputy ends.
