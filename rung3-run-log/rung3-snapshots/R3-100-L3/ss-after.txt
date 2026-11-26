@@ -1,0 +1,21 @@
+State  Recv-Q Send-Q                          Local Address:Port  Peer Address:PortProcess
+LISTEN 0      2048                                127.0.0.1:8082       0.0.0.0:*    users:(("fcc-server",pid=19105,fd=4))
+LISTEN 0      4096                               127.0.0.54:53         0.0.0.0:*   
+LISTEN 0      512                                 127.0.0.1:4096       0.0.0.0:*    users:(("opencode",pid=1302,fd=10))
+LISTEN 0      1                                   127.0.0.1:2828       0.0.0.0:*    users:(("zen-bin",pid=578117,fd=55))
+LISTEN 0      511                                 127.0.0.1:36695      0.0.0.0:*    users:(("code",pid=3337619,fd=50))
+LISTEN 0      4096                  100.70.92.52%tailscale0:52877      0.0.0.0:*   
+LISTEN 0      4096                                127.0.0.1:631        0.0.0.0:*   
+LISTEN 0      512                                 127.0.0.1:49374      0.0.0.0:*    users:(("opencode.exe",pid=635426,fd=10))
+LISTEN 0      4096                               172.17.0.1:53         0.0.0.0:*   
+LISTEN 0      511                                 127.0.0.1:45337      0.0.0.0:*    users:(("code",pid=3329173,fd=40))
+LISTEN 0      128                                 127.0.0.1:43721      0.0.0.0:*    users:(("codex",pid=4232,fd=36))
+LISTEN 0      128                                   0.0.0.0:22         0.0.0.0:*   
+LISTEN 0      4096                            127.0.0.53%lo:53         0.0.0.0:*   
+LISTEN 0      4096                                127.0.0.1:44437      0.0.0.0:*   
+LISTEN 0      37                                  127.0.0.1:9222       0.0.0.0:*    users:(("zen-bin",pid=578117,fd=47))
+LISTEN 0      10                                  127.0.0.1:9223       0.0.0.0:*    users:(("chromium",pid=12561,fd=94))
+LISTEN 0      10                                  127.0.0.1:9224       0.0.0.0:*    users:(("brave",pid=11804,fd=102))
+LISTEN 0      4096                                    [::1]:631           [::]:*   
+LISTEN 0      4096   [fd7a:115c:a1e0::212e:5c36]%tailscale0:46393         [::]:*   
+LISTEN 0      128                                      [::]:22            [::]:*   

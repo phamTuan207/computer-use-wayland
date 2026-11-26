@@ -1,0 +1,74 @@
+{
+ "files": [
+  {
+   "mtime": 1795724482,
+   "name": "drive-log.txt",
+   "sha256": "e82220b294cd69bc0b6b2fba48f8bbef3aab1e7b20360cfd11980cecdb3f2c6f",
+   "size": 5777
+  },
+  {
+   "mtime": 1795724484,
+   "name": "end_time.txt",
+   "sha256": "ea23c097b4f62a44f9d24fedf104709ed54a1878321a258de041354c2abb15de",
+   "size": 26
+  },
+  {
+   "mtime": 1795724485,
+   "name": "gioi-thieu-saved.html",
+   "sha256": "e760910beb467319d939d528021ab04167882609dfed724ed88b407791b414b5",
+   "size": 239
+  },
+  {
+   "mtime": 1795724486,
+   "name": "ket-qua.txt",
+   "sha256": "333c400b161480ab1c6872e09afd45fe6e8f32dd9ac378c2ee620664daa817ce",
+   "size": 679
+  },
+  {
+   "mtime": 1795724488,
+   "name": "lien-he-saved.html",
+   "sha256": "339c81e9e5be6638e66f7d1078828843969bad168486dbcd42b27d12ad3be1fd",
+   "size": 236
+  },
+  {
+   "mtime": 1795724492,
+   "name": "pill-off.png",
+   "sha256": "dd8da5e749867e1ab8ab9a2c8a7553134e4f3323e81ac87131cbb864d76d5179",
+   "size": 704008
+  },
+  {
+   "mtime": 1795724495,
+   "name": "pill-on.png",
+   "sha256": "9a2ae9edc9fb238753f15943cf07daedcfa666037080588a7a0475e7e076d396",
+   "size": 708789
+  },
+  {
+   "mtime": 1795724496,
+   "name": "ss-after.txt",
+   "sha256": "0b0d54fe51494194b46cc3675a51d7131b23a0759434e88fbdce7f3fdc3b9f72",
+   "size": 2136
+  },
+  {
+   "mtime": 1795724498,
+   "name": "ss-before.txt",
+   "sha256": "0b0d54fe51494194b46cc3675a51d7131b23a0759434e88fbdce7f3fdc3b9f72",
+   "size": 2136
+  },
+  {
+   "mtime": 1795724499,
+   "name": "start_time.txt",
+   "sha256": "932c322886f3d190ad115739dd2297cadf2e9f86765ada060aa4bdd44edc2ff3",
+   "size": 26
+  },
+  {
+   "mtime": 1795724500,
+   "name": "trang-chu-saved.html",
+   "sha256": "2745056563d23d1cd02261ba134937a40ed188b60a355b81929abbb072da2eba",
+   "size": 239
+  }
+ ],
+ "manifest_sha256": "0a86c8d17719677611eabf5a8e03c048dd009071c881f0ccb2de3ab0846eec16",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-100-L3",
+ "source_dir": "/tmp/r3-100-evidence",
+ "task": "r3-100-evidence"
+}

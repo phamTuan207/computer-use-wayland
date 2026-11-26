@@ -24,7 +24,7 @@
  "completed_positions": 34,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 41,
- "current_task": "R3-100 (position 52, Class S, Tier B) DRIVING: launched 2026-11-27T03:12:56+07, codex PID 3954485, log ~/r3-100-codex.log, F12 guard passed (port 8899 free, fixture sha match, configerrors empty). Deadline 03:42:56+07. Scorers on completion: Mochi (B1) + Fresh (B2) per F5.2; prep coordinator-live per 21:36 order. Graded from saved files only.",
+ "current_task": "R3-100 drive COMPLETED 2026-11-27T03:20:26+07 (launched 03:12:56, codex PID 3954485, elapsed 7m30s, within limit; fields recorded 03:14:07, cleared now). Results match key (200 x3, titles correct, links correct, port closed). Zen confirmation skipped (holder probe navigator.webdriver=true, recorded in ket-qua.txt; graded evidence is saved files only). Evidence 11 files in /tmp/r3-100-evidence/ (sha256 laptop==VM). Snapshot sealing next.",
  "deputy": "dee95d07-524e-4e10-8dcf-271d5b36c65c (epoch 24 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T19:07:21+07:00, after state last_updated 2026-11-26T19:06:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 24 coordinator_active 64030fac, snapshot + verdict paths exist; epoch 23 deputy b3cf2527 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-27T03:14:07+07:00",
+ "last_updated": "2026-11-27T03:22:34+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "41 rows (1 TEST + 30 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 81 verdict files)",
@@ -1537,11 +1537,11 @@
  "status": "RUNNING",
  "coordinator_active": "64030fac-dbec-4359-9fb5-21ae46f944f1 (epoch 24, takeover 2026-11-26T19:06:52+07:00)",
  "epoch": 24,
- "task_start": "2026-11-27T03:12:56+07:00",
+ "task_start": null,
  "runner_pid": null,
  "codex_task": null,
  "codex_task_start": null,
- "codex_runner_pid": 3954485,
+ "codex_runner_pid": null,
  "graded_count": 30,
  "graded": 6,
  "pass": 22,

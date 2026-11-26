@@ -1,0 +1,20 @@
+R3-100 result
+Port: 8899 (from the frozen task steps)
+
+HTTP status codes:
+- trang-chu.html: 200
+- gioi-thieu.html: 200
+- lien-he.html: 200
+
+Titles:
+- trang-chu.html: Trang chu
+- gioi-thieu.html: Gioi thieu
+- lien-he.html: Lien he
+
+Links:
+- trang-chu.html -> gioi-thieu.html, lien-he.html
+- gioi-thieu.html -> trang-chu.html, lien-he.html
+- lien-he.html -> trang-chu.html, gioi-thieu.html
+
+Port closed verification: curl exit code 7; both localhost IPv6 and IPv4 attempts returned Connection refused. ss-after.txt shows no listener on port 8899; server process stopped.
+Zen confirmation: skipped because the required pre-navigation holder probe returned navigator.webdriver=true.
