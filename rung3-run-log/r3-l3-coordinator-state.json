@@ -24,7 +24,7 @@
  "completed_positions": 0,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 1,
- "current_task": "R3-028",
+ "current_task": "EPOCH 12 TAKEOVER (ledger repair done; R3-029 held for parent password)",
  "deputy": "4e4c8de2-9955-4075-a1e9-bb98335624d8 (epoch 10 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T06:34:53+07:00, after state last_updated 2026-11-26T06:34:15+07:00, G-24 freshness satisfied; dry run 5/5 PASS 06:34: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive, codex-cli 0.172.0, state parse epoch 10 coordinator_active f1dac71f, ledgers 29 rows 21 PASS/4 INVALID/3 FAIL/1 TEST + 3 re-run PASS rule-A 24 PASS / 0 FAIL, scorer paths present; epoch 9 deputy 8aef68b3 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -41,8 +41,8 @@
   "rat_kho": 0,
   "trung_binh": 4
  },
- "invalid_count": 4,
- "last_updated": "2026-11-26T07:46:21+07:00",
+ "invalid_count": 5,
+ "last_updated": "2026-11-26T07:53:29.012102+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1119,9 +1119,19 @@
   "2026-11-26T07:23:53+07:00 TIMEOUT-WATCH SAFETY (parent heads-up): R3-027 drive ENDED 07:16 (blocked, finalized) before its 07:25 deadline; state already moved to R3-028 at 07:18:56 with runner_pid cleared, so PID 22399 (persistent FCC pane, verified alive) is NOT a kill target. R3-028 runner_pid now recorded as 2363275 (drive-r3028.py on laptop; holder 2363298). R3-028 task_start 07:18:56 (coordinator release); runner's own start_time.txt in evidence governs its 30-min deadline (~07:49).",
   "2026-11-26T07:24:31+07:00 task_start aligned to R3-028 runner drive start 07:21:44 (evidence start_time.txt); watch deadline 07:51:44. Probe passed on R3-028 drive (webdriver false, shim bb49ff3f).",
   "2026-11-26T07:38:31+07:00 R3-027 ruled INVALID by both scorers (Mochi A1 07:21:49, Clone2 A2 07:20; agreement, no tiebreaker). Invalid event 5 = CAP (5/5). R3-027 drops, no backup. Valid original set 53, bars 51/53 + 52/54 (task 56). B-F4 valid-53 crossing: recomputed + parent notified. Any 6th event needs a new recorded team decision. R3-028 drive COMPLETED 07:35:54 (no block; values match key), snapshot pushed 017a3e16 (manifest aa4e4e15, gate PASS). Scorers for R3-028: Mochi + Fresh. R3-029 next (position 25): password requested from parent.",
-  "2026-11-26T07:46:21+07:00 R3-028 PASS (Mochi 07:40:29 + Fresh 07:39:41, agreement). Rule-A banked 25 PASS / 0 FAIL. Valid 53, bars 51/53 + 52/54; need 26 more PASS from 28 remaining original. Clone1 sealed set built 07:45:09 (R3-002/013/016/024, verifier 5501fa93, regrade 4/4); clone1 calibration dispatched next. R3-029 awaits password from parent."
+  "2026-11-26T07:46:21+07:00 R3-028 PASS (Mochi 07:40:29 + Fresh 07:39:41, agreement). Rule-A banked 25 PASS / 0 FAIL. Valid 53, bars 51/53 + 52/54; need 26 more PASS from 28 remaining original. Clone1 sealed set built 07:45:09 (R3-002/013/016/024, verifier 5501fa93, regrade 4/4); clone1 calibration dispatched next. R3-029 awaits password from parent.",
+  {
+   "ts": "2026-11-26T07:49:02.495951+07:00",
+   "by": "coordinator-epoch-11",
+   "text": "COORDINATOR TAKEOVER, EPOCH 11: epoch 10 (f1dac71f) completed; parent appoints successor 0e455752 as coordinator epoch 11 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 0e455752). Ledgers recomputed by epoch 11 from files: grades 31 rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST), reruns 3 PASS; Rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk hCaptcha = event 5, trung_binh 4, kho 1); a 6th event needs a new recorded team decision via parent BEFORE further releases (R3-036/R3-046 timeanddate shared-cause drops add 0 events only with browser evidence + scorer-2 confirmation). Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Stale task_start/runner_pid (R3-028, drive done 07:35:54, graded PASS) CLEARED so timeout watch has no kill target. R3-029 (position 25, Muse lane) HELD: parent re-verifying password with owner; do NOT release until parent sends it; password goes in spawn message only, never in any file. Clone1 calibration dispatched (sealed set R3-002/013/016/024, brief pushed 31fa2244); clone1 scores nothing until sign-off passes (first scoring task R3-037). Checks 11-12 prep under way. Fresh deputy to be spawned (G-24/G-38)."
+  },
+  {
+   "ts": "2026-11-26T07:53:29.012102+07:00",
+   "by": "coordinator-epoch-12",
+   "text": "COORDINATOR TAKEOVER, EPOCH 12: epoch 11 (0e455752) completed after its takeover write; parent appoints successor 0ef54a8e as coordinator epoch 12 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 0ef54a8e). LEDGER REPAIR DONE: R3-027 scorer1.files_read (was int 20) repaired to the 20-file list transcribed from Mochi grade md (17 snapshot files + 3 docs); R3-028 scorer1.files_read (was missing) restored verbatim from Mochi A1 verdict JSON (15 files). Verdict JSONs filed in ~/workspace/rung3-verdicts (R3-027-A1/A2, R3-028-A1/A2, scorer content verbatim). validate-ledger PASS (31 rows, 0 errors), ledger-cross-check OK (61 verdict files, 0 errors). No grade, verdict, or hash changed (diff-verified: only scorer1.files_read on lines 30-31). Rule-A recomputed: 25 PASS / 0 FAIL, 5 INVALID (events 5/5 EXHAUSTED; a 6th event needs a new recorded team decision via parent BEFORE further releases). Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Per-task reports backfilled for R3-027 + R3-028. R3-029 (position 25, Muse lane) HELD: parent re-verifying password with owner; do NOT release until parent sends it; password in spawn message only, never in any file. Clone1 calibration dispatched (sealed set R3-002/013/016/024, brief 31fa2244); clone1 scores nothing until sign-off (first scoring task R3-037). Checks 11-12 prep next. Fresh deputy to be spawned (G-24/G-38)."
+  }
  ],
- "pass_count": 21,
+ "pass_count": 22,
  "plan_adaptations": [
   {
    "change": "Codex runner uses codex exec (non-interactive, one invocation per task) instead of an interactive tmux session",
@@ -1165,10 +1175,10 @@
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
  "status": "PAUSED at pause point, RESUME GATE PASSED with conditions (owner 04:31 pause, 04:53 delegated gate, redteam reconvene 06:30 YES/YES with 12 checks). Ledger: 29 grade rows (21 PASS, 4 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 24 PASS / 0 FAIL. Bars (N-2): 52/54 original, 53/55 with task 56, slack 2. Next: R3-027 frozen position 23 after checks 3-9.",
- "coordinator_active": "f1dac71f-f10f-4d18-adb2-6e6ed0732dea (epoch 10, takeover 2026-11-26T06:34:15+07:00)",
- "epoch": 10,
- "task_start": "2026-11-26T07:21:44+07:00",
- "runner_pid": 2363275,
+ "coordinator_active": "0ef54a8e-67b6-4d85-b2b1-d227630f365b (epoch 12, takeover 2026-11-26T07:53:29.012102+07:00)",
+ "epoch": 12,
+ "task_start": null,
+ "runner_pid": null,
  "codex_task": "R3-042",
  "codex_task_start": null,
  "codex_runner_pid": null,
@@ -1283,5 +1293,7 @@
   "lanes": "FCC: R3-027, R3-037. Muse subagents: R3-028, R3-029, R3-035, R3-036, task 56 default. Codex exec: remaining 24. R3-027 = frozen position 23 (recount; earlier 24 was R3-028). R3-029 password: parent holds, brief at release only, never in file, epoch 9 notifies parent as position 25 approaches, brief copy destroyed after, destruction logged without value.",
   "cloudflare": "Shim: session-scoped BiDi preload Proxy variant sha256 bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8, integrated zen_cli.py BidiSession.start() L484 via holder-fixb.mjs, probe fail-loud per drive. F3 cookie-cleared user-way: timeanddate PASS (only remaining-task site), chatgpt x2 PASS, openverse PASS, coolors repeat FAIL (known cold limit, zero remaining exposure, stock cold also walls). Warm-profile rule: no cookie clears mid-run without coordinator approval; cf_clearance is run state. Fallback default INVALID path; Chromium/Brave lane only with coordinator + both scorers agreement recorded before drive. Re-proof trigger: any bot-wall invalid on shimmed drive = council+redteam re-check before further releases on that site class.",
   "resume_order": "RESUME when redteam section 6.4 checks 3-9 pass (holder hash verify, FCC holder dry start, probe per drive, warm-profile + sign-in record, clone2 calibration sign-off before scoring, pii-scan.py + test push, brief fields). Checks 10-12 before touched tasks (R3-028 fallback brief, re-proof trigger armed, R3-079/089/100 guards; R3-089 guard refresh 2026-11-30 12:00 even if not reached)."
- }
+ },
+ "rule_a_pass": 25,
+ "rule_a_fail": 0
 }

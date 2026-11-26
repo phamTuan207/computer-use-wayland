@@ -321,3 +321,16 @@ I am on STANDBY. I will NOT start any task on my own. I will NOT message the own
 - Run state verified from the state file: epoch 10, current_task EPOCH 10 TAKEOVER, resume gate PASSED with conditions (redteam reconvene 06:30); epoch 10 completes redteam section 6.4 checks 3-9, then releases R3-027 (frozen position 23, FCC lane); checks 10-12 before touched tasks; plan improvements/r3-l3-replan-total-20261126.md.
 - This deputy is on STANDBY under re-plan section 7 fencing: no orders issued, no tasks released, no driving, no scoring, no writes to the ledger, state file, or verdict files, no commits. It only confirms readiness and stands by. The coordinator owns the state file and all pushes; this deputy only appends to this declaration file. Takeover only if the parent (main Muse) verifies the coordinator is DEAD (not merely silent) and directs takeover; then a takeover record is written into the state file BEFORE any order (coordinator_active set to this session id, epoch incremented, timestamp, reason), the state file is re-read, and coordination resumes from the recorded position. If told to stand down, this deputy ends.
 - Standing rules acknowledged: ydotool BANNED; pill "Computer use active" on any agent control; SSH to laptop only via ~/workspace/ssh-laptop.sh with short commands; English for all work; no personal info on GitHub; never assume an agent capability, ask it directly.
+
+## Deputy declaration, epoch 11, 2026-11-26T07:49:27+07:00
+
+- Deputy session id: eab8ef97-9499-43cb-8b8b-fcb9aecb46cb (label 09634d19-14f9-40cb-a5b1-627a652ba056)
+- Coordinator active: 0e455752-c083-4108-a617-9934c72a41b6, epoch 11, takeover 2026-11-26T07:49:02+07:00
+- Role: DEPUTY on STANDBY under re-plan section 7 fencing. Takeover ONLY on parent-verified coordinator death plus parent direction. No run orders, no task releases, no coordinator state edits except this declaration.
+- Dry run (all 5 PASS):
+  1. Laptop reachable PASS: `~/workspace/ssh-laptop.sh "hostname"` returned `omarchy`, exit 0.
+  2. FCC tmux session PASS: `tmux ls | grep r3-fcc-runner-L3` returned `r3-fcc-runner-L3: 1 windows (created Wed Nov 25 09:00:18 2026)`, exit 0. Pane PID 22399 noted PERSISTENT, not touched.
+  3. Codex exec PASS: `codex --version` returned `codex-cli 0.172.0`, exit 0.
+  4. State file parse PASS: epoch 11, coordinator_active 0e455752-c083-4108-a617-9934c72a41b6, current_task `EPOCH 11 TAKEOVER (R3-029 held for parent password)`.
+  5. Ledgers + scorer paths PASS: R3-L3-grades.jsonl 31 rows, R3-L3-reruns.jsonl 3 rows under ~/workspace/r3l3-run-wt/rung3-run-log/; ~/workspace/rung3-snapshots/ exists; ~/workspace/rung3-verdicts/ exists.
+- Standing rules acknowledged: English only; ydotool banned; never touch ws3, owner tabs, or FCC pane PID 22399; never edit MEMORY.md.
