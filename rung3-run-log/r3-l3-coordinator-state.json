@@ -25,7 +25,7 @@
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
  "current_task": "EPOCH 20: R3-029 (position 25) drive COMPLETED 12:42:14; snapshot pushed 83b4fef5 (manifest 42d22dff); Pair A scoring dispatched 12:46 (Mochi scorer 1 daemon run 238, Clone2 scorer 2 PWA), verdicts due ~13:16; epoch 20 receiving verdicts. task_start/runner_pid null. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
- "deputy": "51154780-ef5c-4fab-bb75-755eeec66760 (epoch 19 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T12:14:45+07:00, after state last_updated 2026-11-26T12:12:42+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive untouched, codex-cli 0.172.0, state parse epoch 19 coordinator_active 4eb5ee66, snapshot + verdict paths exist; declaration pushed f452b3e1; epoch 18 deputy 79db2d8c SUPERSEDED; on STANDBY under section 7 fencing)",
+ "deputy": "4b4924ac-9e6c-48fd-936a-20ad6786c5bb (epoch 20 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T12:48:30+07:00, after state last_updated 2026-11-26T12:47:39+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive untouched, codex-cli 0.172.0, state parse epoch 20 coordinator_active 0ace6385, snapshot + verdict paths exist; declaration pushed d6f39875; epoch 19 deputy 51154780 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T12:47:39+07:00",
+ "last_updated": "2026-11-26T12:49:30+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1224,6 +1224,11 @@
    "ts": "2026-11-26T12:47:39+07:00",
    "by": "coordinator-epoch-20",
    "text": "COORDINATOR TAKEOVER, EPOCH 20, 2026-11-26T12:47:39+07:00: epoch 19 (4eb5ee66) completed its session 12:46:52 +07 with state clean (R3-029 drive COMPLETED 12:42:14, snapshot pushed 83b4fef5 manifest 42d22dff, Pair A scoring dispatched 12:46: Mochi scorer 1 daemon run 238, Clone2 scorer 2 PWA, verdicts due ~13:16, task_start/runner_pid null). Parent appoints successor session 0ace6385-41ca-4b9f-a6b0-445758cebf72 as coordinator, epoch 20, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 0ace6385). All predecessors dead, no split-brain risk. Run state re-verified by epoch 20 from ledgers: 31 grade rows (22 PASS, 5 INVALID: R3-011/022/024/026/027, 3 FAIL: R3-001/002/003 all superseded by PASS re-runs, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 + 52/54 (task 56); need 26 PASS from 28 remaining original positions. Git HEAD 7f171b91 = origin todolist-push tip at takeover. Next: fresh deputy (G-24/G-38), receive R3-029 verdicts, grade + push, then release R3-035 (position 26)."
+  },
+  {
+   "ts": "2026-11-26T12:49:30+07:00",
+   "by": "coordinator-epoch-20",
+   "text": "DEPUTY CONFIRMED, EPOCH 20: fresh deputy 4b4924ac. Declaration 12:48:30 +07 (after state 12:47:39, G-24 satisfied), pushed d6f39875 (ls-remote verified). Dry run 5/5 PASS. G-24 and G-38 CLOSED for epoch 20. Deputy on STANDBY under section 7 fencing. R3-029 scorer 2 (Clone2) verdict PASS received + audited (branch clone2/verdict-R3-029-L3 commit 3f8b62f3, session ad85548c, key hashes + manifest 42d22dff match, 13 files hash-verified, independence declaration present); filing to rung3-verdicts as R3-029-A2.json. Scorer 1 (Mochi, daemon run 238) verdict pending, due ~13:16."
   }
  ],
  "pass_count": 22,

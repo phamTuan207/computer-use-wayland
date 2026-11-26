@@ -131,3 +131,4 @@
 2026-11-26T12:15:38+07:00 epoch 19 deputy confirmed (51154780, G-24/G-38 closed); R3-029 releasing
 2026-11-26T12:46:27+07:00 R3-029 drive completed 12:42:14 (states 5/4/5, no block); snapshot 83b4fef5 manifest 42d22dff; Pair A scoring dispatched (Mochi run 238, Clone2 PWA)
 2026-11-26T12:47:39+07:00 epoch 20 takeover (coordinator 0ace6385); R3-029 scoring pending, verdicts due ~13:16; Rule-A 25/0
+2026-11-26T12:49:30+07:00 epoch 20 deputy confirmed (4b4924ac, G-24/G-38 closed); R3-029 A2 PASS audited, A1 pending
