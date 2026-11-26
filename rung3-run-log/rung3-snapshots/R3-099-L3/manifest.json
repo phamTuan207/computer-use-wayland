@@ -1,0 +1,62 @@
+{
+ "files": [
+  {
+   "mtime": 1795723361,
+   "name": "bao-cao.txt",
+   "sha256": "ce85f5b72678ab6c3a62a6948e2c8786d3dd40722c27ccf60bc442e864146742",
+   "size": 64
+  },
+  {
+   "mtime": 1795723362,
+   "name": "drive-log.txt",
+   "sha256": "52feaaf7284896d0b6c5d473331b25f0c3e23b5d8c88039438e9d1bfa792a12a",
+   "size": 4726
+  },
+  {
+   "mtime": 1795723364,
+   "name": "end_time.txt",
+   "sha256": "d484e0fa3044c2e2b20e09e7a128b5d09cfc2479e27ea8ccb080b524e11c614e",
+   "size": 26
+  },
+  {
+   "mtime": 1795723365,
+   "name": "nd19-bao-cao-run2.txt",
+   "sha256": "ce85f5b72678ab6c3a62a6948e2c8786d3dd40722c27ccf60bc442e864146742",
+   "size": 64
+  },
+  {
+   "mtime": 1795723367,
+   "name": "nd19-bao-cao.txt",
+   "sha256": "ce85f5b72678ab6c3a62a6948e2c8786d3dd40722c27ccf60bc442e864146742",
+   "size": 64
+  },
+  {
+   "mtime": 1795723368,
+   "name": "nd19-xu-ly.py",
+   "sha256": "9c211bd6330997119882a45b73b0e7da2bfad833306ff9337272d5ec1309f576",
+   "size": 801
+  },
+  {
+   "mtime": 1795723372,
+   "name": "pill-off.png",
+   "sha256": "08c74c42ec46c8431dfe12c4f117b72aaa7510a3d6673e8c0761ecef5089ddd4",
+   "size": 702208
+  },
+  {
+   "mtime": 1795723374,
+   "name": "pill-on.png",
+   "sha256": "48f8b47e3c84d9443f1effe4d1ff07257b1fad5f00ff80fb1121c31f3ea3555f",
+   "size": 708890
+  },
+  {
+   "mtime": 1795723376,
+   "name": "start_time.txt",
+   "sha256": "8996eb547e882a60805b4cbc020998c3123b592b003f927276de3e8901087905",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "544d90241ac81791fe01cbba4e1710b7a71da62883e43d04246017052d4d3444",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-099-L3",
+ "source_dir": "/tmp/r3-099-evidence",
+ "task": "r3-099-evidence"
+}

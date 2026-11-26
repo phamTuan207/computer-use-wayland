@@ -1,0 +1,54 @@
+2026-11-27T02:59:42+07:00 | elapsed=13s | Start; terminal PTY session is active; evidence directory created; start_time.txt recorded (2026-11-27T02:59:29+07:00).
+2026-11-27T02:59:42+07:00 | elapsed=13s | Pill status check before screenshot: {
+  "holders": {
+    "Codex:3934448": {
+      "acquired": "2026-11-27T02:59:13+07:00",
+      "agent": "Codex",
+      "method": "Codex",
+      "pid": 3934448
+    }
+  },
+  "label": "Computer use active",
+  "owner": "daemon",
+  "visible": true
+}
+2026-11-27T02:59:42+07:00 | elapsed=13s | Captured pill-on.png with grim; signature read fresh as 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795571116_1643048828.
+2026-11-27T02:59:42+07:00 | elapsed=13s | CSV inspection completed: sha256 above; line count, columns, data row count, group names and decimal sample shown above.
+2026-11-27T02:59:51+07:00 | elapsed=22s | ANOMALY: CSV inspection failed with KeyError for Nhom/Diem -> header output showed lowercase names -> reason: inspection expression assumed capitalization -> attempt 1 failed; retry using actual header keys before deciding whether fixture is valid.
+2026-11-27T02:59:51+07:00 | elapsed=22s | CSV inspection retry succeeded with lowercase keys; four-group and decimal-score validation shown above.
+2026-11-27T03:00:04+07:00 | elapsed=35s | Wrote the Python script interactively via terminal heredoc; script uses csv.DictReader and computes grouped totals/counts at runtime.
+2026-11-27T03:00:04+07:00 | elapsed=35s | Displayed full script content in the terminal after writing.
+2026-11-27T03:00:04+07:00 | elapsed=35s | Required mid-drive pill re-check after script write and before run 1: {
+  "holders": {
+    "Codex:3934448": {
+      "acquired": "2026-11-27T02:59:13+07:00",
+      "agent": "Codex",
+      "method": "Codex",
+      "pid": 3934448
+    }
+  },
+  "label": "Computer use active",
+  "owner": "daemon",
+  "visible": true
+}
+2026-11-27T03:00:12+07:00 | elapsed=43s | Run 1 executed with python3; exit status=0.
+2026-11-27T03:00:12+07:00 | elapsed=43s | Opened run 1 report in terminal and saved run 1 report plus script copies into evidence.
+2026-11-27T03:00:18+07:00 | elapsed=49s | Run 2 executed with python3; exit status=0.
+2026-11-27T03:00:18+07:00 | elapsed=49s | Run1-versus-run2 report comparison via cmp -s; exit status=0 (0 means identical).
+2026-11-27T03:00:39+07:00 | elapsed=70s | ANOMALY RESOLUTION: initial CSV inspection command raised KeyError; reasoning identified case-sensitive column-name mismatch; attempt 1 failed, retry with exact lowercase headers succeeded; verified matching SHA-256, 50 data rows and exactly four groups; decision: fixture is valid; fix: used nhom/diem keys; outcome: processing completed successfully.
+2026-11-27T03:00:39+07:00 | elapsed=70s | Evidence read-back verification starting: inspect all text evidence copies, compare script copy, validate screenshot files and list mtimes.
+2026-11-27T03:00:39+07:00 | elapsed=70s | Read-back checks completed: all text files displayed; copies compared; pill-on screenshot validated as PNG and hashed; mtimes listed.
+2026-11-27T03:00:55+07:00 | elapsed=86s | CSV inspection recorded values: sha256=fc7abae0e1b68312eac292518076bea9a9a03984d42d83279403728c2e20bea6; wc -l=51; data rows=50; columns=ten, nhom, diem; groups=NhomA,NhomB,NhomC,NhomD; decimal sample=5.2.
+2026-11-27T03:00:55+07:00 | elapsed=86s | Run 1 output (exit 0): NhomA, 14, 7.91 | NhomB, 12, 7.09 | NhomC, 13, 7.86 | NhomD, 11, 7.12.
+2026-11-27T03:00:55+07:00 | elapsed=86s | Run 2 output (exit 0): NhomA, 14, 7.91 | NhomB, 12, 7.09 | NhomC, 13, 7.86 | NhomD, 11, 7.12.
+2026-11-27T03:00:55+07:00 | elapsed=86s | Read-back checks: evidence script matches original (cmp 0); run1 and graded report copies match (cmp 0); run1 and run2 copies match (cmp 0); all text evidence read back; pill-on PNG recognized and hashed.
+2026-11-27T03:00:55+07:00 | elapsed=86s | Preparing pill release and post-release screenshot; no other GUI actions performed.
+2026-11-27T03:00:55+07:00 | elapsed=86s | Released pill using same long-lived PID 3934448; post-release status: {
+  "holders": {},
+  "owner": "none",
+  "visible": false
+}
+2026-11-27T03:00:55+07:00 | elapsed=86s | Captured pill-off.png after release using grim.
+2026-11-27T03:01:27+07:00 | elapsed=118s | Verified pill-off.png visually after release: screenshot contains no Computer use active pill; status had holders={} and visible=false; PNG verified.
+2026-11-27T03:01:27+07:00 | elapsed=118s | Final evidence read-back: re-reading every text evidence file and validating both PNG byte streams before recording end time.
+2026-11-27T03:01:27+07:00 | elapsed=118s | Final read-back succeeded for all text evidence and screenshot bytes; pill-on/off visual states verified.
