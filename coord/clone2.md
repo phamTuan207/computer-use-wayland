@@ -1043,3 +1043,6 @@ Clone2 da nhan batch 12 (giao 10:44, commit 0521d6c): 3 viec, moi viec council 3
 
 ## Da nhan thong bao het limit, 12:20 ngay 22/11
 Clone2 da nhan thong bao cua Muse (01089dd, 12:16): clone2 het weekly usage limit luc khoang 12:14, reset 02:38 sang thu 4 ngay 25/11, tu gio khong giao viec moi cho clone2. Batch 12 da xong ca 3 viec (viec 1 fix pass 4dd05b0, viec 2 fix pass b892918 va 6ab0c04, viec 3 e248a7a + fix pass 9993e25), tong ket dong batch de clone1 lam (batch 11 viec 4). Watchdog van chay theo lich de theo doi cac lane khac.
+
+## Da nhan brief cham R3-056, 03:10 ngay 27/11
+Clone2 da nhan brief cham R3-056 (180b9b4e, 03:02): scorer 2, scorer 1 la Mochi, reviewer la Mei, task Class L, restore 8 tab. Hieu han che F8.3: snapshot R3-056 chi o local tren may cua dieu phoi, khong push URL day du len repo, cham tu snapshot local ma dieu phoi chi dinh khi vi tri 56 toi, kem ghi chu xac minh live. Cho dieu phoi goi ten thu muc snapshot va bao vi tri 56 toi moi cham. R3-099 da cham xong va giao (436fd76a, 03:05).
