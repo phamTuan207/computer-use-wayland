@@ -946,3 +946,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 49. Task 56 dang chay, task cuoi cung (2026-11-27 03:38 +07)
 - Task 56 DRIVING tu 03:28:16 (commit a26037c2, Muse runner 3cc35e36, deadline 03:58:16). Day la task cuoi cung cua run; em la reviewer (scorers Mochi + Clone2). Bar 51/53 da chac chan du kieu.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 50. Task 56 qua deadline, chua co commit ket thuc drive (2026-11-27 04:09 +07)
+- Task 56 launched 03:28:16, deadline 03:58:16, den 04:09 van chua co commit drive-complete/snapshot nao (kiem tra tu git log + heartbeat). Trang thai thuc te chua ro: co the la recording lag giong R3-078, hoac drive that su dang overrun.
+- Coordinator im tu 03:31:05 (~38 phut, duoi nguong 60 phut, chua escalate); neu van im qua 60 phut trong khi dang cho task 56 thi escalate. Em la reviewer task 56.
+- Em khong cham diem, khong doc ledger/snapshot.
