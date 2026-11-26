@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T18:20:00+07:00",
+ "last_updated": "2026-11-26T18:21:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1404,6 +1404,11 @@
    "ts": "2026-11-26T18:20:00+07:00",
    "by": "coordinator-epoch23",
    "text": "OWNER RULE ON FIXES (2026-11-26 18:19 +07, final, via parent): during the run, ONLY RECORD every error and every fix (what failed, what was done, evidence). Integrate NOTHING mid-run into neither the repo nor the local install; hold no criteria meeting now. Finish all tasks first. After the run closes, the team reviews the full record and only the best, most essential fixes get integrated. Machine-state unblocks needed to keep a drive alive (like clearing the hyprctl configerror at 18:14) stay allowed as operational fixes, recorded not integrated as code. Epoch 23 compliance: the configerrors clear was a machine-state unblock (no code change), recorded in state + event log; the overlay 30s-spawn vs 15s-deadline fragility is recorded for post-run review; no code integrated mid-run. Coordinator keeps the error/fix record complete in state notes + per-task reports for the end-of-run review."
+  },
+  {
+   "ts": "2026-11-26T18:21:00+07:00",
+   "by": "coordinator-epoch23",
+   "text": "OWNER LOGGING RULE (2026-11-26 18:20 +07, via parent): log SUPER detailed. EVERY event logged with the full chain: what failed -> how we reasoned -> what we tried -> what we decided -> how we fixed it -> whether it succeeded or failed. Everything goes into the run log/state + master event log (log-event.sh). This record is the basis for the end-of-run review that selects which fixes are worth integrating (pairs with the 18:19 record-only rule). Coordinator applies to own records from now (state notes, per-task reports, event log) and RESTATES the chain requirement in every worker brief issued from now on (drivers, scorers, diagnosticians). Backfill note: events since epoch-23 takeover (17:08) already carry failure/reasoning/decision/outcome in state notes; the R3-049 attempt-1 chain is fully recorded (failure 18:09 act-now timeout -> reasoning: our-side tooling before task content -> attempts: independent diagnosis 18:12-18:15 -> decision: ungraded infra re-run, no cap spent -> fix: no-op eval cleared configerrors, machine-state unblock -> outcome: verified live 18:15, attempt 2 released 18:17)."
   }
  ],
  "pass_count": 24,
