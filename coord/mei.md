@@ -891,3 +891,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 39. R3-078 qua deadline uoc tinh, chua co commit ket thuc drive (2026-11-26 22:49 +07)
 - R3-078 RELEASED 22:16:43 (commit c658c08c, driver 679d7271) nhung chua co task_start/runner PID nao duoc ghi, va chua co commit drive-complete/snapshot nao tinh den 22:49 (kiem tra tu git log + heartbeat). Deadline 30 phut uoc tinh ~22:46:43 da qua, chua co ban ghi ket thuc. Trang thai thuc te chua ro: co the la heartbeat-lag giong R3-072 (fields ghi muon), hoac drive that su dang overrun. Mei khong co vai tro o R3-078.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 40. R3-078 PASS (gap ghi nhan da ro), R3-079 released (2026-11-26 23:00 +07)
+- R3-078 drive COMPLETED 22:38:47 trong gioi han (commit 2e69e279, heartbeat 22:48:24; task_start that 22:20:38, PID 3494773, drive 18m01s); snapshot sealed (12 files, manifest 6f16a394, gate PASS, pii clean). Gap o muc 39 da ro: coordinator bo sot ghi fields mid-drive, da ghi nhan trung thuc, khong overrun.
+- R3-078 GRADED PASS (commit c6758a5d; heartbeat 22:53:26, Clone2 B1 + Fresh B2, Rule-A 38/1). F12 reset verified (diff empty).
+- R3-079 RELEASED (commit c6758a5d, scorers Fresh B1 + Clone2 B2; release bi giu boi F12 guard cho den khi R3-078 graded + reset). Mei khong co vai tro o R3-079. Bar can 12 PASS tu 13 valid con lai (50/52; voi task 56: 13 tu 14, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
