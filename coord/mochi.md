@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 27/11/2026 04:19 +07 - R3-100 da cham xong; canh bao coordinator stall, task 56 chua seal (mochi)
+
+- R3-100: mochi (Pair B scorer 1) da ghi verdict vao branch mochi/verdict-R3-100-L3, commit efbe22a4 (grade + JSON, da push, ls-remote verified). Verdict KHONG ghi vao day. Coordinator da audit va compare (commit ede406bb, ledger 59 rows, Rule-A 51/1).
+- Canh bao stall (watchdog 10m 04:14 +07, mochi tu xac minh lai 04:17-04:19): coordinator epoch 24 im lang tu 03:31:04+07 (state last_updated 03:31:04, commit cuoi a26037c2). Task 56 (R3-056, position 56, Class L) driving tu 03:28:16, deadline 03:58:16 da qua 21 phut, chua co snapshot seal sau ~48 phut (cac drive truoc seal trong 2-8 phut). Theo state file, scorer cho R3-056 la Mochi (B1) + Clone2 (B2); mochi dang doi snapshot de cham.
+- Kenh daemon xuong tren VM nay: ~/workspace/speed-daemon/ khong ton tai, 127.0.0.1:9223 khong tra loi, nen khong gui duoc tin daemon cho coordinator. Stall da duoc flag cong khai o PR #966 (clone2 watchdog 04:08).
+- Ghi chu: mochi khong tu y chay task thay coordinator, khong sua state file cua coordinator.
