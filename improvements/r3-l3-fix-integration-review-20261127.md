@@ -123,4 +123,39 @@ not closed, G28 recurred; J12/J23/E1/E2 superseded-closed.
 
 ## Integration log (filled as items land)
 
-- (pending)
+All commits on todolist-push, ls-remote verified. Final tip 914ad171.
+
+- R18 pill label unification: aa176f2b (separate worker, landed first).
+- Review deliverable + council/redteam files: 2b4259c8.
+- R2 + R11 + R12 + R24 (brief template): d78a07c0. brief_check still runs.
+- R1 signal hygiene + R10 residue: 27da702d. signal-hygiene.py verdict
+  helper + test (6/6 PASS on fake fixtures: completed-task guard,
+  deadline suppression, Muse-lane close action); timeout-watch and
+  liveness-watch cron bodies updated via cron.update and read back;
+  coordinator checklist state-write discipline.
+- R5 Tier A: 2ad856d5. 35 regression tests green; checker PASS on the
+  real R3-021/072/076/DP-02 snapshots; mutation controls red.
+- R9 + R7: 2102887b (1a9bbe3f R9, 2102887b R7). Collect tests ALL PASS;
+  first_action suite 98 tests OK (94 pre-existing + 4 new). Note: R9
+  duplicate detection FAILs collect on identical non-empty content
+  under two names (intended fail-loud; zero-byte exempt).
+- R4 + R3: 914ad171. Overlay two-cycle test passes; zen_cli 20 tests,
+  zen_dom 52 tests OK. Live two-cycle screenshot test on the laptop
+  still owed (owner screen; only when needed).
+- R6 tab guardrail: agents-watch cron body (step 6) + laptop machine
+  layer (fastest-paths.md lines 110-138); logic test PASS (dry-run
+  close list = recorded task tabs only; pinned/essential/owner/active
+  kept). Live throwaway-profile test deliberately skipped (focus
+  disturbance risk); headless Marionette scratch-profile proof is a
+  separate follow-up if wanted.
+- R8 machine-layer anomalies: laptop fastest-paths.md (R8 block) +
+  keybinds.md golden rules 10-12, corroborated items only, each cited.
+
+Deferred with owners recorded: R13 (batch with R11 follow-up), R14 ops
+cleanup (after R6, verify-first), R15 daemon diagnosis (instrument
+first), R16 (alert first; restart authority is owner's), R17 Zen folder
+tooling (Clone2 artifact exists: improvements/zen-sidebar/, commits
+c045bfe4 + 8bc66191; laptop throwaway-profile proof owed before any
+integration), R20/R21/R23 (laptop batch / process / experiment).
+Owner-decision items: R19, R10 durable direction, R16 restart
+authority, R22, R15 service-manager move (section above).
