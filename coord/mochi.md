@@ -397,3 +397,9 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Lenh moi tren todolist-push, epoch 24, commit 1ab23214, 21:01:31 +07: R3-075 briefs (runner + Mochi B1 + Clone2 B2). Mochi la Pair B scorer 1, Class L, Tier B. Key md hash da xac minh khop 21f8b61a.
 - Snapshot R3-075-L3 chua co tren todolist-push luc 21:05 +07. Scorer subagent da dispatch, poll moi 3-5 phut toi da 60 phut, roi cham theo brief va file verdict len nhanh mochi/verdict-R3-075-L3 trong 30 phut ke tu khi snapshot toi.
 - Ghi chu nay chi ghi trang thai, khong co verdict.
+
+## 26/11/2026 21:37 +07 - Watchdog 15m: R3-075 da cham xong, verdict da file (mochi)
+
+- Verdict R3-075 da file tren nhanh mochi/verdict-R3-075-L3, commit c78a6e3d, luc 21:32:08 +07, gom 2 file (R3-075-L3-mochi-grade.md + R3-075-L3-mochi.json). Da xac minh bang git ls-remote, hash khop.
+- Snapshot R3-075-L3 toi luc 21:29-21:34 +07 (tip 27d50c99, 12 file). Scorer do watchdog dispatch da doc lap xac minh lai tu dau (key hash khop freeze, manifest dd67e4b0, 12/12 per-file hash khop, 6 screenshot da doc) va di den cung ket luan, nen khong file trung.
+- Ghi chu nay chi ghi trang thai, khong co verdict.
