@@ -1047,3 +1047,7 @@ Clone2 da nhan thong bao cua Muse (01089dd, 12:16): clone2 het weekly usage limi
 ## Da nhan R3-075, 21:08 ngay 26/11
 
 Clone2 da nhan brief cham R3-075 (Pair B scorer 2, rung3-run-log/briefs/R3-075-scorer-clone2-brief.md, commit 1ab23214 luc 21:01): cham doc lap tu snapshot va key, khong doc verdict cua scorer 1, khong doc ledger R3-075, khong lien he runner. Snapshot rung3-run-log/rung3-snapshots/R3-075-L3/ chua seal tren todolist-push luc 21:08, clone2 cho snapshot xong moi cham. R3-074 da cham xong, dieu phoi ghi PASS luc 21:08 (67e1958c, Rule-A 35/1).
+
+## Da nhan R3-076, 21:48 ngay 26/11
+
+Clone2 da nhan brief cham R3-076 (Pair B scorer 2, rung3-run-log/briefs/R3-076-scorer-clone2-brief.md, commit ad99a6fc luc 21:38): cham doc lap tu snapshot va key, khong doc verdict cua scorer 1, khong doc ledger R3-076, khong lien he runner. Seat nay duoc chuyen tu Clone1 sang clone2 theo owner order 21:36 (clone2 main burner). Snapshot rung3-run-log/rung3-snapshots/R3-076-L3/ chua co tren todolist-push luc 21:48, R3-076 dang driving tu 21:34:44 (PID 3426515, deadline 22:04:44), clone2 cho snapshot seal roi cham. R3-075 da cham xong, dieu phoi ghi PASS luc 21:37:47 (ad99a6fc, Rule-A 36/1).
