@@ -1,0 +1,21 @@
+{"wall":"2026-11-26T05:54:52.475Z","elapsed_s":"0.0","step":"shim_pinned","sha256":"bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8","bytes":316}
+{"wall":"2026-11-26T05:54:52.475Z","elapsed_s":"0.0","step":"start"}
+{"wall":"2026-11-26T05:54:52.507Z","elapsed_s":"0.0","step":"session","sessionId":"06b485b1-a3a3-4795-9d1c-41176ab9516c"}
+{"wall":"2026-11-26T05:54:52.510Z","elapsed_s":"0.0","step":"preload_installed","preloadId":"d30dad1d-0431-4aff-83f2-b33e9a5e95e6"}
+{"wall":"2026-11-26T05:54:52.822Z","elapsed_s":"0.3","step":"context_created","context":"34a85456-867e-4498-a68b-861b7b0d54b1"}
+{"wall":"2026-11-26T05:54:54.349Z","elapsed_s":"1.9","step":"descriptor_probe","info":{"webdriver":false,"own_on_navigator":false,"own_on_proto":true,"get_name":"get webdriver","get_tostring":"function () {\n    [native code]\n}","configurable":true,"enumerable":true,"title":"wdprobe","url":"data:text/html,<title>wdprobe</title><body>probe</body>"}}
+{"wall":"2026-11-26T05:54:54.349Z","elapsed_s":"1.9","step":"probe_ok"}
+{"wall":"2026-11-26T05:55:35.203Z","elapsed_s":"42.7","step":"rpc_done","id":"url1","op":"evaluate","ok":true}
+{"wall":"2026-11-26T05:56:46.091Z","elapsed_s":"113.6","step":"rpc_done","id":"serp2","op":"evaluate","ok":true}
+{"wall":"2026-11-26T05:57:05.718Z","elapsed_s":"133.2","step":"rpc_done","id":"serp3","op":"evaluate","ok":true}
+{"wall":"2026-11-26T05:57:31.350Z","elapsed_s":"158.9","step":"rpc_done","id":"url2","op":"evaluate","ok":true}
+{"wall":"2026-11-26T05:57:51.777Z","elapsed_s":"179.3","step":"rpc_done","id":"form1","op":"evaluate","ok":true}
+{"wall":"2026-11-26T06:00:01.536Z","elapsed_s":"309.1","step":"rpc_done","id":"conv1","op":"evaluate","ok":true}
+{"wall":"2026-11-26T06:01:20.836Z","elapsed_s":"388.4","step":"rpc_done","id":"conv2","op":"evaluate","ok":true}
+{"wall":"2026-11-26T06:03:21.386Z","elapsed_s":"508.9","step":"rpc_done","id":"conv3","op":"evaluate","ok":true}
+{"wall":"2026-11-26T06:08:24.562Z","elapsed_s":"812.1","step":"rpc_done","id":"url3","op":"evaluate","ok":true}
+{"wall":"2026-11-26T06:15:33.885Z","elapsed_s":"1241.4","step":"rpc_done","id":"docurl","op":"evaluate","ok":true}
+{"wall":"2026-11-26T06:15:55.114Z","elapsed_s":"1262.6","step":"preload_removed"}
+{"wall":"2026-11-26T06:15:55.132Z","elapsed_s":"1262.7","step":"context_closed"}
+{"wall":"2026-11-26T06:15:55.160Z","elapsed_s":"1262.7","step":"session_ended"}
+{"wall":"2026-11-26T06:15:55.161Z","elapsed_s":"1262.7","step":"done"}

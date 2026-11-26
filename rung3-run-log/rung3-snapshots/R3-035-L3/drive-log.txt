@@ -1,0 +1,23 @@
+R3-035 drive log (Muse lane, session 069510f3-e23e-40b5-bb44-36f66ce9bc4d)
+All times Asia/Ho_Chi_Minh, 2026-11-26.
+12:54:46 task start, holder hashes verified match, evidence dir created, start_time.txt written
+12:54:46 pill acquired (Muse:2741729, visible=true)
+12:54:52 holder started detached (pid 2741855), ready.json probe_ok: webdriver false, own_on_proto true, own_on_navigator false, get_name "get webdriver", get_tostring empty-name form
+12:55:25 act1: Ctrl+L, typed "xe currency converter", Enter -> DuckDuckGo SERP
+12:57:15 act2: clicked first xe.com result -> xe.com converter (en-gb)
+12:58:01 act3 first attempt failed: point outside observed image (viewport coords used); corrected to observation-space coords
+12:58:45 act3: amount 100 entered
+12:58:58-12:59:38 act4-6: To-currency dropdown, searched VND, selected Vietnamese Dong; conv1 screenshot saved (1 USD = 25,842.15 VND, result 2,584,215 VND); RPC conv1 verified inputs ["100.00","2,584,215"]
+13:00:15-13:00:57 act7-9: From-currency EUR selected, amount 50; conv2 screenshot saved (1 EUR = 28,320.08 VND, result 1,416,004 VND); RPC conv2 verified
+13:01:29-13:02:57 act10-14: From-currency GBP (one misclick selected CAD at 13:01:48, corrected via grounded click at 13:02:36), amount 200; conv3 screenshot saved (1 GBP = 33,855.23 VND, result 6,771,047 VND); RPC conv3 verified. Total 10,771,266 VND
+13:03:32 act15: Ctrl+T typed "google docs" - text went into xe currency search, pair flipped to SAR after conv3 screenshot (evidence unaffected); Zen split view appeared
+13:03:59-13:04:47 act16-18: DDG search "google docs" in right pane, opened Google Docs, created blank doc
+13:05:13-13:06:19 act19-22: Insert > Table 4x4 inserted in right-pane doc
+13:06:41 act23: Tab-typing into table escaped focus, opened Page setup dialog with stray text in margin fields; cancelled dialog (act24), table lost
+13:07:25-13:11:28 act25-36: repeated typing attempts into Docs editor in right pane failed (type verification failed / no text landed); split-view focus issue
+13:11:51-13:12:39 act37-39: navigated left holder tab via DDG to Google Docs home, opened the same blank doc in left pane
+13:13:04-13:13:50 act40-42: typing into left-pane Docs also failed verification, no text landed
+13:14:44 act43: clipboard paste (wl-copy + Ctrl+V) landed the 4-row table text in the doc; Drive autosave confirmed ("Da luu vao Drive")
+13:15:07 act44: Ctrl+R reload (reopen check); doc-reopened screenshot saved showing 4 rows
+13:15:42 ket-qua.txt and end_time.txt written
+No bot check, no 429/403, no challenge encountered on xe.com or Google Docs.

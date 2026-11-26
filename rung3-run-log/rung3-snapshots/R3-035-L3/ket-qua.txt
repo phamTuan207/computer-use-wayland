@@ -1,0 +1,11 @@
+R3-035 - Currency conversions to VND (xe.com)
+
+| Amount | Pair | Rate | Result |
+| 100 | USD to VND | 1 USD = 25,842.15 VND | 2,584,215 VND |
+| 50 | EUR to VND | 1 EUR = 28,320.08 VND | 1,416,004 VND |
+| 200 | GBP to VND | 1 GBP = 33,855.23 VND | 6,771,047 VND |
+| Total |  |  | 10,771,266 VND |
+
+Online document (Google Docs): https://docs.google.com/document/d/1CG2_hHnlD3TUHTAKjee-Kw6lrCgLIusmGNLPk_hoX7A/edit?tab=t.0
+Rates are xe.com mid-market rates shown at 05:58 UTC on 2026-11-26.
+Values taken from the saved conversion screenshots.

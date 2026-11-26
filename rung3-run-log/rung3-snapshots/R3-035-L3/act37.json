@@ -1,0 +1,1 @@
+[{"button":"left","type":"click","x":300,"y":500},{"keys":["Ctrl","l"],"type":"key"},{"delay_ms":0,"text":"google docs","type":"type"},{"keys":["Enter"],"type":"key"}]
