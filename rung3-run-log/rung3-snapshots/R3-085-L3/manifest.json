@@ -1,0 +1,74 @@
+{
+ "files": [
+  {
+   "mtime": 1795714673,
+   "name": "active-pill-proof.png",
+   "sha256": "86c5df5279714c09d11d53d82a6cd2993b0ab6f9c958943cc1b8ffd55b465e97",
+   "size": 714788
+  },
+  {
+   "mtime": 1795714676,
+   "name": "anh-mpv-00-10.png",
+   "sha256": "f95bd1606a6e27286be8d8e597596f618f8724def859451d76785dc050b91713",
+   "size": 1358583
+  },
+  {
+   "mtime": 1795714680,
+   "name": "anh-tham-chieu-imv.png",
+   "sha256": "1f3127bbf48f0aecc189ee0dd068deb35099d8e49daf470a10702b428c3b990d",
+   "size": 1197868
+  },
+  {
+   "mtime": 1795714681,
+   "name": "bao-cao.txt",
+   "sha256": "8afba992af9e96ff39c08557112650cc0666e8aa3ee8230d4bfabe40d4fac9c7",
+   "size": 4085
+  },
+  {
+   "mtime": 1795714684,
+   "name": "codex-R3-085.log",
+   "sha256": "b91819d5a7a608d83bc5fe241deb5d9a844a52004e2e2a4f3d4eeb03816f54af",
+   "size": 550999
+  },
+  {
+   "mtime": 1795714687,
+   "name": "desktop-after-release.png",
+   "sha256": "e5fce18d532c7741f42cefd66c93440b177dba5fd7721fd4ac65d5256bfe5f55",
+   "size": 702203
+  },
+  {
+   "mtime": 1795714689,
+   "name": "drive-log.txt",
+   "sha256": "173e8dad869fba20bae1e3e6058327a7c7d8a256e84cde93941ac65e94288d5a",
+   "size": 7279
+  },
+  {
+   "mtime": 1795714690,
+   "name": "end_time.txt",
+   "sha256": "2701ec5f99098069129259f17517e21a4b62cbdfe92453307f18c69439d7bdd8",
+   "size": 26
+  },
+  {
+   "mtime": 1795714692,
+   "name": "ket-qua.txt",
+   "sha256": "b3879c1d3faca0d49e3ed3334a90afb12c893ecbf48965e66cb9f46c4a2732c3",
+   "size": 557
+  },
+  {
+   "mtime": 1795714694,
+   "name": "r3-085-khung-tham-chieu.png",
+   "sha256": "de410f94b2192e553f4a78ff42df8bcfd84e29e5908c3f02775125cfa4c759c2",
+   "size": 52495
+  },
+  {
+   "mtime": 1795714695,
+   "name": "start_time.txt",
+   "sha256": "b04fd17854da51fb7b17392cd6b8dcab83d83632842d78b6fd3242a179143119",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "37a909717b8cb3f7a16a18e159ba7e4f23f17e967dc081a5b68095b3a0e51161",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-085-L3",
+ "source_dir": "/tmp/r3-085-evidence",
+ "task": "r3-085-evidence"
+}

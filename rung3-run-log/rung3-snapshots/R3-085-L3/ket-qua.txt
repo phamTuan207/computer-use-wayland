@@ -1,0 +1,8 @@
+Thời điểm tạm dừng (timeline hiển thị): 00:00:10.000
+Ảnh mpv: anh-mpv-00-10.png
+
+Hai chi tiết nhận dạng trong ảnh tham chiếu:
+1. Sáu dải màu dọc theo thứ tự đỏ, xanh lá, vàng, xanh dương, hồng tím, xanh lơ.
+2. Dải màu chéo chạy từ góc dưới bên trái lên phía trên bên phải; vùng ô caro nhiễu nằm ở phần dưới bên phải.
+
+Kết luận: match. Ảnh mpv tại 00:00:10.000 có cùng sáu dải màu và dải màu chéo; vùng ô caro cũng xuất hiện ở dưới bên phải.

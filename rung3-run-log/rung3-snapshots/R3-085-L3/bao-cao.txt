@@ -1,0 +1,31 @@
+Báo cáo runner R3-085
+Start: 2026-11-27T00:19:24+07:00
+Runner PID: 3687734
+Workspace thao tác: 2 (monitor eDP-2)
+
+Các bước đã làm:
+1. Ghi start time và PID; mở computer-use, chụp active-pill-proof.png khi pill hiện “Computer use active”.
+2. Mở launcher bằng Super+Space, tìm Foot (Terminal), mở cửa sổ Foot trên workspace 2.
+3. Nhập đúng lệnh: mpv --start=00:10 --pause ~/rung3/nd26-video.mp4.
+4. Xác nhận mpv trên workspace 2. Chụp anh-mpv-00-10.png khi video dừng tại timeline 00:00:10.000, OSC hiển thị và nút phát là biểu tượng tam giác.
+5. Mở ảnh tham chiếu bằng imv-wayland, quan sát chi tiết, chụp anh-tham-chieu-imv.png.
+6. Sao chép ảnh tham chiếu vào thư mục bằng chứng; SHA-256 của nguồn và bản sao giống nhau: de410f94b2192e553f4a78ff42df8bcfd84e29e5908c3f02775125cfa4c759c2.
+7. Đóng imv-wayland và xác nhận tiến trình không còn. Đóng terminal bằng exit. mpv đã tự thoát khi hết video sau một sự cố nhập phím được ghi bên dưới.
+8. Giữ nguyên mọi bằng chứng; không thao tác workspace 3 hay đóng cửa sổ của chủ máy.
+
+Kết quả: hai chi tiết tham chiếu khớp ảnh mpv: sáu dải màu dọc đỏ/xanh lá/vàng/xanh dương/hồng tím/xanh lơ; dải màu chéo từ dưới trái lên trên phải. Vùng ô caro ở dưới phải cũng hiện diện trong cả hai ảnh.
+
+Chuỗi bất thường (lỗi -> suy luận -> thử -> quyết định -> sửa -> kết quả):
+- Chọn monitor eDP-1 thất bại vì monitor thực tế là eDP-2 -> suy luận tên monitor cũ/không đúng -> computer-use doctor liệt kê eDP-2 -> mở session mới và dùng eDP-2 -> sửa bằng monitor đúng -> quan sát thành công, pill được chụp.
+- Lệnh Super+Space đầu tiên không cho kết quả và request kế tiếp bị báo JSON sai -> suy luận không có focus terminal nên không nhập chữ -> kiểm tra activewindow cho thấy VS Code vẫn focus, không có chữ nào vào buffer -> quan sát mới và gửi request JSON đúng -> launcher mở, tiếp tục tìm kiếm.
+- Chọn dòng Terminal thuộc Hotkeys nhưng không thấy terminal mới -> suy luận đây là trợ giúp/phím tắt và có sẵn client scratchpad ở special:herdrdrop -> để nguyên client đó, mở launcher và tìm ứng dụng Foot -> chọn Applications > Foot (Terminal) -> terminal mới hiện trên workspace 2.
+- Chọn nhầm Foot thuộc mục Setup > Install -> launcher cài Foot và hiện “Done” -> đóng riêng hộp hoàn tất, tìm lại foot -> chọn Applications > Foot (Terminal) -> Foot mở thành công; việc cài đặt ngoài ý muốn vẫn còn.
+- Lệnh mở imv lần đầu không mở viewer; ảnh/log cho thấy các ký tự vào mpv đang phủ terminal, mpv báo phím không gán và tiếp tục chạy tới EOF -> không gửi lại mù -> kiểm tra thấy prompt Foot trống, mpv đã thoát -> quan sát và xác nhận Foot focus rồi nhập lại lệnh trong vùng không bị phủ -> imv mở, xem được ảnh; VS Code không bị nhập chữ.
+- Tìm cửa sổ theo class imv-wayland trả về rỗng -> suy luận tên executable khác class cửa sổ -> hyprctl xác nhận class imv và tiêu đề chứa đường dẫn tham chiếu; pgrep xác nhận executable imv-wayland -> dùng thông tin đó để chụp, kiểm tra hash, rồi pkill -x imv-wayland -> tiến trình viewer không còn.
+
+Log thời gian đầy đủ: drive-log.txt. Các ảnh/sao chép bằng chứng nằm trong thư mục này.
+
+Cleanup and end:
+- imv-wayland, Foot terminal, and mpv are no longer running; workspace 2 remains active.
+- Finish call returned “Unknown process id 93571” because the relay process had already ended. Checked computer-use status and process list, ran computer-use stop, then captured desktop-after-release.png. The screenshot shows the pill is gone and the owner windows remain.
+- End: 2026-11-27T00:34:34+07:00
