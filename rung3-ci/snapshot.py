@@ -13,7 +13,12 @@ Snapshot directory: <root>/<TASK-ID>-<YYYYMMDD-HHMMSS>[-<label>]/.
 The copy is verified: every copied file hash must match the source
 hash, else the snapshot is removed and the command fails.
 manifest.json in the snapshot lists source dir, files with sha256,
-size and mtime, and the manifest sha256.
+size and mtime, and the manifest sha256. The copy is recursive
+(R9): files in subdirectories are copied under their relative
+path, so evidence with a subdir (DP-02 dp02-code/) seals whole.
+The source manifest.json written by collect-evidence.py is NOT
+copied (R9): the snapshot writes its own manifest, and copying the
+collect manifest would seal a stale self-hash.
 Times are Asia/Ho_Chi_Minh wall clock.
 No personal info in this file.
 """
@@ -61,14 +66,23 @@ def main():
     if os.path.exists(dest):
         print("FAIL: snapshot dir already exists: %s" % dest)
         return 1
-    names = sorted(n for n in os.listdir(src)
-                   if os.path.isfile(os.path.join(src, n)))
+    names = []
+    for dirpath, dirnames, filenames in os.walk(src):
+        dirnames.sort()
+        for n in sorted(filenames):
+            rel = os.path.relpath(os.path.join(dirpath, n), src)
+            if rel == "manifest.json":
+                continue
+            names.append(rel)
+    names.sort()
     manifest = {"task": task, "source_dir": src, "snapshot_dir": dest,
                 "files": []}
     try:
         os.makedirs(dest)
         for n in names:
-            shutil.copy2(os.path.join(src, n), os.path.join(dest, n))
+            target = os.path.join(dest, n)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.copy2(os.path.join(src, n), target)
         for n in names:
             s_hash = sha256_file(os.path.join(src, n))
             d_hash = sha256_file(os.path.join(dest, n))
