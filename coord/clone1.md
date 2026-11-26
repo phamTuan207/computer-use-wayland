@@ -9119,3 +9119,23 @@ Không có comment mới trên PR #897 (0 comment), không có issue mở. Lưu 
 R3-L3: R3-075 snapshot sealed 21:25, chấm giao Mochi B1 + Clone2 B2, không giao clone1; Rule-A 35 PASS / 1 FAIL; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push f1547c0e lúc 21:29 (5 phút trước); câu hỏi equip Graphify 04:44 vẫn chưa trả lời nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 21:37 ngày 26/11 - WATCHDOG
+
+Muse giao việc mới: R3-076 chấm, clone1 là Pair B scorer 2 (brief 27d50c99 lúc 21:31, snapshot chưa sealed, runner đang chạy vị trí 38). Đã giao cho subagent chấm riêng, session 5e30b43f, chờ snapshot lên todolist-push rồi chấm theo brief, hạn 30 phút từ lúc snapshot có.
+Không agent nào kẹt, không agent đang chạy (R3-072 đã chấm xong, GRADED PASS lúc 20:37).
+Main không có commit mới từ watermark 2e7f4de2; todolist-push có 1 commit mới sau watermark f1547c0e (27d50c99 lúc 21:31, brief R3-076).
+Không có comment mới trên PR mở, không có issue mở.
+R3-L3: R3-075 đã sealed 21:25, chấm giao Mochi B1 + Clone2 B2; Rule-A 35 PASS / 1 FAIL; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
+Điều phối còn sống: todolist-push 27d50c99 lúc 21:31 (6 phút trước); câu hỏi equip Graphify 04:44 vẫn chưa trả lời nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
+Lưu ý: lần chạy này git local trong repo bị chặn bởi execution-risk check, khối này chỉ ghi local, chưa push lên main, sẽ thử lại lần sau.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 22:20 ngày 26/11 - WATCHDOG
+
+R3-076: clone1 đã chấm xong 22:18, nhánh clone1/verdict-R3-076-L3 commit 962a96e3, có ghi checker đọc sai file báo cáo; nhưng chủ lệnh 21:36 đổi scorer 2 sang Clone2, điều phối chấm chính thức R3-076 GRADED PASS với Fresh B1 + Clone2 B2 lúc 22:17, Rule-A 37/1.
+R3-078: briefs lúc 22:10, giao runner + Clone2 B1 + Fresh B2, không giao clone1. Không có việc mới cho clone1, không agent nào kẹt, không agent đang chạy.
+Main không có commit mới từ watermark 2e7f4de2; todolist-push có 4 commit mới sau watermark 27d50c99 (ad99a6fc 21:38, 22d317b3 22:08, 937b7ed5 22:10, c658c08c 22:17).
+Không có comment mới trên PR #897, #904, không có issue mở. Clone2 watchdog PR #904 ghi "clone1 watchdog stall" vì các khối 20:37-21:37 chưa lên main, đang đẩy lại lần này.
+Điều phối còn sống: todolist-push c658c08c lúc 22:17 (3 phút trước); câu hỏi equip Graphify 04:44 vẫn chưa trả lời nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
