@@ -39,10 +39,10 @@
   "de": 0,
   "kho": 1,
   "rat_kho": 0,
-  "trung_binh": 3
+  "trung_binh": 4
  },
  "invalid_count": 4,
- "last_updated": "2026-11-26T07:24:31+07:00",
+ "last_updated": "2026-11-26T07:38:31+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1117,7 +1117,8 @@
   "2026-11-26T06:55:21+07:00 R3-027 drive actually started: FCC found the session busy at 06:53 (check-6 holder PID 2321252 lingered after its drive ended 06:49:24; worker stopped it cleanly 06:54:00 on coordinator order; FCC correctly held, one-driver rule worked). FCC signaled at 2026-11-26T06:55:21+07:00; its 30-min deadline runs from its holder sequence start. Clone2 calibration filed (branch clone2/calibration-sealed-20261126, 5af45214); sign-off verifier spawned (d2cd5fd0). Check 10 PASS (R3-028 briefs pushed cc265891).",
   "2026-11-26T07:18:56+07:00 R3-027 BLOCKED: hCaptcha on namechk at 07:10:51 (FCC followed bot-check rule, finalized 07:16). Snapshot R3-027-L3 pushed 5a501b64 (manifest be4791f1; gate FAIL ket-qua.txt missing as expected; brief-report label reworded in snapshot copy for scanner false positive, laptop original untouched). Scorers dispatched: Mochi (daemon run 236) + Clone2 (PWA). If INVALID: event 5 = cap, R3-027 drops, valid 53, bars 51/53 + 52/54. Check 11 trigger recorded for captcha-gated class (not Cloudflare class). R3-028 released to Muse lane runner d1b41eaf. Check 6 worker report confirms LOGGED OUT (auth_page_conflict x2).",
   "2026-11-26T07:23:53+07:00 TIMEOUT-WATCH SAFETY (parent heads-up): R3-027 drive ENDED 07:16 (blocked, finalized) before its 07:25 deadline; state already moved to R3-028 at 07:18:56 with runner_pid cleared, so PID 22399 (persistent FCC pane, verified alive) is NOT a kill target. R3-028 runner_pid now recorded as 2363275 (drive-r3028.py on laptop; holder 2363298). R3-028 task_start 07:18:56 (coordinator release); runner's own start_time.txt in evidence governs its 30-min deadline (~07:49).",
-  "2026-11-26T07:24:31+07:00 task_start aligned to R3-028 runner drive start 07:21:44 (evidence start_time.txt); watch deadline 07:51:44. Probe passed on R3-028 drive (webdriver false, shim bb49ff3f)."
+  "2026-11-26T07:24:31+07:00 task_start aligned to R3-028 runner drive start 07:21:44 (evidence start_time.txt); watch deadline 07:51:44. Probe passed on R3-028 drive (webdriver false, shim bb49ff3f).",
+  "2026-11-26T07:38:31+07:00 R3-027 ruled INVALID by both scorers (Mochi A1 07:21:49, Clone2 A2 07:20; agreement, no tiebreaker). Invalid event 5 = CAP (5/5). R3-027 drops, no backup. Valid original set 53, bars 51/53 + 52/54 (task 56). B-F4 valid-53 crossing: recomputed + parent notified. Any 6th event needs a new recorded team decision. R3-028 drive COMPLETED 07:35:54 (no block; values match key), snapshot pushed 017a3e16 (manifest aa4e4e15, gate PASS). Scorers for R3-028: Mochi + Fresh. R3-029 next (position 25): password requested from parent."
  ],
  "pass_count": 21,
  "plan_adaptations": [
@@ -1174,7 +1175,7 @@
  "graded": 6,
  "pass": 21,
  "fail": 3,
- "invalid": 4,
+ "invalid": 5,
  "runner_split": {
   "approved_by": "owner 2026-11-25 18:46 +07 (counting rule A)",
   "source": "improvements/r3-l3-replan-midrun-20261125.md section 2",
