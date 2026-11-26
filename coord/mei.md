@@ -878,3 +878,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - OWNER ORDER 21:36 (heartbeat 21:36:56, commit ad99a6fc): Clone2 main burner, Mei steady, Mochi+Clone1 reduced; R3-076 scorer2 doi Clone1 -> Clone2.
 - R3-076 RELEASED, DRIVING tu 21:34:44 (PID 3426515, vi tri 41 theo run order). Mei khong co vai tro o R3-076. Bar can 14 PASS tu 15 valid con lai (50/52; voi task 56: 15 tu 16, 51/53), toi da 1 FAIL nua.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 37. R3-076 drive xong trong gioi han, scoring tiep theo (2026-11-26 22:10 +07)
+- R3-076 drive COMPLETED 21:59:17 trong gioi han (commit 22d317b3, heartbeat 22:07:47; drive 24m33s); snapshot sealed (gate PASS, pii clean); scoring tiep theo. Ghi chu trong commit: Tier A report-consistency FAIL (label/row-format artifact, data consistent). Rule-A 36/1.
+- Em khong cham diem, khong doc ledger/snapshot.
