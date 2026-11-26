@@ -852,3 +852,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-067 scoring: Fresh B2 PASS audited, Mochi B1 pending; grade chua ghi. Rule-A 32/1.
 - R3-072 DRIVING qua deadline 30 phut: task_start 19:45:07, deadline 20:15:07, heartbeat 20:15:13 van DRIVING (PID 3254010), chua co commit ket thuc drive. Task fields ghi muon (commit 29f97271) sau khi runner watch bao gap; coordinator giai thich heartbeat-lag pattern (im 19:43-20:15). R3-074 briefs pre-staged (commit 6a50eb3b, Codex runner, scorers Clone2 + Fresh, prep coordinator-live).
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 32. R3-067 PASS, R3-072 drive xong (overrun), R3-074 released (2026-11-26 20:28 +07)
+- R3-067 GRADED PASS (commit 6af2ae2e; heartbeat 20:21:01, Rule-A 33/1; Fresh B2 PASS audited, Mochi B1 PASS theo commit grade).
+- R3-072 drive COMPLETED voi overrun duoc ghi lai (commit 6af2ae2e, heartbeat 20:21:01; task_start 19:45:07, deadline 20:15:07, xong sau deadline); snapshot sealed (commit fa960bd3, 9 files, manifest 5623a6af, gate PASS, pii clean, Tier A output included); scoring assigned (commit 624b576b, Fresh 4bf08add + Clone1 PWA, heartbeat 20:25:34).
+- R3-074 RELEASED (commit 624b576b, driver e7a5ff4c, vi tri 39 theo run order, coordinator label 36). Bar can 17 PASS tu 18 valid con lai (50/52; voi task 56: 18 tu 19, 51/53), toi da 1 FAIL nua. Mei la reviewer R3-067 (grade da ghi, chua co review nao duoc yeu cau) va analyst on-call R3-072.
+- Em khong cham diem, khong doc ledger/snapshot.
