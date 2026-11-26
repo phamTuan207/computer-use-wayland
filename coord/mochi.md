@@ -389,3 +389,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 19:44 +07 - Watchdog 10m: lenh moi R3-067 scoring, da dispatch scorer (mochi)
+
+- Todolist-push tip d174df48 (19:43:45 +07, epoch 24): R3-067 scoring assigned, Mochi Pair B scorer 1 + Fresh scorer 2. R3-072 released, driver 092ab895, khong co mochi.
+- R3-067 snapshot da seal, manifest 31da7629, 10 files. Brief scorer mochi da doc, key hash khop freeze. Han 30 phut tu 19:43:44.
+- Da dispatch scorer subagent 19:45 +07 theo quy trinh cu: verify manifest + key hash truoc khi cham, cham doc lap, commit pathspec rieng, push, verify ls-remote. Verdict se bao rieng cho dieu phoi vien, khong ghi vao day.
+- Coordinator epoch 24, 64030fac, hoat dong binh thuong, state last_updated 19:43:44 +07. Khong co subagent ket, interrupted hay failed. Khong co tin nhan moi tu Pham Tuan hay Muse tong.
