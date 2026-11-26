@@ -1,0 +1,44 @@
+Task ID: R3-049 ATTEMPT 3
+Session ID: a47b2556-882c-4dba-af1c-22955554ad53 (holder BiDi session; a separate Codex runner session identifier was not exposed to this process)
+Evidence folder: /home/james/rung3-chung-cu/R3-049
+Start wall-clock time (Asia/Ho_Chi_Minh): 2026-11-26T18:35:22+07:00
+End wall-clock time (Asia/Ho_Chi_Minh): 2026-11-26T18:49:23+07:00
+Result: COMPLETED, no bot-wall or challenge encountered.
+
+Pre-flight:
+- GUI env exported: XDG_RUNTIME_DIR=/run/user/1000, WAYLAND_DISPLAY=wayland-1, DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus; HYPRLAND_INSTANCE_SIGNATURE re-read from /run/user/1000/hypr at launch.
+- `hyprctl configerrors`: empty at initial pre-flight and before each act-now input; nothing needed clearing. Final check also empty.
+- `/tmp/fixb-rpc` and `/tmp/fixb-gate`: empty at initial check; cleared with Python before holder launch and rechecked. Holder created ready.json and stop during the run.
+- Zen PID 578117: alive before and after the drive. Focus checks before every input confirmed task-owned Zen window 0x5614f0849b40, PID 578117, on workspace 2.
+- Cursor lock: initial process scan found no cursor_session guard or act-now holder (only the always-on relay service); /home/james/.cache/agent-computer-use/cursor.lock existed (0 bytes), and final `fuser` showed no process holding it.
+- Competing pill process/holder: none before acquire. Pill was visibly acquired with exact label `Computer use active`; a task-local live keeper PID 3168561 maintained its owner record during input. Release reply was visible=false, owner=none, holders={}; cleanup image /home/james/rung3-chung-cu/R3-049/cleanup-pill-gone.png shows no pill. The keeper exited; no task holder process remained.
+- Holder and probe file hashes matched required values: holder 70bfe8abbed9fdbec30a2cf323c61150322048ce2736dfe26186a1c075d4f213; probe 5329a574c7c7de6b003ad967d9706e75e589ce60c388f7a07f39f12dcf15c1f9. Shim SHA-256: bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8.
+
+Probe:
+- webdriver=false; own_on_proto=true; own_on_navigator=false; get_name=`get webdriver`; get_tostring=`function () {
+    [native code]
+}`.
+- Captured in /home/james/rung3-chung-cu/R3-049/probe-ready.json; holder log confirms probe_ok before any site navigation.
+
+User path and calculations:
+- Entered `calculator.net` from the Zen address bar and Return. Homepage screenshot: /home/james/rung3-chung-cu/R3-049/entry-homepage.png; homepage URL and rendered text read through holder RPC.
+- Navigated with visible UI links to Payment Calculator, then used its visible Related > Loan Calculator link. No deep link, direct BiDi navigation to a calculator URL, DOM click, API call, or computed loan value was used. Form entry used visible fields and keyboard input; result values were read from rendered page text.
+- Loan 1 form readback: 500,000,000; 10 years; 0 months; 8%. Rendered Monthly Payment 6,066,379.72; Total Interest 227,965,566.13. Screenshot: loan1-2026-11-26T18-42-24+07-00.png (SHA-256 6a782d55d385ef12043658272b6c3f5743bd3cd58c7c580d26b90f67c78cebd1).
+- Loan 2 form readback: 300,000,000; 5 years; 0 months; 7.5%. Rendered Monthly Payment 6,011,384.58; Total Interest 60,683,074.72. Screenshot: loan2-2026-11-26T18-44-17+07-00.png (SHA-256 658e90a3483d66776b5d6f96731be484986669e282b8a0d5c31b779a673c0066).
+- Loan 3 form readback: 1,000,000,000; 20 years; 0 months; 9%. Rendered Monthly Payment 8,997,259.56; Total Interest 1,159,342,294.04. Screenshot: loan3-2026-11-26T18-45-38+07-00.png (SHA-256 34e93042c916eacff87129800723a7d9a9b90bc218aa4c608a587976d233c73a).
+- `ket-qua.txt` was written and read back. A holder RPC text scan of the 8,969-character rendered page found no formula/payment-formula text; file records `formula: none shown`.
+
+Anomaly chain (failure -> reasoning -> attempts -> decision -> fix -> outcome):
+1. An initial act-now batch was rejected before input because its 3,500 ms wait exceeded the driver's 2,000 ms limit. The typed refusal reported completed=0 and input_sent=false. I corrected the wait to 1,800 ms and rechecked configerrors and focused task window. The valid retry entered calculator.net; homepage URL/title were verified by holder RPC and screenshot.
+2. A short-lived shell initially acquired the pill under its own PID; after that shell exited, a later status query found the overlay socket absent. No browser input had been sent at that status failure. I inferred ownership was PID-scoped, logged the failure, and started a detached task-local keeper that acquired the exact pill label and stayed alive. Its reply reported visible=true; subsequent screenshots showed the pill during the drive.
+3. The first homepage link click did not navigate. A read-only DOM bounds check showed the visible Loan Calculator link, but I mapped its CSS coordinates incorrectly against the scaled screenshot; the next click opened Payment Calculator. I checked the rendered title/URL and did not enter loan data there. Decision: continue only via the visible Related > Loan Calculator link. Two clicks without a bound fresh observation did not navigate; I then captured a fresh window observation, passed it to act-now, clicked the visible Related link, and verified URL `/loan-calculator.html` and page title `Loan Calculator` through holder RPC.
+4. The first second-loan field batch used stale coordinates after the result page had scrolled. The screenshot showed Ctrl+A selected page text and holder RPC proved all form fields were unchanged. I did not calculate from those values. I read a fresh screenshot, remapped the visible principal field, repeated visible keyboard entry, captured a new screenshot, and RPC-confirmed principal 300,000,000 / term 5 / months 0 / rate 7.5 before clicking Calculate. Result then matched the intended loan.
+5. For the task page, form changes and result states were captured and hashed. No unchanged-hash freeze occurred after a successful state change. No string-form Hyprland dispatch was used; no ydotool, cookie clearing, Zen restart, or owner-tab navigation occurred.
+
+Holder shutdown and cleanup:
+- Stop requested only by writing `/tmp/fixb-rpc/stop`; no timeout wrapper or signal was used on the holder.
+- Waited for log markers `preload_removed`, `context_closed`, `session_ended`, and `done`; all were present in /home/james/rung3-chung-cu/R3-049/holder.log. The `session_ended` marker was observed before pill release.
+- Released the pill after holder shutdown. Release reply had visible=false and zero holders. Captured `/home/james/rung3-chung-cu/R3-049/cleanup-pill-gone.png` with grim and visually verified the pill was gone.
+- No cookies were cleared; no bot block evidence was needed.
+
+Evidence files: ket-qua.txt, 3 timestamped loan screenshots, probe-ready.json, start_time.txt, end_time.txt, holder.log, report.txt, cleanup-pill-gone.png. Additional entry and intermediate screenshots document the user path and form states. All were created during this attempt window.

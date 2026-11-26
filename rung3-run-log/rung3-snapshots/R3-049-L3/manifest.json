@@ -1,0 +1,134 @@
+{
+ "files": [
+  {
+   "mtime": 1795693869,
+   "name": ".pill-keeper.log",
+   "sha256": "b2c23520e785e62a18cd3039485d7a1e37b1129232e401fb6cb8156be8bc2596",
+   "size": 498
+  },
+  {
+   "mtime": 1795693869,
+   "name": ".pill-keeper.pid",
+   "sha256": "c8d34eab9992b0518ca9e0a0fa385f9a627b501eecc9dccccea582cdfbfa9992",
+   "size": 8
+  },
+  {
+   "mtime": 1795693869,
+   "name": "cleanup-pill-gone.png",
+   "sha256": "a99cb7226c2e8734e3c0f6813e014719c3f30a740feb194497ffe40ac0a03a00",
+   "size": 528775
+  },
+  {
+   "mtime": 1795693869,
+   "name": "driver-grim-after.png",
+   "sha256": "5e746e1af625dccb27d3e2e025ebefe842b25a99ea56974b47f760ef078fb4dd",
+   "size": 528873
+  },
+  {
+   "mtime": 1795693869,
+   "name": "end_time.txt",
+   "sha256": "902e8c828d7af9c9ab8e4c709a069f9798181505cbdb0946a041b64454fa61c9",
+   "size": 26
+  },
+  {
+   "mtime": 1795693869,
+   "name": "entry-homepage.png",
+   "sha256": "04f9f177f4ba3f2d699e0637acf90ce2e9887aef1cfbc83136d16a4bfcb2c334",
+   "size": 121024
+  },
+  {
+   "mtime": 1795693869,
+   "name": "holder.log",
+   "sha256": "1e58ffa3b0f0595bcb919a06bfe1117772891d8564cb92e15e2c7a212f1f334a",
+   "size": 3475
+  },
+  {
+   "mtime": 1795693869,
+   "name": "holder.pid",
+   "sha256": "00683bb757628b168e17f975ad6bfb7e684e41b87e19087dccf0a209a4315268",
+   "size": 8
+  },
+  {
+   "mtime": 1795693869,
+   "name": "ket-qua.txt",
+   "sha256": "7e32615784a7089fa808c4219d24e967b9c8742a61e6ea9ca88788a288d6c472",
+   "size": 154
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan-calculator.png",
+   "sha256": "059b0f31a2aae27f0323d87cc10daea4dbc0bcd1cddfb0b88f6805b9dcc5bb17",
+   "size": 151376
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan1-2026-11-26T18-42-24+07-00.png",
+   "sha256": "6a782d55d385ef12043658272b6c3f5743bd3cd58c7c580d26b90f67c78cebd1",
+   "size": 352938
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan1-input.png",
+   "sha256": "4f1b59c8b3a249ca9b742dbddf156c9891c20033e0f90b77f1c1d1e115e7448c",
+   "size": 151861
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan2-2026-11-26T18-44-17+07-00.png",
+   "sha256": "658e90a3483d66776b5d6f96731be484986669e282b8a0d5c31b779a673c0066",
+   "size": 352636
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan2-after.png",
+   "sha256": "547d6810eb391044eebe59d47852702524b02971de777d57c955ad9a84f0a8ba",
+   "size": 135790
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan2-input.png",
+   "sha256": "00a6a3c6da6caf4779621fca302cc3ba74de8e1bbcfba9c61ec6e29b64f43926",
+   "size": 136105
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan3-2026-11-26T18-45-38+07-00.png",
+   "sha256": "34e93042c916eacff87129800723a7d9a9b90bc218aa4c608a587976d233c73a",
+   "size": 353666
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan3-input.png",
+   "sha256": "f3cbf17e6d22aa5e967becf2915cca23d62023b7eba096e3d15ffd2e56254e6e",
+   "size": 136103
+  },
+  {
+   "mtime": 1795693869,
+   "name": "loan3-pre.png",
+   "sha256": "af2b4886265da06c835829d773466efb5e4d0808413b74728f6cff31fe0c9f9d",
+   "size": 135503
+  },
+  {
+   "mtime": 1795693869,
+   "name": "probe-ready.json",
+   "sha256": "17b5fe5c0e68537f8f89dc9627d9b7ca04343514ae1f5d086c4bdc4a59c847fe",
+   "size": 455
+  },
+  {
+   "mtime": 1795693869,
+   "name": "report.txt",
+   "sha256": "da7bed18c7d779d0537b4554cf19130554d58d1c37e120d0713df4c27afb53c4",
+   "size": 6982
+  },
+  {
+   "mtime": 1795693869,
+   "name": "start_time.txt",
+   "sha256": "8e7a7d1abd6bd134ad6e0126f1ee92b4927e3ed3b03ac7ea05431549acfd772d",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "0a3b0a660ee73371af6a4e182432b2feff4b49aa273b769808ba2208fd9d286a",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-049-L3",
+ "source_dir": "/tmp/r3-049-snapshot-src",
+ "task": "r3-049-snapshot-src"
+}

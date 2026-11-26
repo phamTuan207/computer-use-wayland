@@ -1,0 +1,27 @@
+{"wall":"2026-11-26T11:36:15.921Z","elapsed_s":"0.0","step":"shim_pinned","sha256":"bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8","bytes":316}
+{"wall":"2026-11-26T11:36:15.922Z","elapsed_s":"0.0","step":"start"}
+{"wall":"2026-11-26T11:36:15.954Z","elapsed_s":"0.0","step":"session","sessionId":"a47b2556-882c-4dba-af1c-22955554ad53"}
+{"wall":"2026-11-26T11:36:15.956Z","elapsed_s":"0.0","step":"preload_installed","preloadId":"f5ffed7b-875b-49b8-bbe2-fa487ed146e4"}
+{"wall":"2026-11-26T11:36:16.266Z","elapsed_s":"0.3","step":"context_created","context":"b1600365-785d-4697-aa16-473edf4d7ea9"}
+{"wall":"2026-11-26T11:36:17.790Z","elapsed_s":"1.9","step":"descriptor_probe","info":{"webdriver":false,"own_on_navigator":false,"own_on_proto":true,"get_name":"get webdriver","get_tostring":"function () {\n    [native code]\n}","configurable":true,"enumerable":true,"title":"wdprobe","url":"data:text/html,<title>wdprobe</title><body>probe</body>"}}
+{"wall":"2026-11-26T11:36:17.790Z","elapsed_s":"1.9","step":"probe_ok"}
+{"wall":"2026-11-26T11:37:52.309Z","elapsed_s":"96.4","step":"rpc_done","id":"r3049-1795693072186918585","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:38:19.144Z","elapsed_s":"123.2","step":"rpc_done","id":"r3049-1795693098947702599","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:38:35.167Z","elapsed_s":"139.2","step":"rpc_done","id":"r3049-1795693114772011859","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:39:08.417Z","elapsed_s":"172.5","step":"rpc_done","id":"r3049-1795693148156042937","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:39:22.836Z","elapsed_s":"186.9","step":"rpc_done","id":"r3049-1795693162621739900","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:39:48.869Z","elapsed_s":"212.9","step":"rpc_done","id":"r3049-1795693188858173777","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:40:25.314Z","elapsed_s":"249.4","step":"rpc_done","id":"r3049-1795693224917930162","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:41:08.566Z","elapsed_s":"292.6","step":"rpc_done","id":"r3049-1795693268517212050","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:41:54.224Z","elapsed_s":"338.3","step":"rpc_done","id":"r3049-1795693313924051786","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:42:24.661Z","elapsed_s":"368.7","step":"rpc_done","id":"r3049-1795693344323736763","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:43:15.523Z","elapsed_s":"419.6","step":"rpc_done","id":"r3049-1795693395388334110","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:43:49.967Z","elapsed_s":"454.0","step":"rpc_done","id":"r3049-1795693429709522891","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:44:17.200Z","elapsed_s":"481.3","step":"rpc_done","id":"r3049-1795693457183795360","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:45:14.477Z","elapsed_s":"538.6","step":"rpc_done","id":"r3049-1795693514262372110","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:45:38.508Z","elapsed_s":"562.6","step":"rpc_done","id":"r3049-1795693538343631403","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:45:47.321Z","elapsed_s":"571.4","step":"rpc_done","id":"r3049-1795693547078824997","op":"evaluate","ok":true}
+{"wall":"2026-11-26T11:46:46.594Z","elapsed_s":"630.7","step":"preload_removed"}
+{"wall":"2026-11-26T11:46:46.605Z","elapsed_s":"630.7","step":"context_closed"}
+{"wall":"2026-11-26T11:46:46.613Z","elapsed_s":"630.7","step":"session_ended"}
+{"wall":"2026-11-26T11:46:46.614Z","elapsed_s":"630.7","step":"done"}
