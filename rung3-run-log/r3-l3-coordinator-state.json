@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T08:04:41.542851+07:00",
+ "last_updated": "2026-11-26T08:05:44.629324+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1179,6 +1179,11 @@
    "ts": "2026-11-26T08:04:41.542851+07:00",
    "by": "coordinator-epoch-16",
    "text": "DEPUTY CONFIRMED, EPOCH 16: fresh deputy c3fe4516. Declaration 08:04:03 +07 (after state 08:03:21, G-24 satisfied), pushed 58367bef (ls-remote verified). Dry run 5/5 PASS (SSH omarchy, FCC tmux pane 22399 alive, codex-cli 0.172.0, state parse epoch 16, ledgers validate + cross-check exit 0). G-24/G-38 CLOSED for epoch 16. Deputy on STANDBY under section 7 fencing. R3-029 still HELD for parent password. Holder hashes on laptop verified by coordinator pre-check (holder 70bfe8ab...213, probe 5329a574...c1f9 match the brief pins); R3-029 releases immediately on password receipt."
+  },
+  {
+   "ts": "2026-11-26T08:05:44.629324+07:00",
+   "by": "coordinator-epoch-16",
+   "text": "BRIEFS PREPPED while R3-029 held: runner + scorer briefs for R3-035 (Muse lane; scorers Mochi + Clone2), R3-036 (Muse lane, named INVALID candidate timeanddate shared cause; scorers Mochi + Fresh with shared_cause_confirmed), R3-037 (FCC lane; scorers Mochi + Clone1, clone1 first real scoring task) written to rung3-run-log/briefs/ following the epoch 10 R3-029 template; task inputs extracted from the frozen list + key input lines only (035: 100 USD, 50 EUR, 200 GBP to VND; 036: Hanoi/Tokyo/Sydney, 2026-12-02; 037: example.com, wikipedia.org); no expected answers in runner briefs. Check 9 spot-check by epoch 16: all 9 briefs carry ydotool ban, pill rule, user entry point, forbidden shortcuts, event-log duty, ponytail text, 30-min timeout, explicit delivery paths; runner briefs carry holder hashes + probe fail-loud + bot-check rule + invalid budget. R3-029 still HELD for parent password."
   }
  ],
  "pass_count": 22,
