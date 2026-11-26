@@ -120,3 +120,4 @@
 2026-11-26T07:59:52.252828+07:00 | epoch 15 takeover | coordinator_active 4ede4016 | rule-A 25/0 | R3-029 held (password) | clone1 sign-off verifier spawned
 2026-11-26T08:01:19.736092+07:00 | epoch 15 deputy confirmed 1598992c (G-24/G-38 closed) | clone1 sign-off verifier running | R3-029 held
 2026-11-26T08:02:23.804229+07:00 | epoch 15 clone1 calibration APPROVED 4/4 (sign-off 555b5ddc) | R3-029 held (password)
+2026-11-26T08:03:21.072508+07:00 | epoch 16 takeover | coordinator_active 78fd6562 | rule-A 25/0 | invalid 5/5 | R3-029 held (password) | clone1 approved 4/4
