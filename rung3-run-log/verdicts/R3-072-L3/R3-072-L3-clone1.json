@@ -1,0 +1,48 @@
+{
+ "task": "R3-072",
+ "pair": "B",
+ "scorer": 2,
+ "scorer_id": "clone1",
+ "session": "055fbc96-720f-4442-ae8a-a3955bd1a624",
+ "timestamp": "2026-11-26T20:27:36+07:00",
+ "verdict": "PASS",
+ "key_hashes": {
+  "docs/rung3-answer-keys.md": "21f8b61a6eaa0097e9840adb218f15e99d446fc2a62968aef614116c8831bc60",
+  "docs/rung3-answer-keys.json": "5059f6c447f9df0b63c092589bbba0df9efe37b2b6b962f7a32194054abfdae8"
+ },
+ "manifest_hash": "5623a6af94404b3e987aac4656e12a2934260bca6630c3b84da8e9884c9ee8fb",
+ "manifest_file_sha256": "0293cb9631d4b77238761a1441dbd8152f7e37709a8e534ce322a65152a5825f",
+ "per_file_hashes_match": true,
+ "files_checked": 9,
+ "reason": "ket-qua.txt has exactly 5 data rows in folder order, all file names and sizes match the key (d72-anh-1.png 800 x 600, d72-anh-2.png 1024 x 768, d72-anh-3.png 640 x 480, d72-anh-4.png 1280 x 720, d72-anh-5.png 400 x 400). The image 1 overlay screenshot (imv-overlay-20261126T195101+0700.png) is present, a valid PNG 1920 x 1200, and readable: it shows imv at [1/5] with size [800x600] legible, the path prefix ending in d72-a, and the same screenshot shows the full d72-anh-1.png name in the visible Nautilus file list for folder d72-anh. The viewer is imv, the expected viewer. CHECKER DISAGREEMENT, stated explicitly: tier-a-output.json in the snapshot says FAIL with reasons missing image d72-anh-1.png through d72-anh-5.png, because the checker requires the 5 source image files to be present in the evidence directory. The key (docs/rung3-answer-keys.md, section R3-072 Tier A) lists the grading evidence as ket-qua.txt (5-row table) plus the overlay screenshot of image 1 only, and says the checker compares file names and sizes; it does not list the source images as evidence. The source images are task inputs in the source folder, not evidence outputs. My own reading of the evidence satisfies the brief PASS criteria, so I grade PASS and do not silently override the checker; the disagreement is recorded here and in the grade file for the coordinator. Observations, not verdict drivers: the run elapsed 31 minutes 29 seconds, 1 minute 29 seconds over the 30-minute limit (brief grade rules list no time criterion); the overlay basename is clipped after d72-a (disclosed by the runner, corroborated by the Nautilus list in the same screenshot); the checker evidence_files list names codex-R3-072.log, which is not in the snapshot (9 files, manifest verified).",
+ "checker_output": {
+  "verdict": "FAIL",
+  "reasons": [
+   "missing image d72-anh-1.png",
+   "missing image d72-anh-2.png",
+   "missing image d72-anh-3.png",
+   "missing image d72-anh-4.png",
+   "missing image d72-anh-5.png"
+  ]
+ },
+ "checker_agrees_with_own_reading": false,
+ "files_read": [
+  "rung3-run-log/rung3-snapshots/R3-072-L3/manifest.json",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/ket-qua.txt",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/tier-a-output.json",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/bao-cao.txt",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/drive-log.txt",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/imv-overlay-20261126T195101+0700.png",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/start_time.txt",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/end_time.txt",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/desktop-after-release-20261126T201451+0700.png (PNG header checked)",
+  "rung3-run-log/rung3-snapshots/R3-072-L3/r3-072-driver-pillcheck.png (PNG header checked)",
+  "docs/rung3-answer-keys.md, section ## R3-072 (Tier A) only",
+  "docs/rung3-answer-keys.json, tasks.R3-072 entry only",
+  "rung3-run-log/briefs/R3-072-scorer-clone1-brief.md (local copy)"
+ ],
+ "infrastructure_rerun_considered": true,
+ "infrastructure_rerun_note": "Considered and not required. The evidence is complete and judgable from the snapshot and key, so no INVALID verdict and no infrastructure re-run path applies.",
+ "graded_manually": true,
+ "repo_scripts_run": "none"
+}
