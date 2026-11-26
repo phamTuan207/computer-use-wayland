@@ -48,6 +48,13 @@ the ones workers kept repeating because a brief omitted them.
   one; never wait to be asked.
 - Long-running processes launch FULLY DETACHED
   (`setsid nohup ... > log 2>&1 < /dev/null & disown`).
+- Holder/session lifecycle: never timeout-kill or SIGTERM the holder;
+  stop via the stop file. After an abrupt holder death, wait ~10 min
+  and poll session creation instead of relaunching blind. Record the
+  runner identity (PID, or subagent session id for lanes with no OS
+  PID) and task_start in the state file at every task start, and
+  clear both at drive end; a stale task_start can make a watchdog
+  kill a live idle process.
 - NARRATE BEFORE ACTING (C7): when driving computer-use live while
   the user watches, say each step out loud BEFORE doing it (which
   button/link, what action, in plain short words). A static screen
@@ -70,9 +77,18 @@ the ones workers kept repeating because a brief omitted them.
 - Never relay a subagent's diagnosis as fact without checking it.
 - If the same approach fails the same way 2-3 times, stop, rethink,
   and change approach.
+- Fixture and answer-key freshness preflight: before a task runs,
+  confirm fixtures are in-window and answer keys match the live
+  versions they grade against (a stale key version once graded a
+  correct live answer wrong). Record the check in the brief.
 
 ## 7. Browser rules (Zen)
 
+- KEYBIND/COMMAND FIRST (hard rule, owner 27/11): whatever can be
+  done with a keybind or command, use the keybind/command. Limit
+  vision/screenshot use to cross-checks only, to save time. Verify
+  every keybind against the live config, never against docs defaults
+  alone (docs defaults have been wrong on this machine before).
 - NEVER press Ctrl+T in Zen: it opens a new window (Ctrl+N is the new
   tab). The driver refuses Ctrl+T into a Zen window (C3).
 - Workspace switching and the Omarchy menu are done by COMMAND, never
