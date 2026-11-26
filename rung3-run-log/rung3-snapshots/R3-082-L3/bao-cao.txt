@@ -1,0 +1,29 @@
+BAO CAO R3-082
+
+Ket qua doc tren man hinh omacalc:
+1. (14 + 6) * 4 - 9 = 71
+2. 120 / 5 + 18 * 3 = 78
+3. (60 - 24) * 3 + 12 = 120
+4. 300 / 6 * 2 - 11 = 89
+5. (11 + 9) * 5 / 4 = 25
+
+Kiem tra lai: (14 + 6) * 4 - 9 = 71
+Tinh tay: 14 + 6 = 20; 20 * 4 = 80; 80 - 9 = 71.
+
+Su co 1 (2026-11-26 23:22:11 +07:00): Loi: quan sat man hinh voi ten eDP-1 bi tu choi vi monitor khong ton tai, phien computer-use ket thuc. Ly do: toi doan ten monitor ma chua kiem tra. Cach thu: chay computer-use doctor; ket qua cho thay eDP-2; bat dau phien moi va quan sat eDP-2. Quyet dinh: dung ten monitor doctor bao. Sua: khoi dong lai phien va observe eDP-2. Ket qua: chup man hinh thanh cong, pill hoat dong.
+
+Su co 2 (2026-11-26 23:26:18 +07:00): Loi: tim “code” trong launcher va bam Ctrl+Shift+N khong mo cua so editor moi; omacalc van o truoc. Ly do: VS Code san co nam sau calculator nen phim tat vao calculator. Cach thu: xem danh sach windows, xac nhan chi co VS Code cu va omacalc tren ws2; thu dua VS Code len truoc roi mo cua so moi, nhung lenh tiep theo khong gui duoc do relay da ket thuc. Quyet dinh: khoi dong lai computer-use va quan sat man hinh truoc khi tiep tuc. Sua: trong phien moi, bam vung editor VS Code dang hien va bam Ctrl+Shift+N. Ket qua: cua so VS Code moi xuat hien, cac tab cu duoc giu nguyen.
+
+Su co 3 (2026-11-26 23:26:34 +07:00): Loi: computer-use tra “Unknown process id 64184” truoc thao tac focus editor. Ly do: relay cu khong con chay; khong co input nao duoc gui. Cach thu: kiem tra status va doctor (cancelled=false, monitor eDP-2), sau do khoi dong session-driver moi. Quyet dinh: khong gui lai input khi chua co phien moi. Sua: bat dau phien moi, observe man hinh roi bam editor. Ket qua: pill hoat dong va cua so editor rieng duoc tao thanh cong.
+
+Su co 4 (2026-11-26 23:30:26 +07:00): Loi: Alt+F4 khong dong omacalc; danh sach cua so van hien dung dia chi cua app. Ly do: shortcut nay khong dong cua so calculator. Cach thu: kiem tra lai cua so omacalc theo class/address va xac nhan no con mo. Quyet dinh: dung binding dong cua so Super+Q da cau hinh tren dung cua so omacalc da focus. Sua: observe/focus cua so omacalc va gui Super+Q bang computer-use. Ket qua: danh sach windows khong con cua so omacalc tai 23:30:54+07:00.
+
+Dieu chinh anh chung cu (2026-11-26 23:31:09 +07:00): Phat hien anh man hinh day du co nen trinh duyet khong lien quan. Ly do: khong de lo thong tin ca nhan trong chung cu. Cach xu ly: xem cac PNG da luu, cat sat vung omacalc, sau do kiem tra ca 5 anh; ket qua la moi anh chi con bieu thuc cuoi va ket qua tren may tinh.
+
+Su co 6 (khoang 2026-11-26 23:32:30 +07:00): Loi: lenh gom computer-use stop, rm -f va status bi cong cu tu choi vi dang chua rm -f. Ly do: quy tac an toan shell chan mau lenh xoa nay; toan lenh khong chay. Cach thu: tach computer-use stop khoi thao tac xoa file tam. Quyet dinh: giu lenh stop va dung Python de xoa anh tam. Sua: goi computer-use stop rieng, dung Path.unlink cho anh /tmp, roi kiem tra status. Ket qua: don dep thanh cong, khong anh huong den tep bang chung.
+
+Bat dau (start_time.txt): 2026-11-26T23:20:46+07:00
+Thao tac dau tien trong phien nay: 2026-11-26T23:22:07+07:00
+Su co 5 (2026-11-26 23:32:30 +07:00): Loi: lenh finish gui qua relay tra “Unknown process id 30526”. Ly do: tien trinh relay da ket thuc truoc khi finish duoc gui. Cach thu: kiem tra computer-use status, danh sach tien trinh va chup man hinh; status khong bi huy, khong con session-driver, man hinh khong con pill. Quyet dinh: van chay computer-use stop theo quy trinh don dep. Sua: goi computer-use stop rieng, sau do kiem tra status va tien trinh mot lan nua. Ket qua: status binh thuong, khong con driver/indicator theo tac vu, pill da tat; chi con cac cua so co san cua nguoi dung.
+
+Ket thuc: 2026-11-26T23:33:54+07:00

@@ -182,3 +182,4 @@
 2026-11-26T23:17:20+07:00 | epoch24 | R3-079 drive COMPLETED 23:11:55 within limit; fields cleared; snapshot+scoring next | Rule-A 38/1 | position 40 | our-side invalid budget 5/5
 2026-11-26T23:23:12+07:00 | epoch24 | R3-082 DRIVING (PID 3594783, start 23:20:46) fields recorded; R3-079 scoring in flight | Rule-A 38/1 | position 41 | our-side invalid budget 5/5
 2026-11-26T23:24:14+07:00 | epoch24 | R3-079 GRADED PASS (Fresh B1 + Clone2 B2); R3-082 driving | Rule-A 39/1 | position 41 | our-side invalid budget 5/5
+2026-11-26T23:38:21+07:00 | epoch24 | R3-082 drive COMPLETED 23:33:54 within limit; fields cleared; checker+snapshot+scoring next | Rule-A 39/1 | position 41 | our-side invalid budget 5/5

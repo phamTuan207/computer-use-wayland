@@ -1,0 +1,80 @@
+{
+ "files": [
+  {
+   "mtime": 1795710984,
+   "name": "bao-cao.txt",
+   "sha256": "83661c5d1b77869d3fd53caa6c314ba7000c0d4ca071629c2a5ce6b4c4012cf7",
+   "size": 3796
+  },
+  {
+   "mtime": 1795710986,
+   "name": "calc-01-232415.png",
+   "sha256": "9a0a5614f570f2d845674c2e116931b832f696e07fbe10c2bc821e0c74f3017b",
+   "size": 57085
+  },
+  {
+   "mtime": 1795710988,
+   "name": "calc-02-232440.png",
+   "sha256": "da7576534529e5ea3c5e371b556adb15f8b6e8f22022a729dba8493c7b222e08",
+   "size": 60901
+  },
+  {
+   "mtime": 1795710990,
+   "name": "calc-03-232506.png",
+   "sha256": "38fd2c098694b2967ab525ecfb016ab77cc4a090029ed1933c9ae3cf230253e7",
+   "size": 64034
+  },
+  {
+   "mtime": 1795710992,
+   "name": "calc-04-232531.png",
+   "sha256": "84e2d5906548e452835278a21e93f831bda2f40dbd9dc8488147102436b92ac6",
+   "size": 62841
+  },
+  {
+   "mtime": 1795710993,
+   "name": "calc-05-232605.png",
+   "sha256": "7cdf55d203ac6b01e688cef8f9f48ecf7328ac5a2c0c2f8b02b071f3897042a6",
+   "size": 60342
+  },
+  {
+   "mtime": 1795710997,
+   "name": "desktop-after-release.png",
+   "sha256": "bdd935ea4b45bf0692ee087795a574e54ed804d8a7237787dde8fc2a58f51f47",
+   "size": 702057
+  },
+  {
+   "mtime": 1795710998,
+   "name": "drive-log.txt",
+   "sha256": "b90eb18eed1c48879a6d5f0a9c7d818101fe14f3e7bcef0525c882c4db06ea8e",
+   "size": 6336
+  },
+  {
+   "mtime": 1795711000,
+   "name": "end_time.txt",
+   "sha256": "8bfd9e45c08e1f30adbd526542e56614a1d47c7435c17671aa374b01723c1336",
+   "size": 26
+  },
+  {
+   "mtime": 1795711001,
+   "name": "ket-qua.txt",
+   "sha256": "0cc0df701edd128329d6f94609ca00a9632a48ba47ba56798a08bf73b458bad7",
+   "size": 218
+  },
+  {
+   "mtime": 1795711003,
+   "name": "start_time.txt",
+   "sha256": "6c879dd589fddb884f61c5a6dd76f9d2c132e9f73b2cce9ed309a309f3b14348",
+   "size": 26
+  },
+  {
+   "mtime": 1795711101,
+   "name": "tier-a-output.json",
+   "sha256": "a90194e4c08cc5ad237e2ce61892aaa0cd75bbadb047f69708747360492a1fc4",
+   "size": 595
+  }
+ ],
+ "manifest_sha256": "8273edb7cabec40a0a3c827bba9ee413b607d536606c9268a8ad6ccbb1a7450b",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-082-L3",
+ "source_dir": "/tmp/r3-082-evidence",
+ "task": "r3-082-evidence"
+}
