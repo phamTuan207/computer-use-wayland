@@ -1,0 +1,27 @@
+2026-11-27T01:34:54+07:00 | elapsed 00:00:00 | acquire pill: python3 ~/computer-use-wayland/scripts/overlay.py acquire --agent Codex --method Codex --pid <shell PID> | visible=true
+2026-11-27T01:34:59+07:00 | elapsed 00:00:05 | fixture guard command: find /home/james/rung3/nd09-logs -type f -name '*.log' -mtime -7 -print | output:
+/home/james/rung3/nd09-logs/log-01.log
+/home/james/rung3/nd09-logs/log-02.log
+/home/james/rung3/nd09-logs/log-03.log
+/home/james/rung3/nd09-logs/log-04.log
+/home/james/rung3/nd09-logs/log-05.log
+/home/james/rung3/nd09-logs/log-06.log
+2026-11-27T01:35:21+07:00 | elapsed 00:00:12 | second find command: find /home/james/rung3/nd09-logs -type f -name '*.log' -mtime -7 -print | output:
+/home/james/rung3/nd09-logs/log-01.log
+/home/james/rung3/nd09-logs/log-02.log
+/home/james/rung3/nd09-logs/log-03.log
+/home/james/rung3/nd09-logs/log-04.log
+/home/james/rung3/nd09-logs/log-05.log
+/home/james/rung3/nd09-logs/log-06.log
+2026-11-27T01:35:38+07:00 | elapsed 00:00:20 | per-file commands: wc -l < <full-path>; stat -c '%y' <full-path> | cut -c1-19; sorted with sort -t TAB -k1,1nr | rows (line count, path, modification date):
+125	/home/james/rung3/nd09-logs/log-06.log	2026-11-24 08:59:42
+110	/home/james/rung3/nd09-logs/log-05.log	2026-11-24 08:59:42
+95	/home/james/rung3/nd09-logs/log-04.log	2026-11-24 08:59:42
+80	/home/james/rung3/nd09-logs/log-03.log	2026-11-24 08:59:42
+65	/home/james/rung3/nd09-logs/log-02.log	2026-11-24 08:59:42
+50	/home/james/rung3/nd09-logs/log-01.log	2026-11-24 08:59:42
+2026-11-27T01:35:38+07:00 | elapsed 00:00:20 | wrote /home/james/rung3/nd09-bao-cao.txt with total 6 and descending rows; copied to /home/james/rung3-chung-cu/R3-089/nd09-bao-cao.txt
+2026-11-27T01:35:53+07:00 | elapsed 00:00:22 | anomaly recorded: the data collection pipeline also invoked find /home/james/rung3/nd09-logs -type f -name '*.log' -mtime -7 -print before wc/stat. Its six paths were log-01.log through log-06.log. This was an extra invocation; all three find outputs matched.
+2026-11-27T01:35:53+07:00 | elapsed 00:00:24 | release pill: python3 ~/computer-use-wayland/scripts/overlay.py release --agent Codex
+2026-11-27T01:35:53+07:00 | elapsed 00:00:26 | pill-off screenshot captured with grim at /home/james/rung3-chung-cu/R3-089/pill-off.png; overlay.py status checked after release and pill is gone.
+2026-11-27T01:36:08+07:00 | elapsed 00:00:59 | read-back verification: read start_time.txt, drive-log.txt, bao-cao.txt, and nd09-bao-cao.txt; file identified both PNG screenshots; overlay status visible=false. All evidence files exist.

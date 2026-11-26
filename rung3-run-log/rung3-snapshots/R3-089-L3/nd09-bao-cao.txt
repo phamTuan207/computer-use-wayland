@@ -1,0 +1,10 @@
+Total files: 6
+
+| Full path | Line count | Modification date |
+|---|---:|---|
+| /home/james/rung3/nd09-logs/log-06.log | 125 | 2026-11-24 08:59:42 |
+| /home/james/rung3/nd09-logs/log-05.log | 110 | 2026-11-24 08:59:42 |
+| /home/james/rung3/nd09-logs/log-04.log | 95 | 2026-11-24 08:59:42 |
+| /home/james/rung3/nd09-logs/log-03.log | 80 | 2026-11-24 08:59:42 |
+| /home/james/rung3/nd09-logs/log-02.log | 65 | 2026-11-24 08:59:42 |
+| /home/james/rung3/nd09-logs/log-01.log | 50 | 2026-11-24 08:59:42 |

@@ -1,0 +1,17 @@
+Task R3-089 results
+
+Fixture guard: the first command was find /home/james/rung3/nd09-logs -type f -name '*.log' -mtime -7 -print. It returned 6 files (log-01.log through log-06.log), so the fixture guard passed.
+
+A second identical find command returned 6 files. A further identical find was used to supply the per-file wc -l and stat data; it returned the same six paths. Counts: first=6, second=6, report=6.
+
+Sorted descending by line count:
+125	/home/james/rung3/nd09-logs/log-06.log	2026-11-24 08:59:42
+110	/home/james/rung3/nd09-logs/log-05.log	2026-11-24 08:59:42
+95	/home/james/rung3/nd09-logs/log-04.log	2026-11-24 08:59:42
+80	/home/james/rung3/nd09-logs/log-03.log	2026-11-24 08:59:42
+65	/home/james/rung3/nd09-logs/log-02.log	2026-11-24 08:59:42
+50	/home/james/rung3/nd09-logs/log-01.log	2026-11-24 08:59:42
+
+Report written to /home/james/rung3/nd09-bao-cao.txt and copied to this evidence directory.
+
+Anomaly chain: an extra identical find occurred before report generation while gathering the file list for wc/stat (failure: command ordering deviated from the planned two-find sequence -> reasoning: report rows require paths and metadata, and the run had not yet saved a reusable path list -> attempts: continued using the stable six-path result and recorded the extra invocation -> decision: preserve the exact commands and outputs rather than conceal the extra invocation -> fix: treated the initial fixture guard and immediate repeat as the first and second counts, then separately logged the metadata collection find -> outcome: all three results contained the same six paths; report and both required counts agree).
