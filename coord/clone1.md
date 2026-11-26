@@ -9037,3 +9037,12 @@ Không có comment mới trên PR #752, #749, #746, #751, không có issue mở.
 R3-L3: ĐÃ RESUME, R3-027 giao FCC, L3 BLOCKED hCaptcha; Rule-A 24 PASS / 0 FAIL + 4 INVALID; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push 5a501b64 lúc 07:18, main merge 95a5771e lúc 05:23; câu hỏi equip Graphify 04:44 chưa trả lời, không có việc bị chặn nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 07:27 ngày 26/11 - WATCHDOG
+
+Không agent nào kẹt, batch 13 xong hẳn (không agent đang chạy).
+Muse: không có yêu cầu mới cho clone1. Main không có commit mới từ watermark 4cdc623e; todolist-push có 2 commit mới (6b295029, f5a77a0b lúc 07:24): R3-028 task_start aligned 07:21:44 và timeout-watch safety, không nhắc clone1, không đổi coord/clone1.md.
+Không có comment mới trên PR #754, #756, không có issue mở. PR #756 là của mei (ruling CAPTCHA R3-027), không giao clone1.
+R3-L3: đã resume, R3-027 đang chạy (FCC), L3 BLOCKED hCaptcha; R3-028 sắp chạy; Rule-A 24 PASS / 0 FAIL + 4 INVALID; clone1 vẫn chờ bộ calibration sealed để chấm R3-037; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
+Điều phối còn sống: todolist-push f5a77a0b lúc 07:24; câu hỏi equip Graphify 04:44 vẫn chưa trả lời (163 phút) nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
