@@ -1,0 +1,19 @@
+{"wall":"2026-11-26T07:12:16.066Z","elapsed_s":"0.0","step":"shim_pinned","sha256":"bb49ff3f974a0534445fa5bb8eac48b47a378f39d944706b10118d5ff9d630b8","bytes":316}
+{"wall":"2026-11-26T07:12:16.067Z","elapsed_s":"0.0","step":"start"}
+{"wall":"2026-11-26T07:12:16.095Z","elapsed_s":"0.0","step":"session","sessionId":"0de19bae-c53b-4424-9330-59136200bdf9"}
+{"wall":"2026-11-26T07:12:16.099Z","elapsed_s":"0.0","step":"preload_installed","preloadId":"3476395b-d914-4a91-8890-8881cdfdab3e"}
+{"wall":"2026-11-26T07:12:16.414Z","elapsed_s":"0.3","step":"context_created","context":"bd79413e-8638-4df6-a781-9642d174076b"}
+{"wall":"2026-11-26T07:12:17.941Z","elapsed_s":"1.9","step":"descriptor_probe","info":{"webdriver":false,"own_on_navigator":false,"own_on_proto":true,"get_name":"get webdriver","get_tostring":"function () {\n    [native code]\n}","configurable":true,"enumerable":true,"title":"wdprobe","url":"data:text/html,<title>wdprobe</title><body>probe</body>"}}
+{"wall":"2026-11-26T07:12:17.941Z","elapsed_s":"1.9","step":"probe_ok"}
+{"wall":"2026-11-26T07:13:49.661Z","elapsed_s":"93.6","step":"rpc_done","id":"r037-q1","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:18:22.404Z","elapsed_s":"366.3","step":"rpc_done","id":"r037-q2","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:24:09.634Z","elapsed_s":"713.6","step":"rpc_done","id":"r037-q3","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:24:54.893Z","elapsed_s":"758.8","step":"rpc_done","id":"r037-q4","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:26:41.422Z","elapsed_s":"865.4","step":"rpc_done","id":"r037-q5","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:28:15.537Z","elapsed_s":"959.5","step":"rpc_done","id":"r037-q6","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:30:29.697Z","elapsed_s":"1093.6","step":"rpc_done","id":"r037-q7","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:32:35.851Z","elapsed_s":"1219.8","step":"rpc_done","id":"r037-q8","op":"evaluate","ok":true}
+{"wall":"2026-11-26T07:41:44.115Z","elapsed_s":"1768.0","step":"preload_removed"}
+{"wall":"2026-11-26T07:41:44.134Z","elapsed_s":"1768.1","step":"context_closed"}
+{"wall":"2026-11-26T07:41:44.152Z","elapsed_s":"1768.1","step":"session_ended"}
+{"wall":"2026-11-26T07:41:44.152Z","elapsed_s":"1768.1","step":"done"}

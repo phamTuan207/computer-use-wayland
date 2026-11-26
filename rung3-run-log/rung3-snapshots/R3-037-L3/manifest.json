@@ -1,0 +1,104 @@
+{
+ "files": [
+  {
+   "mtime": 1795678517,
+   "name": "20261126-143504-example.png",
+   "sha256": "c835947bc175a43167716f4d1adb9c4d3eca9804f221b85b72da464505347ac7",
+   "size": 143524
+  },
+  {
+   "mtime": 1795678261,
+   "name": "act-enter-ex.json",
+   "sha256": "555964aaf8d6055a2402a0251a84a70e4c66b20b616bb9a9ba2528b8126d7197",
+   "size": 34
+  },
+  {
+   "mtime": 1795677938,
+   "name": "act-example1.json",
+   "sha256": "c95cd0a77da3fb902bc08238c970900be13a47a408ef9656d2b955f29f2276fd",
+   "size": 150
+  },
+  {
+   "mtime": 1795678639,
+   "name": "act-logo.json",
+   "sha256": "033d474d083c5934c6ac950e6ad4b1180fa3aac7564d81befdae4e0301e16eb9",
+   "size": 50
+  },
+  {
+   "mtime": 1795678448,
+   "name": "act-scroll-ex.json",
+   "sha256": "bac6adb1172170b541c96446f3fabae8a0e41e5a39e57fcc9aee6bc11a22b0d9",
+   "size": 52
+  },
+  {
+   "mtime": 1795678585,
+   "name": "act-scroll-up.json",
+   "sha256": "8c3e346d83be5d62b7ae6bdc81fc49e2e0f7ca7903577a812b302a48dcc4abf5",
+   "size": 53
+  },
+  {
+   "mtime": 1795678138,
+   "name": "act-search-ex.json",
+   "sha256": "277eb146a522b8444c3db813c7a6cd9a416d8d97220ece3ed4bd1ce82fed5480",
+   "size": 51
+  },
+  {
+   "mtime": 1795677431,
+   "name": "act-serp1.json",
+   "sha256": "9ee45d4ef6e1e9f94971d8165f3ca4e311ab1996a46d6c6a84270810303ce52e",
+   "size": 114
+  },
+  {
+   "mtime": 1795678026,
+   "name": "act-type-ex.json",
+   "sha256": "37e825dd7efee0f22ac67b2a8830d2ded5e05e9721476ac1e6fa3ef545316f80",
+   "size": 52
+  },
+  {
+   "mtime": 1795678903,
+   "name": "end_time.txt",
+   "sha256": "3a57df2b858fe782b3fe090e9933b977228056203a972ef9c733c38512191143",
+   "size": 26
+  },
+  {
+   "mtime": 1795678972,
+   "name": "grim-pill-gone.png",
+   "sha256": "a4e587da38c78640210195900445eac26a399c35b9ea37b61d7c4157d3c3cc1c",
+   "size": 1517303
+  },
+  {
+   "mtime": 1795677136,
+   "name": "holder-pid.txt",
+   "sha256": "04b3665e228504dc3496452a5003ac8e79b8ace8d7598259b5b016ba26388612",
+   "size": 8
+  },
+  {
+   "mtime": 1795678904,
+   "name": "holder-task.log",
+   "sha256": "03996a6fbc9dd68026e6192055192a935e381d4e29c97510aaa85b8fc084c3a1",
+   "size": 2273
+  },
+  {
+   "mtime": 1795678975,
+   "name": "ket-qua.txt",
+   "sha256": "7525e3efd3a0b40ddfcb4925123b020ba3e9db1a7acaae2eddf8faf35580403b",
+   "size": 757
+  },
+  {
+   "mtime": 1795677151,
+   "name": "probe-ready.json",
+   "sha256": "a170b5d3fdb4cb765b4e834be974d8ef392bada69352ed4b14fe6b758e7878d5",
+   "size": 455
+  },
+  {
+   "mtime": 1795677104,
+   "name": "start_time.txt",
+   "sha256": "112042697afc421f0d04d55c2b165480b0593361319e0ee0c6c5fdfc5d11c01f",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "4f758d621215142ea1f56f399bc18dd1f7045aefd0cabe0fad45c7739b642291",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-037-L3",
+ "source_dir": "/tmp/r3037-evidence/R3-037",
+ "task": "R3-037"
+}

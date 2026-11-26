@@ -24,7 +24,7 @@
  "completed_positions": 27,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 28,
- "current_task": "EPOCH 21: R3-037 (position 28, FCC lane) RELEASED 2026-11-26T14:08:24+07:00 via FCC driver 8d044b59 (brief to tmux r3-fcc-runner-L3; task_start provisional, correct to FCC actual start when driver reports). Scorers Mochi + Clone1 (clone1 first scoring task). Rule-A 28/0.",
+ "current_task": "EPOCH 21: R3-037 (position 28, FCC lane) drive ENDED 14:41:43 by 30-min timeout (FCC actual start 14:11:44, 29m59s): example.com captured, wikipedia.org NOT captured; no reCAPTCHA, no bot block, no fabrication (driver verified on disk). Snapshot sealed 4f758d62 (16 files, gate PASS mechanically; incompleteness is a scoring matter). Scoring next (Mochi + Clone1). Rule-A 28/0; expected FAIL (timeout, incomplete) would be Rule-A FAIL #1.",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T14:08:24+07:00",
+ "last_updated": "2026-11-26T14:45:51+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "34 rows (1 TEST + 25 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 67 verdict files)",
@@ -1289,6 +1289,11 @@
    "ts": "2026-11-26T14:08:24+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-037 RELEASED 2026-11-26T14:08:24+07:00 (position 28, FCC lane). FCC driver 8d044b59-7592-412b-919b-2de0ac5d0f63 spawned to hand brief rung3-run-log/briefs/R3-037-fcc-runner-brief.md to FCC (tmux r3-fcc-runner-L3, pane PID 22399 persistent) and verify evidence on disk (FCC fabrication history R3-001/002: grade from files, never the report). Brief spot-checked: ydotool ban, pill, user-path entry (who.is via SERP) + forbidden shortcuts, holder discipline, reCAPTCHA stop rule, bot-check rule, invalid budget 5/5. task_start provisional 2026-11-26T14:08:24+07:00; runner_pid null (FCC pane 22399 is NOT the recorded runner PID, never left as such). Scorers: Mochi scorer 1 + Clone1 scorer 2 (first clone1 scoring task, calibration APPROVED 4/4). One driver on shared Zen."
+  },
+  {
+   "ts": "2026-11-26T14:45:51+07:00",
+   "by": "coordinator-epoch-21",
+   "text": "R3-037 DRIVE ENDED 2026-11-26T14:41:43+07:00 (FCC actual start 14:11:44, corrected from provisional 14:08:24; 29m59s, 1s before deadline). Outcome per driver on-disk verification: example.com captured cleanly (who.is screenshot + ket-qua row 1 match: registrar RESERVED-Internet Assigned Numbers Authority, expiry August 13 2027, nameservers elliott/hera.ns.cloudflare.com); wikipedia.org NEVER captured (ket-qua row 2 honestly NOT CAPTURED, no screenshot). No reCAPTCHA, no bot block (block-evidence.txt correctly absent). No fabrication: FCC self-reported FAIL per brief and disk agrees. Probe clean (webdriver false, shim bb49ff3f); pill released, grim proof. Evidence pulled laptop->VM (scp -p, 16 files sha256-verified); collect-evidence PASS (16 files, 1 screenshot); snapshot R3-037-L3 manifest 4f758d621215142ea1f56f399bc18dd1f7045aefd0cabe0fad45c7739b642291 (16 files); manifest-gate PASS mechanically (ket-qua.txt + screenshots_min 1 met; the 2-domain completeness is a scoring matter, R3-002 precedent: seal as-is, scorers grade). pii-scan clean. task_start/runner_pid cleared at drive end. NOTE: 20261126-143504-example.png holds JPEG bytes (JFIF) despite .png extension; flagged for scorers. If graded FAIL: Rule-A FAIL #1, slack 2->1 (need 23 PASS from 24 remaining after R3-037); re-run decision via parent/council per mid-run re-plan (re-run PASS replaces FAIL at closure; failed re-run gets no second re-run without new owner decision)."
   }
  ],
  "pass_count": 24,
@@ -1337,7 +1342,7 @@
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 34 grade rows (25 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 28 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 23 PASS from 25 remaining original positions. Next drive R3-037 (position 28, FCC lane; scorers Mochi + Clone1 first scoring task). Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
  "coordinator_active": "f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00)",
  "epoch": 21,
- "task_start": "2026-11-26T14:08:24+07:00",
+ "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",
  "codex_task_start": null,

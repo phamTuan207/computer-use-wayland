@@ -1,0 +1,8 @@
+# R3-037 ket-qua.txt — who.is WHOIS lookups
+# Values come from the saved screenshots in this folder, never from a live re-run.
+# NOTE: run hit the 30-minute wall-clock cap (start 2026-11-26T14:11:44+07:00, deadline 14:41:44+07:00)
+#       before the second domain was captured. Task outcome: FAIL per brief ("Over 30 minutes is FAIL, stop, log").
+
+domain | registrar | expiry_date | nameservers | status | evidence
+example.com | RESERVED-Internet Assigned Numbers Authority | August 13, 2027 | elliott.ns.cloudflare.com, hera.ns.cloudflare.com | still valid (clientDeleteProhibited, clientTransferProhibited, clientUpdateProhibited) | 20261126-143504-example.png
+wikipedia.org | NOT CAPTURED (30-minute deadline reached) | — | — | — | no screenshot
