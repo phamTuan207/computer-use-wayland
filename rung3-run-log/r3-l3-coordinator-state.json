@@ -24,7 +24,7 @@
  "completed_positions": 24,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
- "current_task": "R3-029 (position 25) drive COMPLETED 12:42:14; snapshot pushed 83b4fef5 (manifest 42d22dff); Pair A scoring dispatched 12:46 (Mochi scorer 1 daemon run 238, Clone2 scorer 2 PWA), verdicts due ~13:16. task_start/runner_pid null. Epoch 19 coordinator 4eb5ee66, deputy 51154780 on standby. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
+ "current_task": "EPOCH 20: R3-029 (position 25) drive COMPLETED 12:42:14; snapshot pushed 83b4fef5 (manifest 42d22dff); Pair A scoring dispatched 12:46 (Mochi scorer 1 daemon run 238, Clone2 scorer 2 PWA), verdicts due ~13:16; epoch 20 receiving verdicts. task_start/runner_pid null. Rule-A 25 PASS / 0 FAIL, invalid events 5/5 EXHAUSTED, valid 53, bars 51/53 and 52/54, need 26 PASS from 28 remaining original positions.",
  "deputy": "51154780-ef5c-4fab-bb75-755eeec66760 (epoch 19 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T12:14:45+07:00, after state last_updated 2026-11-26T12:12:42+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive untouched, codex-cli 0.172.0, state parse epoch 19 coordinator_active 4eb5ee66, snapshot + verdict paths exist; declaration pushed f452b3e1; epoch 18 deputy 79db2d8c SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T12:46:27+07:00",
+ "last_updated": "2026-11-26T12:47:39+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1219,6 +1219,11 @@
    "ts": "2026-11-26T12:46:27+07:00",
    "by": "coordinator-epoch-19",
    "text": "R3-029 DRIVE COMPLETED 2026-11-26T12:42:14+07:00 (runner 1aa462ff, Muse lane; start 12:18:21, inside 30-min timeout). Wishlist states 5/4/5 screenshot-verified; logged out at end; no bot block, no INVALID candidate. Two drives (drive 1 aborted at runner 19-min cap after 5+4 states; drive 2 fresh probe completed re-add + 5-again + logout). Probe both drives: webdriver false, own_on_proto true, own_on_navigator false, get_name get webdriver, toString empty-name form; holder hashes verified per drive; pill visible both drives, released with grim proof; no cookies cleared; owner tabs untouched. task_start/runner_pid CLEARED at drive end (pushed 7061a60c). Snapshot: 13 files pulled sha256-verified, snapshot.py manifest 42d22dff, pushed 83b4fef5. pii-scan v1: 14 hits, ALL manual-review class (disposable test-account email on @example.com + public demo-store account-route URLs; session tokens already redacted in logs; no password, no personal email, no owner tab URL) - coordinator manual review PASS per R3-040 precedent, scan output filed here. Pair A scoring dispatched 12:46: Mochi scorer 1 (daemon run 238, verified) + Clone2 scorer 2 (PWA send ok); verdicts due within 30 min on branches mochi/verdict-R3-029-L3 + clone2/verdict-R3-029-L3. Next: file verdicts to ~/workspace/rung3-verdicts, validate + cross-check, ledger row, per-task report, then R3-035 (position 26)."
+  },
+  {
+   "ts": "2026-11-26T12:47:39+07:00",
+   "by": "coordinator-epoch-20",
+   "text": "COORDINATOR TAKEOVER, EPOCH 20, 2026-11-26T12:47:39+07:00: epoch 19 (4eb5ee66) completed its session 12:46:52 +07 with state clean (R3-029 drive COMPLETED 12:42:14, snapshot pushed 83b4fef5 manifest 42d22dff, Pair A scoring dispatched 12:46: Mochi scorer 1 daemon run 238, Clone2 scorer 2 PWA, verdicts due ~13:16, task_start/runner_pid null). Parent appoints successor session 0ace6385-41ca-4b9f-a6b0-445758cebf72 as coordinator, epoch 20, under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 0ace6385). All predecessors dead, no split-brain risk. Run state re-verified by epoch 20 from ledgers: 31 grade rows (22 PASS, 5 INVALID: R3-011/022/024/026/027, 3 FAIL: R3-001/002/003 all superseded by PASS re-runs, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 + 52/54 (task 56); need 26 PASS from 28 remaining original positions. Git HEAD 7f171b91 = origin todolist-push tip at takeover. Next: fresh deputy (G-24/G-38), receive R3-029 verdicts, grade + push, then release R3-035 (position 26)."
   }
  ],
  "pass_count": 22,
@@ -1264,9 +1269,9 @@
   "tiebreaker_a": "97290681-d2ce-4230-9869-13c1c68df5d1 (calibrated, 4/4 expected)",
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
- "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 26 PASS from 28 remaining original positions. Next drive R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
- "coordinator_active": "4eb5ee66-cc5e-4b57-9465-ed1de8fa05a3 (epoch 19, takeover 2026-11-26T12:12:42+07:00)",
- "epoch": 19,
+ "status": "RESUMED under re-plan (gate passed 06:30, checks 3-12 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL (epoch 20 recomputed from ledgers at takeover). Invalid events 5/5 EXHAUSTED. Valid 53; bars 51/53 (original) and 52/54 (with task 56); need 26 PASS from 28 remaining original positions. R3-029 drive completed, Pair A scoring pending (verdicts due ~13:16). Clone1 calibration APPROVED 4/4; first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
+ "coordinator_active": "0ace6385-41ca-4b9f-a6b0-445758cebf72 (epoch 20, takeover 2026-11-26T12:47:39+07:00)",
+ "epoch": 20,
  "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",
