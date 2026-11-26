@@ -24,8 +24,8 @@
  "completed_positions": 0,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 1,
- "current_task": "EPOCH 13 TAKEOVER (R3-029 held for parent password; clone1 calibration pending, deadline ~08:45)",
- "deputy": "af43c55e-7393-4c28-ae2c-10601f835bf6 (epoch 13 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T07:56:01+07:00, after state last_updated 2026-11-26T07:55:32+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 13 coordinator_active a9dd3f91, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; epoch 12 deputy 3b1ee4ed SUPERSEDED; on STANDBY under section 7 fencing)",
+ "current_task": "EPOCH 14 TAKEOVER (R3-029 held for parent password; clone1 calibration grades filed on branch clone1/calibration-sealed-20261126, verifier sign-off pending)",
+ "deputy": "af43c55e-7393-4c28-ae2c-10601f835bf6 (epoch 13 deputy; SUPERSEDED at epoch 14 takeover; fresh epoch 14 deputy to be spawned, G-24/G-38)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T07:56:33.160389+07:00",
+ "last_updated": "2026-11-26T07:57:30.124068+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "7 rows (trial + R3-001 FAIL recorded 14:17:58 + R3-040 PASS recorded 15:08:51 + R3-002 FAIL recorded 16:14:43 + R3-041 PASS recorded 16:41:12 + R3-003 FAIL recorded 17:33:23 + R3-042 PASS recorded 17:45:34), validated PASS, cross-check OK",
@@ -1144,6 +1144,11 @@
    "ts": "2026-11-26T07:56:33.160389+07:00",
    "by": "coordinator-epoch-13",
    "text": "DEPUTY CONFIRMED, EPOCH 13: fresh deputy af43c55e. Declaration 07:56:01 +07 (after state 07:55:32, G-24 satisfied), pushed 2a4e09f8. Dry run 5/5 PASS. G-24/G-38 CLOSED for epoch 13. Deputy on STANDBY under section 7 fencing. R3-029 still held for parent password. Clone1 calibration pending (deadline ~08:45)."
+  },
+  {
+   "ts": "2026-11-26T07:57:30.124068+07:00",
+   "by": "coordinator-epoch-14",
+   "text": "COORDINATOR TAKEOVER, EPOCH 14: epoch 13 (a9dd3f91) completed its setup session; parent appoints successor 0c2dc9fb as coordinator epoch 14 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 0c2dc9fb). Verified myself from ledgers: 31 grade rows (22 PASS, 5 INVALID R3-011/022/024/026/027, 3 FAIL R3-001/002/003, 1 TEST) + 3 re-run PASS; Rule-A 25 PASS / 0 FAIL; invalid events 5/5 EXHAUSTED (R3-027 namechk hCaptcha = event 5); valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. validate-ledger.py + ledger-cross-check.py both exit 0. Next: R3-029 frozen position 25 (Muse lane) HELD for parent-held password (parent asked owner to re-verify 07:47; password to arrive in spawn message only, never in any file). Clone1 calibration: branch clone1/calibration-sealed-20261126 present on remote (dbc7e3f6) with clone1 sealed grades filed (d5a7945c) ahead of the ~08:45 deadline; verifier sign-off PENDING (clone1 scores nothing until sign-off; first clone1 scoring task R3-037). Fresh deputy to be spawned (G-24/G-38). Checks 11-12 prepped (epoch 12 checklist + F12 briefs)."
   }
  ],
  "pass_count": 22,
@@ -1190,8 +1195,8 @@
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
  "status": "RESUMED under re-plan (gate passed 06:30, checks 3-9 done). Ledger: 31 grade rows (22 PASS, 5 INVALID, 3 FAIL, 1 TEST) + 3 re-run PASS; rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk = event 5); a 6th event needs a new recorded team decision via parent before further releases. Valid 53, bars 51/53 + 52/54 (task 56), need 26 PASS from 28 remaining original. Next: R3-029 frozen position 25, HELD for parent password. Checks 11-12 prepped (checklist + F12 briefs filed).",
- "coordinator_active": "a9dd3f91-834e-41ad-ab47-bae693595e9f (epoch 13, takeover 2026-11-26T07:55:32.098848+07:00)",
- "epoch": 13,
+ "coordinator_active": "0c2dc9fb-a500-474e-94f8-5c2aa9a8a225 (epoch 14, takeover 2026-11-26T07:57:30.124068+07:00)",
+ "epoch": 14,
  "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",
