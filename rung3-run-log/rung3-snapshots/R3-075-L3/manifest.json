@@ -1,0 +1,80 @@
+{
+ "files": [
+  {
+   "mtime": 1795703224,
+   "name": "20261126T211504+0700-python-version.jpg",
+   "sha256": "c877b9e835b06f04a0bfba20088b3a9c6f712288066411c6ef6728c3b6072a84",
+   "size": 54809
+  },
+  {
+   "mtime": 1795703241,
+   "name": "20261126T211510+0700-venv-create.jpg",
+   "sha256": "24c0691d469921513538dca3722e2a97e512b855874a59e8913daa866b504037",
+   "size": 58438
+  },
+  {
+   "mtime": 1795703226,
+   "name": "20261126T211544+0700-venv-python-path.jpg",
+   "sha256": "c476b8533d79545d9d8ab66bfe82665e7fa11e66bf2973a34f15814656c45de5",
+   "size": 58363
+  },
+  {
+   "mtime": 1795703229,
+   "name": "20261126T211630+0700-pip-install.jpg",
+   "sha256": "f8f097c7c8fe06355c5447fddf442d0952babdedff662b9081d4424a889470cd",
+   "size": 224761
+  },
+  {
+   "mtime": 1795703232,
+   "name": "20261126T211651+0700-app-output.jpg",
+   "sha256": "0910114bdf96b2e6f2071a7982186bd45d63f8574e7f8262ec58613fea7352ac",
+   "size": 53709
+  },
+  {
+   "mtime": 1795703234,
+   "name": "20261126T211745+0700-venv-intact-after-deactivate.jpg",
+   "sha256": "52497825b9e9c5ec98a50e5c1018094f7f6233c7b8e3eab40577998d2c1a0b58",
+   "size": 76582
+  },
+  {
+   "mtime": 1795703230,
+   "name": "bao-cao.txt",
+   "sha256": "acd0bbe4f85767b5d9cebf3bcefaed0356aba3e07bdc9c143adbde9ce7bddd52",
+   "size": 3100
+  },
+  {
+   "mtime": 1795703237,
+   "name": "desktop-after-release.png",
+   "sha256": "59669d925a0f81625804d0520cd66de1dd09a03bb2fc03723de1c6badfe03f59",
+   "size": 702106
+  },
+  {
+   "mtime": 1795703222,
+   "name": "drive-log.txt",
+   "sha256": "61dab8d428e2ca0958592c5bdaaf78127359a3d17e56cad77befd14099d0334a",
+   "size": 4323
+  },
+  {
+   "mtime": 1795703238,
+   "name": "end_time.txt",
+   "sha256": "3506edd13603b9c3e55ce8619de210d98cd4cee48430f82c262a1a72b16bdf06",
+   "size": 26
+  },
+  {
+   "mtime": 1795703239,
+   "name": "sha256.txt",
+   "sha256": "1a9a574a27b28967ebab42cddc95892174de7b916d37881fa9075a2f20380a59",
+   "size": 1074
+  },
+  {
+   "mtime": 1795703221,
+   "name": "start_time.txt",
+   "sha256": "9188e43db5c42d038de472c8edba7f6f58d34fafc79d61afcdc099a83614ad3a",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "c6668d7126405d8e468e2df379945a46cb1bdcc824577f8f940783674544357e",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-075-L3",
+ "source_dir": "/tmp/r3-075-evidence",
+ "task": "r3-075-evidence"
+}

@@ -1,0 +1,26 @@
+R3-075 run facts
+
+Task start: 2026-11-26T21:07:50+07:00
+Task end: 2026-11-26T21:25:05+07:00
+Elapsed: 17m 15s
+Python version shown in terminal: Python 3.14.10
+Venv creation command typed in the visible terminal: `python3 -m venv ~/rung3/d41-venv`; the command was run on workspace 2 and the directory was present afterward.
+Venv created at: ~/rung3/d41-venv
+Venv python path shown by `which python`: ~/rung3/d41-venv/bin/python
+Packages requested: requests==2.32.3 (from ~/rung3/d41-requirements.txt)
+Pip install result: successful. Installed certifi-2026.11.20, charset-normalizer-3.5.3, idna-3.10, requests-2.32.3, urllib3-2.8.0.
+App output shown in terminal:
+Xin chao rung 3
+requests 2.32.3
+The expected greeting line was present; no error was shown.
+Venv after deactivate: `test -d ~/rung3/d41-venv` succeeded; terminal printed `venv intact` and listed the directory. The directory remains present.
+
+Anomaly chains (full event chronology is also in drive-log.txt):
+1. Failure: initial whole-screen observe omitted --screen and ended with usage error before input -> reasoning: CLI requires a window or monitor target -> attempts: read help and monitor list -> decision: retry with an explicit target -> fix: first numeric monitor ID 0 was attempted -> outcome: this exposed anomaly 2; no task command was run.
+2. Failure: --screen 0 returned “monitor no longer exists” -> reasoning: CLI takes monitor name -> attempts: doctor/docs confirmed eDP-2 -> decision: retry -> fix: used --screen eDP-2 -> outcome: screen observation succeeded.
+3. Failure: modifier-only Super action was refused, completed=0 -> reasoning: a key action needs a non-modifier key -> attempts: refusal sent no input -> decision: use launcher shortcut -> fix: Super+Space -> outcome: launcher opened.
+4. Failure: choosing the first “terminal” search result closed the launcher without opening an app -> reasoning: it was a hotkey/action result -> attempts: checked process and window list -> decision: select the Applications result instead -> fix: searched kitty and chose “kitty (Terminal emulator)” -> outcome: visible terminal opened on workspace 2.
+5. Failure: first Python-version capture had a stray `py` line -> reasoning: characters remained after launcher search focus -> attempts: inspected image, saved no evidence from it -> decision: recapture cleanly -> fix: ran clear and python3 --version -> outcome: clean screenshot saved.
+6. Failure: evidence VM copy could not connect on SSH port 22 -> reasoning: Tailscale peer was online but the port refused connections -> attempts: SSH to 100.104.211.95 and Tailscale SSH to peer muse, both refused -> decision: stop remote attempts and retain laptop evidence -> fix: none available from this runner -> outcome: no VM transfer claimed; evidence remains in ~/rung3-chung-cu/R3-075.
+
+Computer-use: indicator visibly showed “Computer use active” during the run. The kitty terminal opened for this run was closed. Session finished at 2026-11-26T21:18:43+07:00; post-release desktop screenshot shows the pill absent. Owner tabs were not closed or navigated.

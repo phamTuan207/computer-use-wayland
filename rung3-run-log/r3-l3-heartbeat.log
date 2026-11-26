@@ -170,3 +170,4 @@
 2026-11-26T20:54:17+07:00 | epoch24 | R3-074 drive COMPLETED 20:49:44 within limit; fields cleared; snapshot+scoring next | Rule-A 34/1 | position 36 | our-side invalid budget 5/5
 2026-11-26T21:07:33+07:00 | epoch24 | R3-074 GRADED PASS (Clone2 B1 + Fresh B2); R3-075 released (driver 241bb105) | Rule-A 35/1 | position 37 | our-side invalid budget 5/5
 2026-11-26T21:08:32+07:00 | epoch24 | R3-075 DRIVING (PID 3378155, start 21:07:50) fields recorded; R3-074 GRADED PASS landed 67e1958c | Rule-A 35/1 | position 37 | our-side invalid budget 5/5
+2026-11-26T21:29:38+07:00 | epoch24 | R3-075 drive COMPLETED 21:25:05 within limit; fields cleared; snapshot+scoring next | Rule-A 35/1 | position 37 | our-side invalid budget 5/5
