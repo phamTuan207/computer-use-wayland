@@ -24,7 +24,7 @@
  "completed_positions": 29,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 30,
- "current_task": "EPOCH 21: R3-045 (position 29) GRADED INVALID 15:17 (B1 Clone2 INVALID 15:13:00 + B2 Fresh INVALID 15:13:58, agree, no tiebreaker; ezgif service block; validators exit 0; verdicts filed R3-045-B1/B2.json). INVALID EVENT 6. RELEASES HELD: no R3-046 release until a new recorded team decision via parent. Rule-A 28/1. No drive in progress.",
+ "current_task": "EPOCH 22 TAKEOVER 2026-11-26T15:18:00+07:00: holding releases pending parent event-6 decision (council + redteam files awaited at improvements/r3-l3-invalid-event6-council-20261126.md and improvements/r3-l3-invalid-event6-redteam-20261126.md). No drive in progress; task_start/runner_pid/codex fields null (verified). Next drive R3-046 (position 30, Codex lane) HELD. R3-037 graded FAIL (timeout) in ledger; re-run decision also via parent.",
  "deputy": "7dc113ac-e18d-42bd-96e4-ca580731e587 (epoch 21 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T13:22:22+07:00, after state last_updated 2026-11-26T13:22:00+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 21 coordinator_active f79cb9eb, snapshot + verdict paths exist, R3-035-A1/A2.json correctly absent; epoch 20 deputy 4b4924ac SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-26T15:15:29+07:00",
+ "last_updated": "2026-11-26T15:18:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "36 rows (1 TEST + 25 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 21: validate exit 0, cross-check exit 0, 71 verdict files)",
@@ -1324,6 +1324,11 @@
    "ts": "2026-11-26T15:15:29+07:00",
    "by": "coordinator-epoch-21",
    "text": "R3-045 GRADED INVALID (ledger row recorded 15:17:00). Scorer 1 (Clone2 ad85548c) INVALID scored 15:13:00; scorer 2 (Fresh 501248a2) INVALID scored 15:13:58 (shared_cause_confirmed false); both audited PASS (key hashes match freeze, manifest ae8b7299, files read = snapshot + key + brief, independence declarations present), agree, no tiebreaker. INVALID event 6 (ezgif server-side fetch failure; not a bot wall on our browser; check 11 re-proof trigger NOT fired). Verdicts filed ~/workspace/rung3-verdicts/R3-045-B1.json + R3-045-B2.json (+ grade mds) before the ledger row. validate-ledger PASS (36 rows, 0 errors), ledger-cross-check OK (71 verdict files, 0 errors). Task drops from denominator (no medium backup; DP-05 very-hard only). Valid 52; bars 50/52 and 51/53 (with task 56); need 22 PASS from 23 remaining original positions. RELEASES HELD: R3-046 (position 30) NOT released until a new recorded team decision via parent (event-6 rule). Parent notified. R3-037 re-run decision also pending via parent."
+  },
+  {
+   "ts": "2026-11-26T15:18:00+07:00",
+   "by": "coordinator-epoch22",
+   "text": "TAKEOVER epoch 22 at 2026-11-26T15:18:00+07:00: epoch 21 (f79cb9eb) completed 2026-11-26T15:15:45+07:00 after grading R3-045 INVALID (event 6) and holding releases; parent appoints successor session aeb06767-07b3-4ee1-acc3-17c878139317 as coordinator epoch 22 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active aeb06767). Predecessor dead, no split-brain risk. Independently recomputed at takeover: ledger 36 rows (25 PASS, 6 INVALID R3-011/022/024/026/027/045, 4 FAIL R3-001/002/003/037, 1 TEST) + 3 re-run PASS rows; Rule-A 28 PASS / 1 FAIL (R3-037 timeout FAIL stands, re-run decision via parent); valid 52 (55 minus 3 unreplaced drops R3-026/027/045; R3-011/022/024 replaced by DP-06/02/07); bars 50/52 original and 51/53 with task 56; need 22 PASS from 23 remaining original positions, slack 1; validate-ledger + ledger-cross-check exit 0 re-run at takeover. RELEASES HELD until parent records the event-6 decision. Fresh deputy to be spawned (G-24/G-38)."
   }
  ],
  "pass_count": 24,
@@ -1370,8 +1375,8 @@
   "tiebreaker_b": "df4defcc-050b-47c0-8609-cb2932e36207 (TBB2, replacement candidate, calibrated 4/4 expected 2026-11-24 17:31 +07, APPROVED; previous 9d613f19 NOT APPROVED 3/4)"
  },
  "status": "RESUMED under re-plan, RELEASES HELD pending event-6 decision. Ledger: 36 grade rows (25 PASS, 6 INVALID, 4 FAIL, 1 TEST) + 3 re-run PASS; rule-A 28 PASS / 1 FAIL (R3-037 timeout). Invalid events 6 (R3-011/022/024/026/027/045); budget was 5/5, event 6 needs a new recorded team decision via parent before further releases. Valid 52; bars 50/52 (original) and 51/53 (with task 56); need 22 PASS from 23 remaining original positions (slack 1). Next drive R3-046 (position 30, Codex lane) HELD. R3-037 re-run decision also via parent. Checks 11-12 armed; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator.",
- "coordinator_active": "f79cb9eb-9eee-4419-a5cf-31524d7340ad (epoch 21, takeover 2026-11-26T13:22:00+07:00)",
- "epoch": 21,
+ "coordinator_active": "aeb06767-07b3-4ee1-acc3-17c878139317 (epoch 22, takeover 2026-11-26T15:18:00+07:00)",
+ "epoch": 22,
  "task_start": null,
  "runner_pid": null,
  "codex_task": "R3-042",
