@@ -767,3 +767,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+### 13. R3-029 released, KHAN da het (2026-11-26 12:17 +07)
+- Epoch 19 takeover 12:12:42 (coordinator 4eb5ee66, commit d9f00fba, parent released R3-029 hold); deputy 51154780 confirmed 342fb47b (dry run 5/5 PASS, G-24/G-38 closed); release commit e7a022db, R3-029 vi tri 25, Muse lane runner 1aa462ff, task_start 12:15:52, timeout 12:45:52. Heartbeat 12:14:13 xac nhan parent released hold, Rule-A 25/0. KHAN coordinator im lang tu 10:07 da het (lap lai 13 luot, im 64 den 174 phut, deu la false positive, khong leo thang). PR 751 van OPEN 0 comment, chi con phan tra loi viet ve discrepancy calibration set.
+- Em khong cham diem, khong doc ledger/snapshot.
