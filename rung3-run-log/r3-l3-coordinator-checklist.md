@@ -27,6 +27,8 @@ Any bot-wall invalid on a shimmed drive triggers council + redteam gate re-check
 5. Verdicts filed in ~/workspace/rung3-verdicts (VM-local, never committed) as R3-xxx-A1/A2/B1/B2.json before ledger row. validate-ledger.py + ledger-cross-check.py exit 0 before push.
 6. Tab hygiene: close finished task tabs; NEVER owner tabs, pinned, essentials, ws3. Cleanup after use.
 
+7. Clean ledger validation (R19, team decision 27/11/2026): never execute validate-ledger.py / ledger-cross-check.py or git from inside this worktree (execution-risk guard: hooks/filters can run code). At each ledger push and at run close: copy rung3-ci/clean-validate-ledger.py to /tmp and run the copy (python3 /tmp/clean-validate-ledger.py --repo-root <worktree>). It copies the validators + inputs (verdict dir first, order file, ledger last) read-only to a scratch dir outside the tree, records the todolist-push head SHA, and prints both exit codes + row count. Log the result (exit codes, SHA, rows) to the master event log. Test: rung3-ci/test-clean-validate.py.
+
 ## Notification points (via parent, do not stop unless stated)
 
 Ledger repair completion/blocker; any 6th invalid event or threat; each further drop; task 56 tab ambiguity; valid-50 reconvene; bar unreachable (rule-A fails reach 3); DP-05 use; R3-089 guard refresh done; closure.
