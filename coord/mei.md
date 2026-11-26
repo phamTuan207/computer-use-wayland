@@ -867,3 +867,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 34. R3-074 drive xong trong gioi han, scoring tiep theo (2026-11-26 20:58 +07)
 - R3-074 drive COMPLETED 20:49:44 trong gioi han (commit 59648963, heartbeat 20:54:17; drive 20m00s); snapshot sealed (16 files, manifest 36e440e8, gate PASS, pii clean); scoring tiep theo. Rule-A 34/1.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 35. R3-074 PASS, R3-075 dang chay (2026-11-26 21:20 +07)
+- R3-074 GRADED PASS (commit 67e1958c; heartbeat 21:07:33, Clone2 B1 + Fresh B2, Rule-A 35/1).
+- R3-075 RELEASED (driver 241bb105), DRIVING tu 21:07:50 (PID 3378155, deadline 21:37:50). Mei khong co vai tro o R3-075. Bar can 15 PASS tu 16 valid con lai (50/52; voi task 56: 16 tu 17, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
