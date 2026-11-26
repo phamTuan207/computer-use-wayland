@@ -1,0 +1,46 @@
+R3-079 drive report
+
+Start: 2026-11-26T22:59:41+07:00
+End: 2026-11-26T23:11:55+07:00
+Elapsed: 12m 14s
+Runner PID: 3557764
+
+Dated backups listed in Nautilus: 2026-11-20/, 2026-11-22/, and manifest.txt.
+Request file contents (read in editor):
+File can khoi phuc: bao-cao-tuan.txt
+Ngay ban sao luu can dung: 2026-11-22
+Thu muc dich: ~/rung3/d46-restored
+
+Copy source: /home/james/rung3/d46-backup/2026-11-22/bao-cao-tuan.txt
+Copy destination: /home/james/rung3/d46-restored/bao-cao-tuan.txt
+Restore copy was performed in Nautilus using select, Ctrl+C, navigation, Ctrl+V. Nautilus then showed bao-cao-tuan.txt in d46-restored.
+
+Restored file contents read in the editor: Bao cao tuan 47, doanh thu 12500000, don hang 320.
+Manifest line read in the editor: Ban sao luu ngay 2026-11-22 chua file bao-cao-tuan.txt voi noi dung: Bao cao tuan 47, doanh thu 12500000, don hang 320.
+Comparison: match.
+
+Work-folder-not-overwritten check:
+Before copy, d46-restored was empty; no bao-cao-tuan.txt existed in /home/james/rung3 or /home/james/rung3/d45-work.
+Before and after SHA256 values for d45-work files:
+8e9a592136bedd1e951346cd5ea839478e456c86810ce569368ab592ff72e587  /home/james/rung3/d45-work/d45-file-01.txt
+336552bd8f15182dd741d4648953ecacc262f857d2e758b464d599e7e547bb89  /home/james/rung3/d45-work/d45-file-02.txt
+8c6c96e15ef8660ccfc0cf406f2eb4cd71bc38e743bf80334ab34faee483d6e9  /home/james/rung3/d45-work/d45-file-03.txt
+b02d8d929ec9dfb3f0109258e824a333f6f882ac86ecd4485be389660970577c  /home/james/rung3/d45-work/d45-file-04.txt
+46233fdf64b22726c55b66854b1381b1c1d93b4942f18ebb7f86234caa49b01e  /home/james/rung3/d45-work/d45-file-05.txt
+c5615f17864bcaf0917afa5c63367254014437dc028ea1638181d23ecbbba2ed  /home/james/rung3/d45-work/d45-file-06.txt
+319421b6bdb518eade92f2169c0d76d78a4267f58777ed001981afdada94c3eb  /home/james/rung3/d45-work/d45-file-07.txt
+b792d7dad685b5c74cc4aac700effd435341d04ba2c9feff922ef7c3b34d48a2  /home/james/rung3/d45-work/d45-file-08.txt
+15dc65c0efeb49f4c0ca5097a8c4fc88ab845e552dca2dbdf657b728ac98a10e  /home/james/rung3/d45-work/d45-file-09.txt
+45426004afd4481992c1f1e7e5c51f46d1f854da870ff97865c72f4ef23d3c82  /home/james/rung3/d45-work/d45-file-10.txt
+Before and after SHA256 for backup files, manifest, and request:
+3dcf8de4d8a347b40f691abe0b3a1afbfe7da38d46dfd2702ccad04d8d5ace03  /home/james/rung3/d46-backup/2026-11-20/bao-cao-tuan.txt
+407851fceb795390b95868f95df15b31cbac5e8ce0044bd3f56e0949b1e17359  /home/james/rung3/d46-backup/2026-11-22/bao-cao-tuan.txt
+70edc88b584575bb5c92be3ba6ef0bc6294aabde0fccebd89c974f76ab6964e7  /home/james/rung3/d46-backup/manifest.txt
+cab531baf800432604c0e3cc757a1dce99c8684d1cd95279a13ed47725d1618f  /home/james/rung3/d46-yeu-cau.txt
+All listed before/after hashes are identical. After check: no bao-cao-tuan.txt in /home/james/rung3 or /home/james/rung3/d45-work; the restored file is only in d46-restored.
+
+Pill: “Computer use active” was visibly verified during both active sessions. The first session ended after an act geometry-change refusal; the pill disappeared and a desktop screenshot was taken. A second session was started and used for the remaining UI actions. Final release: computer-use driver/guard processes absent; pill visibly gone in desktop-after-release.png.
+
+Evidence files: bao-cao-tuan.txt, ket-qua.txt, bao-cao.txt, drive-log.txt, start_time.txt, end_time.txt, 20261126T230228+0700-d46-backup-open.png, 20261126T230610+0700-restored-file-open.png, 20261126T230727+0700-manifest-open.png, desktop-after-release.png, driver-pill-during.png.
+
+Anomalies and full chains are recorded in drive-log.txt.

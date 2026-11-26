@@ -1,0 +1,4 @@
+Restored file name: bao-cao-tuan.txt
+Backup date used: 2026-11-22
+Restored file content: Bao cao tuan 47, doanh thu 12500000, don hang 320.
+Manifest comparison result: match. Manifest line: Ban sao luu ngay 2026-11-22 chua file bao-cao-tuan.txt voi noi dung: Bao cao tuan 47, doanh thu 12500000, don hang 320.

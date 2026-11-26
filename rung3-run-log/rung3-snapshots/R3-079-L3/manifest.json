@@ -1,0 +1,86 @@
+{
+ "files": [
+  {
+   "mtime": 1795709640,
+   "name": "20261126T230228+0700-d46-backup-open.png",
+   "sha256": "654eace7b7d934cabad6a80bd47e4c704b902b62b6e5657f5953069985f9aeb8",
+   "size": 94432
+  },
+  {
+   "mtime": 1795709644,
+   "name": "20261126T230610+0700-restored-file-open.png",
+   "sha256": "ba388e17f42e2593157e3fc4b22250fb993e90d40a57aa0a925819f507d0c23b",
+   "size": 61334
+  },
+  {
+   "mtime": 1795709648,
+   "name": "20261126T230727+0700-manifest-open.png",
+   "sha256": "9f04380dcf0ac5dcdcda1ae4198ff890e15bcfd140ddbcf48c333d79c21d23a4",
+   "size": 88771
+  },
+  {
+   "mtime": 1795709651,
+   "name": "bao-cao-tuan.txt",
+   "sha256": "407851fceb795390b95868f95df15b31cbac5e8ce0044bd3f56e0949b1e17359",
+   "size": 51
+  },
+  {
+   "mtime": 1795709654,
+   "name": "bao-cao.txt",
+   "sha256": "d8ee15f42b06d13ae9444494c698ae31da2b5363aefb9ac160e90d182e9bbf7f",
+   "size": 3598
+  },
+  {
+   "mtime": 1795709684,
+   "name": "codex-R3-079.log",
+   "sha256": "24529d65940c9be28dd57a2d27d6bf70c0e69c23f7f842412b38c8626a05446f",
+   "size": 484725
+  },
+  {
+   "mtime": 1795709659,
+   "name": "desktop-after-release.png",
+   "sha256": "5e9200efb6d85af801e311438826facf1df8154a876f83a98b0c292a7b8b90ab",
+   "size": 702117
+  },
+  {
+   "mtime": 1795709662,
+   "name": "drive-log.txt",
+   "sha256": "19ae4d36ce481af23b2337ab6af653bc0ebf786bb682ae1a76c999bc0701d455",
+   "size": 5562
+  },
+  {
+   "mtime": 1795709667,
+   "name": "driver-pill-after.png",
+   "sha256": "67fd7a1c61d33b2e0c35e07286052ff90cad074b8db7cc52dbd5af5dbec52c33",
+   "size": 702030
+  },
+  {
+   "mtime": 1795709673,
+   "name": "driver-pill-during.png",
+   "sha256": "23ca596e631fd2d253aaf06360a250083bce43fd71d259a41770b8c8bbb48c7e",
+   "size": 1672035
+  },
+  {
+   "mtime": 1795709676,
+   "name": "end_time.txt",
+   "sha256": "c014650a14eb4008429dc4445526958c3e7354db713b0892446e56bba6b1119c",
+   "size": 26
+  },
+  {
+   "mtime": 1795709629,
+   "name": "ket-qua.txt",
+   "sha256": "9b9a6f67b2b7fcd48f5d509894c1295103fe139a23ba91a156c459747874c566",
+   "size": 310
+  },
+  {
+   "mtime": 1795709679,
+   "name": "start_time.txt",
+   "sha256": "c7903a6fba8c9df5c6a6edfd3fff5f04bd0d45bfc2511f029fd55c40bdddecd2",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "cbf937c3ab1405e075f775a1cc374745fdd8603393e7e755ec92fe2252c3aa00",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-079-L3",
+ "source_dir": "/tmp/r3-079-evidence",
+ "task": "r3-079-evidence"
+}
