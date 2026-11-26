@@ -9055,3 +9055,12 @@ Không có comment mới trên PR #758, #756, #760 (đều 0 comment), không c�
 R3-L3: R3-027 INVALID chính thức (event 5 = cap, cả 2 scorer đồng ý), R3-028-L3 snapshot xong gate PASS, vị trí tiếp R3-029; clone1 vẫn chờ bộ calibration sealed để nhận 13 WU; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push 5c020298 lúc 07:38, main merge 4cdc623e lúc 07:26; câu hỏi equip Graphify 04:44 vẫn chưa trả lời (174 phút) nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 08:37 ngày 26/11 - WATCHDOG
+
+Không agent nào kẹt, batch 13 xong hẳn, calibration 4/4 APPROVED đã nộp đủ 8 file (R3-002 FAIL, R3-013 PASS, R3-016 PASS, R3-024 INVALID, mechanics GO).
+Muse: không có yêu cầu mới cho clone1. Main không có commit mới từ watermark 0e907fb8; todolist-push có 2 commit mới (ce2ebb7e, 132b12d1 lúc 08:29): epoch 17 deputy confirmed, G-24/G-38 closed, không nhắc clone1, không brief mới.
+Không có comment mới trên PR #775, #772, #771, không có issue mở.
+R3-L3: vị trí 25, R3-029 HELD chờ mật khẩu; Rule-A 25 PASS / 0 FAIL, 5 INVALID; chưa có snapshot R3-037-L3 nên chưa chấm; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 vẫn chưa có quyết định.
+Điều phối còn sống: todolist-push 132b12d1 lúc 08:29, epoch 17; câu hỏi equip Graphify 04:44 vẫn chưa trả lời (233 phút) nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
