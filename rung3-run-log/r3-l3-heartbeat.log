@@ -189,3 +189,4 @@
 2026-11-27T00:39:44+07:00 | epoch24 | R3-085 drive COMPLETED 00:34:34 within limit; fields cleared; snapshot+scoring next | Rule-A 41/1 | position 43 | our-side invalid budget 5/5
 2026-11-27T00:50:33+07:00 | epoch24 | R3-085 GRADED PASS; R3-086 DRIVING PID 3736094 since 00:49:07, fields recorded | Rule-A 42/1 | position 44 | our-side invalid budget 5/5
 2026-11-27T01:00:51+07:00 | epoch24 | R3-086 drive COMPLETED 00:56:36 (attempt 2) within limit; fields cleared; snapshot+scoring next | Rule-A 42/1 | position 44 | our-side invalid budget 5/5
+2026-11-27T01:11:19+07:00 | epoch24 | R3-086 GRADED PASS; R3-088 DRIVING PID 3768482 since 01:10:24, fields recorded | Rule-A 43/1 | position 45 | our-side invalid budget 5/5
