@@ -33,7 +33,7 @@
 
 ## Independence declaration
 
-I graded blind from the snapshot and key section only; I did not read the ledger, any grade file, or any other verdict for these tasks.
+I graded blind from the snapshot and key section only; I did not read the ledger, any grade file, or any other verdict for these tasks
 
 ## Checker
 

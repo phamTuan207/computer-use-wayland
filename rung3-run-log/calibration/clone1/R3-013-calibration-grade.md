@@ -50,7 +50,7 @@
 - docs/rung3-answer-keys.md lines 225-236 only (section "## R3-013 (Tier A)")
 - docs/rung3-answer-keys.json entry `.tasks["R3-013"]` only
 
-I graded blind from the snapshot and key section only; I did not read the ledger, any grade file, or any other verdict for these tasks.
+I graded blind from the snapshot and key section only; I did not read the ledger, any grade file, or any other verdict for these tasks
 
 ## Method note
 
