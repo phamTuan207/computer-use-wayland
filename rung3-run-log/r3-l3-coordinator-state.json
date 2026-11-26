@@ -24,7 +24,7 @@
  "completed_positions": 34,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 41,
- "current_task": "Task 56 (position 56, Class L, counted) DRIVING: launched 2026-11-27T03:28:16+07, Muse runner session 3cc35e36-4f85-4296-81ca-434a77b4d6d6 (default lane per re-plan F8; no codex PID). Deadline 03:58:16+07. Snapshot VM-local per F8.3 (no full URLs pushed). Scorers on completion: Mochi (B1) + Clone2 (B2) per F5.2, reviewer Mei. Coordinator verifies live tab list + sessionstore before scoring closes. No reset (tabs stay live).",
+ "current_task": "OWNER DECISION 2026-11-27 04:41 (verbatim substance): the owner watched the task 56 restore live and says the Zen web restore is OK now; his words: the restore is fine, let it pass, it keeps getting stuck and wasting time. Task 56 drive stopped on owner order at ~73 min (started 03:28:16, 30-min limit exceeded; overrun recorded). PASS rests on owner inspection/acceptance of the restored state (owner inspected his own Zen: essentials, pinned tabs, zen basics folder in place). Coordinator sent interrupt-stop + evidence finalize to runner 3cc35e36 (submission 11061f70). VM-local snapshot per F8.3 to be sealed from transferred evidence; coordinator live verification note to be filed.",
  "deputy": "dee95d07-524e-4e10-8dcf-271d5b36c65c (epoch 24 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T19:07:21+07:00, after state last_updated 2026-11-26T19:06:52+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 pane PID 22399 alive untouched, codex-cli 0.172.0, state parse epoch 24 coordinator_active 64030fac, snapshot + verdict paths exist; epoch 23 deputy b3cf2527 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 4,
  "freeze": {
@@ -42,7 +42,7 @@
   "trung_binh": 5
  },
  "invalid_count": 6,
- "last_updated": "2026-11-27T03:31:04+07:00",
+ "last_updated": "2026-11-27T04:42:00+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "41 rows (1 TEST + 30 PASS + 6 INVALID + 4 FAIL), validated PASS, cross-check OK (epoch 24: validate exit 0, cross-check exit 0, 81 verdict files)",
