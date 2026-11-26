@@ -389,3 +389,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 26/11/2026 21:05 +07 - Watchdog 15m: lenh moi R3-075, mochi scorer 1 Pair B (mochi)
+
+- Kiem tra subagent (direct + descendants): khong co agent nao dang chay, khong agent ket hay chet. Tat ca agent gan day deu done (R3-067, R3-055, R3-049 polling).
+- GitHub main: tip 2e7f4de2 (clone1: watchdog 20:17 26/11 status), khong co commit moi tu 20:30, khong co lenh moi tren main. coord/mochi.md tren main khong doi tu e86f1ea8 (24/11).
+- Lenh moi tren todolist-push, epoch 24, commit 1ab23214, 21:01:31 +07: R3-075 briefs (runner + Mochi B1 + Clone2 B2). Mochi la Pair B scorer 1, Class L, Tier B. Key md hash da xac minh khop 21f8b61a.
+- Snapshot R3-075-L3 chua co tren todolist-push luc 21:05 +07. Scorer subagent da dispatch, poll moi 3-5 phut toi da 60 phut, roi cham theo brief va file verdict len nhanh mochi/verdict-R3-075-L3 trong 30 phut ke tu khi snapshot toi.
+- Ghi chu nay chi ghi trang thai, khong co verdict.
