@@ -1,0 +1,362 @@
+{
+ "files": [
+  {
+   "mtime": 1795690222,
+   "name": "000-initial-held-tab.png",
+   "sha256": "6569fd4b076afd8fb8e025c4e31a754ba17e4717fb584800062b3e9298db7124",
+   "size": 2018403
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172403-search-entry.png",
+   "sha256": "e498eac401e7d8c4f2bb6cd89d0ad13d789f48803ac112dcb1067e5a35916b52",
+   "size": 2022063
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172426-search-entry.png",
+   "sha256": "cde1a9c90a9d03cfb5f6d2391dd9f2c6ff1b122167cd30fe5fde6b5d2e29587c",
+   "size": 2136362
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172448-calculator-open.png",
+   "sha256": "4f9998467f4a0cd76fa12799dbd9012fd1883ea8057d397f4cd4e2eec26655a2",
+   "size": 2131806
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172527-calculator-open.png",
+   "sha256": "b73017d2c4d4117258be40dda25033bbf5a63d3fb704d72e6de73f4d910e3aea",
+   "size": 1671531
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172606-city-query.png",
+   "sha256": "a5393b6df5a49babd8537bb0898b20d2bade03b566516d769bc2da2b18aeacd7",
+   "size": 1711704
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172631-hanoi-selected.png",
+   "sha256": "3fe827df6071fcb779273cab95130e5612c0066d1cb9a5dc3e132daefa41f007",
+   "size": 1625548
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172700-hanoi-table-area.png",
+   "sha256": "f50003390d1dfe6e76df0219de25823b91dca4501b251e76bd10b6f537139fb1",
+   "size": 1612458
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172725-hanoi-december.png",
+   "sha256": "0581d8318eca7d465140a35a9617912a6e80b1faaa093ac328076c4b30a45712",
+   "size": 1622036
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172742-hanoi-dec-table.png",
+   "sha256": "314bc820931f3e119d06bda891263c4b0cb465cad93c34eab3a77b4ea4f9a80c",
+   "size": 1646182
+  },
+  {
+   "mtime": 1795690212,
+   "name": "20261126-172805-HaNoi-2026-12-02.png",
+   "sha256": "842bc51e900a93baa15d860832ce8e3190c5ba2d7890b198c9c9868294c74d38",
+   "size": 1616399
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172805-hanoi-dec2-expanded.png",
+   "sha256": "842bc51e900a93baa15d860832ce8e3190c5ba2d7890b198c9c9868294c74d38",
+   "size": 1616399
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172832-month-select.png",
+   "sha256": "94112a37037deeca9b1b33f9ee0d8bf376b80d9a6828c2cc4027d3ca13f855df",
+   "size": 1626508
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172850-month-june-selected.png",
+   "sha256": "b60a86822990b5f067d9392a8bb5cf2c31cdc1e6a7f35aceef29f8400401ed4a",
+   "size": 1612326
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172907-year-select.png",
+   "sha256": "95fdb6c0723494195fb066d2ea4a810bc76ba3302c970bbc950476e42c38f087",
+   "size": 1615523
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172926-year-2027-entered.png",
+   "sha256": "156d0c4286e3143c6691f8b751ad6178b0c5afd2b2e2942ff30ef00524618be0",
+   "size": 1615555
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-172946-hanoi-june-2027.png",
+   "sha256": "eaecc883d2bf269af973024745df1e0fd026c119e7ec0a8aa91a6775d6680dde",
+   "size": 1624431
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173002-hanoi-june-table.png",
+   "sha256": "eeb8289d97e5236fcf770ed4ebe5e4cfb719011f66b666b04d467b6157ddda63",
+   "size": 1639700
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173017-hanoi-june2-expanded.png",
+   "sha256": "453d2b043dd7ad74eba3e54cd9b3381ce3b72ce83c02b4c3cf3826ab8e558955",
+   "size": 1616513
+  },
+  {
+   "mtime": 1795690212,
+   "name": "20261126-173038-HaNoi-2027-06-02.png",
+   "sha256": "bc642671eccb177cd57a968b7ca11059564a5cdb5bd1e950873d8a44ef7630c7",
+   "size": 1616584
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173038-hanoi-june2-expanded.png",
+   "sha256": "bc642671eccb177cd57a968b7ca11059564a5cdb5bd1e950873d8a44ef7630c7",
+   "size": 1616584
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173058-page-top.png",
+   "sha256": "9acfd85bca5ba265e16acfedda494058e77526b54586507c51a10345756de7e1",
+   "size": 1623820
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173135-london-query.png",
+   "sha256": "a9162bff61f315fb34bb58d30dc8add8b87bb7d61de8e5477509ff23db2ba767",
+   "size": 1680677
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173201-london-selected.png",
+   "sha256": "1a04e25e5afc15a3b067ec12b0796548ab69ccb451a9191848f2328679766024",
+   "size": 1633945
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173216-london-table-area.png",
+   "sha256": "19b47610498afdf69771b3d26211087018d4b4efec77cd163e65351396c46aa3",
+   "size": 1654714
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173234-london-december.png",
+   "sha256": "7393df99150e8f1256fb54fdf2c62987b834d44b074f678f8dd7f73d3ebc96df",
+   "size": 1653075
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173256-london-december.png",
+   "sha256": "db3c095b3c1999dc2c3dc8bc9c9951741bd91503216b95f361fa57cab838cd6c",
+   "size": 1633685
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173317-london-dec-table.png",
+   "sha256": "fb3cb02f0587dfb4b1dec761b4a315c4b54ad8e42734daa80f4d56e2d7a9b570",
+   "size": 1649833
+  },
+  {
+   "mtime": 1795690212,
+   "name": "20261126-173339-London-2026-12-02.png",
+   "sha256": "688884f0ea331d3e85be7e1256bfa234adb64b417cafa44332ad16db84be607a",
+   "size": 1622932
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173339-london-dec2-expanded.png",
+   "sha256": "688884f0ea331d3e85be7e1256bfa234adb64b417cafa44332ad16db84be607a",
+   "size": 1622932
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173403-london-month-select.png",
+   "sha256": "c7f841463c745c6960c59cd645fda353262db8b119c48658dfd2b988c628874f",
+   "size": 1629107
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173422-london-june-selected.png",
+   "sha256": "e75cba376d99ec1b98428296b6c292c1ca16b2a4128f02bd2a916f4cbc5b0109",
+   "size": 1621949
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173446-london-year-entered.png",
+   "sha256": "8d02ea61c4cb522ae784ff5f0f03a15da51cea29940d7d7592424d15f7025dcb",
+   "size": 1621259
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173504-london-june-2027.png",
+   "sha256": "38a09a0bf0f67c2eb3f0616ca21319164ba5568fb3ed66b16373256bf0437812",
+   "size": 1634780
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173518-london-june-table.png",
+   "sha256": "980147d7a310c8173f79f1a1a2ae0e409dbcca401ad0b7dd1b5bdcf88f25efc3",
+   "size": 1655434
+  },
+  {
+   "mtime": 1795690212,
+   "name": "20261126-173537-London-2027-06-02.png",
+   "sha256": "40711905bdad33ddf0a2cf0be473af7d778cac0c39b00813d20a30e79fbdc970",
+   "size": 1623683
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173537-london-june2-expanded.png",
+   "sha256": "40711905bdad33ddf0a2cf0be473af7d778cac0c39b00813d20a30e79fbdc970",
+   "size": 1623683
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173602-london-top.png",
+   "sha256": "455a44e63c45a5ababd2c46b603bd6c8f8032372af0b9d0a52b86d20eee770ee",
+   "size": 1635459
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173620-sydney-query.png",
+   "sha256": "436259b5b590c622d8fddd2999fcbd9f4209b1b6e6d5aba7a3cc432bff083b03",
+   "size": 1689190
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173645-sydney-selected.png",
+   "sha256": "3cf018a85dfeedb1cf1e85c39e8c0c1e65559d0d0c3b5a5e0d22894ff9ebd51a",
+   "size": 1617218
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173659-sydney-table-area.png",
+   "sha256": "6423d59facbaec63c635d4a59d888cf2b1bf52996ae5af82f935c8008bd42f74",
+   "size": 1650441
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173723-sydney-december.png",
+   "sha256": "ac2e65d5184d298b04ddc93c7e8ca701c8b43936f53958c63c4a7e32cd50839f",
+   "size": 1631407
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173737-sydney-dec-table.png",
+   "sha256": "cadee3d9b242cd95a1ae9f2914faec4e74506cb0386ab467a77365a653990d08",
+   "size": 1652137
+  },
+  {
+   "mtime": 1795690212,
+   "name": "20261126-173757-Sydney-2026-12-02.png",
+   "sha256": "62865a7a344d7cc8fe9d0639b21d9d3d9fde682c64eef747f1517399843e4cd8",
+   "size": 1621432
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173757-sydney-dec2-expanded.png",
+   "sha256": "62865a7a344d7cc8fe9d0639b21d9d3d9fde682c64eef747f1517399843e4cd8",
+   "size": 1621432
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173819-sydney-month-select.png",
+   "sha256": "a7e456b506dea02732e08d3a37c0316bd4631137e43e17bb7b849dcb53e0ab08",
+   "size": 1631609
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173832-sydney-june-selected.png",
+   "sha256": "f9773a33540356a717b43c07bba51567066897b863046b3aca7e1294e390f1d1",
+   "size": 1616773
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173850-sydney-year-entered.png",
+   "sha256": "57bece64b4333bf6de89b142c9c705cc256d813ea980b0ea6fe7332cba06980c",
+   "size": 1620238
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173910-sydney-june-2027.png",
+   "sha256": "16f96dd011dcabe8645878172beb64ceb658857c6a968fd6c83b134e5c423eeb",
+   "size": 1632808
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173924-sydney-june-table.png",
+   "sha256": "2e489d11ed23915fa9efa74d43e1a8238197ba05e17e8ce3a44a5c7e09c4839f",
+   "size": 1640774
+  },
+  {
+   "mtime": 1795690212,
+   "name": "20261126-173944-Sydney-2027-06-02.png",
+   "sha256": "696c2ba1d7dad8392740a7083b34ae34a3d844b5c5ba2d186c009140cbac5298",
+   "size": 1615342
+  },
+  {
+   "mtime": 1795690222,
+   "name": "20261126-173944-sydney-june2-expanded.png",
+   "sha256": "696c2ba1d7dad8392740a7083b34ae34a3d844b5c5ba2d186c009140cbac5298",
+   "size": 1615342
+  },
+  {
+   "mtime": 1795690212,
+   "name": "coordinator-report.txt",
+   "sha256": "f19de76a9fe20eba104c41db2bdfac8ed2c4147060013cab2c3338d4583e227a",
+   "size": 2202
+  },
+  {
+   "mtime": 1795690212,
+   "name": "end_time.txt",
+   "sha256": "184f810036068c521b438a9b5765202a1ff72287ecdb9d999c5ac4b21f668045",
+   "size": 26
+  },
+  {
+   "mtime": 1795690222,
+   "name": "holder.log",
+   "sha256": "ba716974b34624408dddbdf01519a546b9ad64c76c85b0d657fe64a8174479cc",
+   "size": 3700
+  },
+  {
+   "mtime": 1795690212,
+   "name": "ket-qua.txt",
+   "sha256": "7261974e85310c070777527e82de7de8c8ef2c9f096e4b0c5f611843ba94b903",
+   "size": 665
+  },
+  {
+   "mtime": 1795690212,
+   "name": "pill-verify.png",
+   "sha256": "af187f204beed245e16f7841c7e15899b741154d3c6cac56445a08968c33c195",
+   "size": 1516512
+  },
+  {
+   "mtime": 1795690212,
+   "name": "probe-ready.json",
+   "sha256": "0a685c45f8118d4de7d6e36213de9aa555ca6f5b7fba0b451968997764e855d0",
+   "size": 455
+  },
+  {
+   "mtime": 1795690212,
+   "name": "start_time.txt",
+   "sha256": "b13301a605b0eaf684be712a01931c84263b9fe686a8a807dc2d62f01ba3c4f8",
+   "size": 26
+  }
+ ],
+ "manifest_sha256": "5ac02800027900a2dc22bd8c2994c603c379331ad2e13d4ce4fe825c1da76054",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-046-L3",
+ "source_dir": "/tmp/r3-046-snapshot-src",
+ "task": "r3-046-snapshot-src"
+}

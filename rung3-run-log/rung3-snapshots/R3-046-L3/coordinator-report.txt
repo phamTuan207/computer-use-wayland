@@ -1,0 +1,14 @@
+R3-046 coordinator report (attempt 2)
+Task ID: R3-046; lane: Codex; result: COMPLETED.
+Evidence folder: /home/james/rung3-chung-cu/R3-046
+Start wall time: 2026-11-26T17:23:30+07:00
+End wall time: 2026-11-26T17:43:08+07:00
+Holder session ID: 7e605cc3-014d-4308-8d64-db7e8c1ad84d
+Holder PID: 3069887
+Probe-ready fields: webdriver=false; own_on_proto=true; own_on_navigator=false; get_name=get webdriver; get_tostring=function () {\n    [native code]\n}; configurable=true; enumerable=true. Probe matched the required values and was copied to probe-ready.json.
+Pill: acquired at 2026-11-26T17:22:31+07:00; visible on initial grim and throughout the drive; released at 2026-11-26T17:41:09+07:00. overlay status reported visible=false and final grim /tmp/R3-046-attempt2-post-cleanup.png shows no pill. No pill gap observed.
+User path: address bar search for "timeanddate sunrise sunset" on DuckDuckGo; clicked the first result "Sunrise and Sunset Calculator"; selected city suggestions and dates through visible site controls.
+Six timestamped result screenshots in the evidence folder: 20261126-172805-HaNoi-2026-12-02.png, 20261126-173038-HaNoi-2027-06-02.png, 20261126-173339-London-2026-12-02.png, 20261126-173537-London-2027-06-02.png, 20261126-173757-Sydney-2026-12-02.png, 20261126-173944-Sydney-2027-06-02.png. Values in ket-qua.txt were transcribed from these saved screenshots. Day-length differences are date 2 minus date 1.
+Bot-check/block: none observed; no block-evidence.txt.
+Focus verification: before every act-now input, hyprctl activewindow matched holder Zen window 0x5614f0849b40 on ws2. No foreign-window focus interruption occurred. Three act-now attempts refused before sending input (invalid wait bound; one coordinate outside the 960x600 observation; one stale month-title preflight condition). Each was corrected after fresh screen/state checks; no uncertain input was replayed. A first row click selected June 3 rather than June 2; the next screenshot showed the mismatch and June 2 was selected and captured. No owner-opened tabs were navigated or closed.
+Clean holder shutdown markers confirmed: preload_removed, context_closed, session_ended, done. No holder process remains.

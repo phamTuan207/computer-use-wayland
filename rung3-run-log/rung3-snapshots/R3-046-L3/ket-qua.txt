@@ -1,0 +1,10 @@
+R3-046 ket-qua
+Ha Noi | 2026-12-02 | sunrise 06:17 | sunset 17:14 | day length 10:56:38
+Ha Noi | 2027-06-02 | sunrise 05:14 | sunset 18:34 | day length 13:19:54
+Ha Noi | day-length difference (2027-06-02 minus 2026-12-02): +2:23:16
+London | 2026-12-02 | sunrise 07:45 | sunset 15:54 | day length 8:09:15
+London | 2027-06-02 | sunrise 04:48 | sunset 21:09 | day length 16:20:30
+London | day-length difference (2027-06-02 minus 2026-12-02): +8:11:15
+Sydney | 2026-12-02 | sunrise 05:37 | sunset 19:51 | day length 14:14:38
+Sydney | 2027-06-02 | sunrise 06:51 | sunset 16:54 | day length 10:02:13
+Sydney | day-length difference (2027-06-02 minus 2026-12-02): -4:12:25
