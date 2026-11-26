@@ -25,7 +25,7 @@
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 25,
  "current_task": "EPOCH 17 (R3-029 position 25 HELD for parent password; release on password receipt)",
- "deputy": "c3fe4516-6143-4cbe-9b0f-45ceedbc806f (epoch 16 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:04:03+07:00, after state last_updated 2026-11-26T08:03:21.072508+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399, codex-cli 0.172.0, state parse epoch 16 coordinator_active 78fd6562, ledgers 31 rows + 3 re-run PASS, validate + cross-check exit 0; declaration pushed 58367bef; epoch 15 deputy 1598992c SUPERSEDED; on STANDBY under section 7 fencing)",
+ "deputy": "aa7cf6b1-cc2b-476f-b551-10edf5623f73 (epoch 17 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T08:28:15+07:00, after state last_updated 2026-11-26T08:27:04+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive pane 22399 untouched, codex-cli 0.172.0, state parse epoch 17 coordinator_active 99914724, ledgers validate + cross-check exit 0; declaration pushed ce2ebb7e; epoch 16 deputy c3fe4516 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
   "h1": "9b9d900",
@@ -42,7 +42,7 @@
   "trung_binh": 4
  },
  "invalid_count": 5,
- "last_updated": "2026-11-26T08:27:04.511782+07:00",
+ "last_updated": "2026-11-26T08:29:04.411685+07:00",
  "ledger": {
   "file": "rung3-run-log/R3-L3-grades.jsonl",
   "note": "31 rows (1 TEST + 22 PASS + 5 INVALID + 3 FAIL), validated PASS, cross-check OK (epoch 16 takeover re-run: validate exit 0, cross-check exit 0, 61 verdict files)",
@@ -1189,6 +1189,11 @@
    "ts": "2026-11-26T08:27:04.511782+07:00",
    "by": "coordinator-epoch-17",
    "text": "COORDINATOR TAKEOVER, EPOCH 17: epoch 16 (78fd6562) completed; coordinator gap since 08:06 held by parent; parent appoints successor 99914724-3cbb-4fe2-ba5a-a223c09c9de1 as coordinator epoch 17 under re-plan section 7 fencing (takeover record written before any order; workers obey only coordinator_active 99914724). Takeover verification recomputed by epoch 17 from ledgers: grades 31 rows (22 PASS, 5 INVALID R3-011/022/024/026/027, 3 FAIL R3-001/002/003, 1 TEST) + 3 re-run PASS; Rule-A 25 PASS / 0 FAIL. Invalid events 5/5 EXHAUSTED (R3-027 namechk hCaptcha = event 5); a sixth invalid event needs a new recorded decision via the parent before further releases (R3-036/R3-046 timeanddate shared-cause drops add 0 events only with browser evidence + scorer-2 confirmation). Valid 53; bars 51/53 original and 52/54 with task 56; need 26 PASS from 28 remaining original positions; closure counts both ways. validate-ledger.py exit 0 (31 rows, 0 errors), ledger-cross-check.py exit 0 (61 verdict files). task_start/runner_pid/codex fields null (no drive running). R3-029 (position 25, Muse lane) HELD for parent-held password (owner re-verify asked 07:47, pending); on receipt the password goes in the runner spawn message ONLY, never in any file; holder hashes pre-verified by epoch 16. Briefs for R3-035/036/037 ready (pushed 7208d97c). Clone1 calibration APPROVED 4/4 (555b5ddc); first clone1 scoring task R3-037. Checks 11-12 armed in coordinator checklist; R3-089 guard refresh 2026-11-30 12:00 owned by coordinator even if not reached. Fresh deputy to be spawned (G-24/G-38). State written via temp file then rename (G-48 atomic write)."
+  },
+  {
+   "ts": "2026-11-26T08:29:04.411685+07:00",
+   "by": "coordinator-epoch-17",
+   "text": "DEPUTY CONFIRMED, EPOCH 17: fresh deputy aa7cf6b1. Declaration 08:28:15 +07 (after state 08:27:04, G-24 satisfied), pushed ce2ebb7e (ls-remote verified). Dry run 5/5 PASS. G-24/G-38 CLOSED for epoch 17. Deputy on STANDBY under section 7 fencing. Coordinator spot-checks: holder hashes on laptop match brief pins (holder 70bfe8ab...213, probe 5329a574...c1f9); R3-029 runner brief carries all required fields, no password value in file. R3-029 still HELD for parent password."
   }
  ],
  "pass_count": 22,
