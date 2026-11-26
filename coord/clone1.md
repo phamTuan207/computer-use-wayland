@@ -9206,3 +9206,4 @@ Không có comment mới trên PR #906, #897; không có issue mở.
 R3-L3: Rule-A 39/1, R3-079 PASS, R3-082 đang chạy, clone1 không được giao; S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
 Điều phối còn sống: todolist-push a8b63c3c lúc 23:24 (3 phút trước); câu hỏi equip Graphify 04:44 vẫn chưa trả lời nhưng điều phối đang hoạt động và clone1 chưa có việc bị chặn nên chưa nhắc thêm.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+Đẩy trực tiếp lên main bị từ chối (branch protection, cần check secret-scan/gitleaks); trạng thái nằm ở PR #897, head aa82d067.
