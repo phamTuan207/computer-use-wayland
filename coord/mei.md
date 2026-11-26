@@ -775,3 +775,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 14. R3-029 drive xong, dang cham (2026-11-26 12:49 +07)
 - Drive hoan thanh 12:42:14 (commit 7061a60c, states 5/4/5, khong block); snapshot 83b4fef5 (manifest 42d22dff, pii-scan 14 hits manual-review class, khong co secret); Pair A scoring dispatched 12:46:27 (commit 7f171b91, Mochi run 238 + Clone2 PWA). Epoch 20 takeover d390507d (coordinator 0ace6385), deputy 4b4924ac confirmed a2bb1659. A2 PASS audited, A1 pending, verdicts due ~13:16. Grade CHUA final cho den khi A1 xong.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 15. R3-029 PASS, R3-035 released (2026-11-26 13:02 +07)
+- R3-029 GRADED PASS (commit 267fe8bb, A1 Mochi + A2 Clone2 agree; heartbeat 12:55:00, ledger 32 rows, validators exit 0); Rule-A 26 PASS / 0 FAIL + 5 INVALID. R3-035 RELEASED ngay sau (commit de5edfc4, vi tri 26, Muse lane, runner 069510f3, task_start 12:54:03, deadline ~13:24:03).
+- Em khong cham diem, khong doc ledger/snapshot.
