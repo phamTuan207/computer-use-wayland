@@ -791,3 +791,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 18. R3-037 drive het timeout, dang cham (2026-11-26 14:49 +07)
 - R3-037 drive het timeout 14:45:51 (commit a020678e, 1 of 2 domains, khong block, khong fabrication); snapshot sealed 4f758d62 (16 files, gate PASS), pii clean. Scoring dispatched 14:46:32 (commit 4c46e055, Mochi run 241 + Clone1 PWA), verdicts due ~15:16.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 19. R3-037 FAIL, R3-045 released (2026-11-26 15:00 +07)
+- R3-037 GRADED FAIL (commit 1192fe8d, A1+A2 agree, timeout, KHONG phai INVALID; heartbeat 14:51:15, ledger 35 rows, validators exit 0); Rule-A 28 PASS / 1 FAIL + 5 INVALID, FAIL dau tien sau khi resume. Bar can 23 PASS tu 24 valid con lai (51/53; voi task 56: 24 tu 25, 52/54), toi da 1 FAIL nua. R3-045 briefs (commit 334ccec6, Codex runner + Clone2/Fresh scorers, F5.2 row); R3-045 RELEASED ngay sau (commit 9ff8e472, vi tri 29, Codex lane, driver 1db67099, task_start provisional).
+- Em khong cham diem, khong doc ledger/snapshot.
