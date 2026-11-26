@@ -1,0 +1,59 @@
+R3-083 — drive log — múi giờ Asia/Ho_Chi_Minh (UTC+07:00)
+
+Bắt đầu 2026-11-26T23:47:05+07:00 (elapsed 00:00:00): tạo thư mục evidence, ghi start_time.txt, bật Computer use trên workspace 2.
+2026-11-26T23:47:14+07:00 (elapsed 00:00:09): chụp active-pill-proof.png trực tiếp khi phiên còn hoạt động; pill “Computer use active” nhìn thấy.
+
+Sự cố 1 — launcher và phần nhập nhầm vào VS Code
+- Failure — 2026-11-26T23:47:15+07:00 (elapsed 00:00:10): lệnh phím chỉ gồm Super bị từ chối trước khi gửi input vì cần có non-modifier key; chưa có tác động.
+- Reasoning/attempt — 2026-11-26T23:47:33+07:00 (elapsed 00:00:28): thử Super+Space rồi nhập “Pinta” trong cùng batch. Launcher chưa nhận focus tìm kiếm, nên chuỗi được chèn vào bộ đệm VS Code đang có focus; launcher cũng hiện lên.
+- Observed — 2026-11-26T23:47:38+07:00 (elapsed 00:00:33): ảnh cho thấy ô tìm kiếm launcher chưa có chữ, còn editor phía sau hiển thị `Hello grouping.Pinta`.
+- Decision/fix — 2026-11-26T23:48:03+07:00 (elapsed 00:00:58): đợi launcher hiện ổn định rồi mới nhập Pinta; 2026-11-26T23:48:15+07:00 (elapsed 00:01:10) bấm đúng kết quả Pinta. Không lưu hoặc sửa thủ công editor.
+- Outcome — Pinta mở; không điều hướng Zen hay workspace 3. Sau release đầu, phần chèn nhầm vẫn còn trong bộ đệm VS Code; xem sự cố 7 để biết cách hoàn tác và xác minh.
+
+Các bước chính
+- 2026-11-26T23:48:25+07:00 (elapsed 00:01:20): Ctrl+N mở New Image; ảnh trắng mặc định ban đầu là 800 x 600.
+
+Sự cố 2 — nhập kích thước ảnh
+- Failure — 2026-11-26T23:48:40+07:00 (elapsed 00:01:35): batch đầu nhập kích thước và bấm OK không thay đổi trường. Ảnh lúc 2026-11-26T23:48:57+07:00 (elapsed 00:01:52) vẫn hiển thị Width 800, Height 600; chưa tạo đúng ảnh.
+- Reasoning — 2026-11-26T23:49:38+07:00 (elapsed 00:02:33): quan sát/focus cửa sổ Pinta cha bị từ chối vì cửa sổ riêng `New Image` đang active; bố cục thay đổi cũng khiến tọa độ cũ không còn phù hợp.
+- Attempts/fix — 2026-11-26T23:50:07+07:00 (elapsed 00:03:02): mở phiên lại và quan sát trực tiếp hộp thoại. Lúc 2026-11-26T23:50:12+07:00 (elapsed 00:03:07), bấm riêng hai trường trong hộp thoại, nhập 1200 và 628.
+- Decision/outcome — 2026-11-26T23:50:22+07:00 (elapsed 00:03:17): quan sát xác nhận Custom, Width 1200, Height 628; bấm OK lúc 2026-11-26T23:50:23+07:00. Pinta sau đó hiển thị 1200 x 628.
+
+Sự cố 3 — Color Picker là cửa sổ riêng
+- Failure — 2026-11-26T23:50:46+07:00 (elapsed 00:03:41): bấm foreground mở Color Picker. Batch nhập dựa trên ảnh Pinta cha bị guard từ chối lúc 2026-11-26T23:50:59+07:00 (elapsed 00:03:54) vì focus đã chuyển; không gửi thao tác nhập màu.
+- Reasoning/attempt — 2026-11-26T23:51:14+07:00 (elapsed 00:04:09): quan sát đúng cửa sổ Color Picker; nhập Hex `1E88E5FF`, xác nhận lúc 2026-11-26T23:51:24+07:00 (elapsed 00:04:19). Pinta hiển thị foreground xanh #1E88E5.
+- Fix màu phụ — 2026-11-26T23:51:42+07:00 (elapsed 00:04:37): mở Color Picker cho màu phụ. Chọn swatch màu phụ trong hộp thoại; nhập `43A047FF` lúc 2026-11-26T23:52:20+07:00 (elapsed 00:05:15), xác nhận lúc 2026-11-26T23:52:38+07:00 (elapsed 00:05:33). Kết quả: hai ô màu lần lượt xanh dương và xanh lá.
+- Outcome: màu foreground/background sẵn sàng cho gradient.
+
+Các bước chính
+- 2026-11-26T23:52:54+07:00 (elapsed 00:05:49): chọn Gradient tool, Linear Gradient và Color Mode.
+- 2026-11-26T23:53:31+07:00 (elapsed 00:06:26): kéo dọc giữa canvas từ xấp xỉ (598, 2) đến (598, 621) theo tọa độ ảnh; bắt đầu ở trên, kết thúc ở dưới.
+- 2026-11-26T23:53:45+07:00 (elapsed 00:06:40): quan sát xác nhận chuyển màu #1E88E5 trên xuống #43A047 dưới.
+- 2026-11-26T23:53:46+07:00 (elapsed 00:06:41): mở foreground Color Picker, nhập `FFFFFFFF`, xác nhận lúc 2026-11-26T23:54:15+07:00 (elapsed 00:07:10); foreground chuyển trắng.
+
+Sự cố 4 — hộp thoại chọn font
+- Failure — 2026-11-26T23:54:43+07:00 (elapsed 00:07:38): bấm trường Font mở cửa sổ riêng Pick a Font. Batch tiếp theo dựa trên ảnh Pinta không cập nhật cỡ chữ; quan sát Pinta bị từ chối do cửa sổ font đang active.
+- Reasoning — 2026-11-26T23:55:26+07:00 (elapsed 00:08:21): quan sát trực tiếp Pick a Font cho thấy size vẫn 11, nên chưa thể coi thao tác trước là thành công.
+- Fix — 2026-11-26T23:55:31+07:00 (elapsed 00:08:26): nhập 72 tại trường Size rồi bấm Select.
+- Outcome — 2026-11-26T23:55:44+07:00 (elapsed 00:08:39): Pinta toolbar xác nhận Adwaita Sans Regular 72.
+
+Sự cố 5 — chữ tạm thời không hiện sau khi đổi tool
+- Main action — 2026-11-26T23:55:53+07:00 (elapsed 00:08:48): tại điểm neo ảnh (389, 269), nhập `Chao mung`; ảnh hiện chữ trắng rõ.
+- Failure — 2026-11-26T23:56:08+07:00 (elapsed 00:09:03): sau khi bấm Gradient tool, quan sát lúc 2026-11-26T23:56:30+07:00 (elapsed 00:09:25) gần như không thấy chữ, dù lịch sử có mục Text.
+- Reasoning/attempt — nghi ngờ trạng thái hiển thị của Text tool; bấm lại Text tool lúc 2026-11-26T23:56:34+07:00 (elapsed 00:09:29), không nhập chữ lần nữa.
+- Outcome — 2026-11-26T23:56:58+07:00 (elapsed 00:09:53): toàn bộ “Chao mung” hiện lại. Điểm neo theo status bar là (389, 269); screenshot cuối trong Pinta xác nhận chữ trắng ở gần giữa canvas.
+
+Sự cố 6 — Save As
+- Failure — 2026-11-26T23:57:27+07:00 (elapsed 00:10:22): nhập đường dẫn tuyệt đối vào Name và bấm Save; hộp thoại vẫn mở. Kiểm tra lúc 2026-11-26T23:57:40+07:00 (elapsed 00:10:35) cho thấy file chưa tồn tại.
+- Reasoning/attempt — trường Name vẫn giữ đường dẫn nhưng thao tác Save chưa hoàn tất; không lặp lại click chưa chắc chắn.
+- Fix/outcome — 2026-11-26T23:57:50+07:00 (elapsed 00:10:45): nhấn Enter một lần. Hộp thoại đóng; `file` xác nhận `anh-bia.png` là PNG RGBA 1200 x 628.
+- 2026-11-26T23:58:20+07:00 (elapsed 00:11:15): chụp `2026-11-26_23-58-20-cover-in-pinta.jpg`; ảnh bìa hiển thị trong Pinta, pill đang hoạt động.
+
+Sự cố 7 — hoàn tác phần nhập nhầm vào VS Code sau release đầu
+- Failure — 2026-11-27T00:00:04+07:00 (elapsed 00:12:59): sau release đầu, ảnh desktop cho thấy `Pinta` vẫn được chèn vào bộ đệm chưa lưu của VS Code. Đây là phần nhập nhầm từ sự cố 1; không phải tệp đã lưu.
+- Reasoning — cần khôi phục đúng phần chèn do drive tạo ra và giữ nguyên các cửa sổ khác.
+- Attempts/fix — 2026-11-27T00:01:08+07:00 (elapsed 00:14:03): mở phiên Computer use lại, quan sát editor hiển thị `Hello grouping.Pinta`. Nhấn Ctrl+Z đúng một lần lúc 2026-11-27T00:01:19+07:00 (elapsed 00:14:14).
+- Outcome — 2026-11-27T00:01:31+07:00 (elapsed 00:14:26): xác nhận editor trở về `Hello grouping.`. Kết thúc phiên lúc 2026-11-27T00:01:35+07:00 (elapsed 00:14:30), trạng thái `cancelled=false`, không còn cửa sổ Pinta.
+- 2026-11-27T00:01:57+07:00 (elapsed 00:14:52): chụp `desktop-after-final-release.png`; pill không còn, editor đã trở về nội dung trước thao tác. Ảnh `desktop-after-release.png` là ảnh từ release đầu, trước khi hoàn tác.
+
+Kết thúc drive: 2026-11-27T00:01:57+07:00 (elapsed 00:14:52).

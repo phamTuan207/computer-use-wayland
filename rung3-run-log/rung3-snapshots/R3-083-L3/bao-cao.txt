@@ -1,0 +1,36 @@
+R3-083 — Pinta — ảnh bìa
+
+Trạng thái: Đã tạo và lưu PNG 1200 x 628. Thanh trạng thái Pinta hiển thị 1200, 628; `file` xác nhận PNG RGBA 1200 x 628.
+
+Tạo ảnh
+- Mở Pinta bằng Omarchy launcher: mở launcher, tìm “Pinta”, bấm kết quả Pinta.
+- Dùng File > New Image (Ctrl+N), nhập Width = 1200 và Height = 628 trong hộp thoại New Image, giữ nền trắng, bấm OK.
+
+Màu và gradient
+- Màu chính: bấm ô foreground ở góc dưới trái, nhập `1E88E5FF` trong ô Hex của Color Picker (RGB #1E88E5, alpha 255), bấm OK.
+- Màu phụ: bấm ô background, chọn swatch màu phụ trong Color Picker, nhập `43A047FF` (RGB #43A047, alpha 255), bấm OK.
+- Chọn Gradient tool; đặt Gradient = Linear Gradient và Mode = Color Mode.
+- Kéo một đường thẳng dọc từ gần mép trên tới gần mép dưới, giữa canvas. Hình học trên canvas, quy đổi từ tọa độ màn hình ở zoom 48% và vị trí con trỏ Pinta báo sau khi kéo: xấp xỉ (598, 2) → (598, 621). Điểm bắt đầu dùng foreground #1E88E5; điểm cuối dùng background #43A047. Kết quả quan sát được: xanh dương phía trên chuyển dần sang xanh lá phía dưới.
+
+Chữ
+- Đặt foreground thành trắng bằng Color Picker Hex `FFFFFFFF` (RGB #FFFFFF, alpha 255).
+- Chọn Text tool, mở bộ chọn font, giữ Adwaita Sans Regular và đặt Size = 72; Pinta toolbar xác nhận “Adwaita Sans Regular 72”.
+- Bấm tại điểm neo tọa độ ảnh (389, 269) theo thanh trạng thái Pinta rồi nhập chính xác `Chao mung`. Chữ trắng hiện gần giữa canvas, trong vùng x=300–900; điểm neo nằm trong vùng y=250–380 và các nét chữ nằm trong dung sai 50 px theo quan sát.
+- Lịch sử Pinta ghi mục Text. Sau khi đổi tool, chữ tạm thời không hiện rõ; chọn lại Text tool làm chữ hiện đầy đủ. Không nhập lại lần hai.
+
+Lưu và bằng chứng
+- Dùng Save As, định dạng PNG, lưu `/home/james/rung3-chung-cu/R3-083/anh-bia.png`.
+- Đã kiểm tra tệp là PNG 1200 x 628.
+- `2026-11-26_23-58-20-cover-in-pinta.jpg` chụp ảnh bìa đang mở trong Pinta; `active-pill-proof.png` chụp pill khi phiên điều khiển hoạt động.
+- `desktop-after-final-release.png` chụp desktop sau khi kết thúc phiên, không có pill và không còn cửa sổ Pinta.
+
+Sự cố và khắc phục
+- Lúc gọi launcher, batch đầu chỉ có phím Super bị từ chối trước khi gửi phím. Batch kế tiếp gửi Super+Space và nhập “Pinta” quá sớm; chữ đi vào bộ đệm VS Code đang focus trong khi launcher vừa mở. Không lưu bộ đệm này. Sau đó nhập lại trong ô tìm kiếm launcher và bấm đúng kết quả. Sau lần release đầu, nhận ra chữ thừa còn trong bộ đệm; mở lại Computer use, Ctrl+Z một lần, xác nhận nội dung trở lại `Hello grouping.`, rồi release. Chi tiết đầy đủ nằm trong drive-log.txt.
+- Batch nhập kích thước đầu không cập nhật trường; ảnh quan sát vẫn ghi 800 x 600. Hộp thoại New Image là cửa sổ riêng và bố cục/tọa độ đã đổi. Quan sát đúng cửa sổ hộp thoại, nhập lại 1200 và 628, xác nhận Custom 1200 x 628 rồi OK.
+- Color Picker và Pick a Font mở thành cửa sổ riêng. Guard từ chối các thao tác dựa trên ảnh quan sát cửa sổ cha sau khi focus đã chuyển. Quan sát trực tiếp từng hộp thoại, nhập màu/cỡ chữ, rồi xác nhận trên Pinta.
+- Nút Save không hoàn tất đường dẫn đã nhập; hộp thoại còn mở và tệp chưa tồn tại. Nhấn Enter một lần từ trường Name; hộp thoại đóng và tệp xuất hiện.
+
+Thời gian
+- Bắt đầu: 2026-11-26T23:47:05+07:00
+- Kết thúc: 2026-11-27T00:01:57+07:00
+- Thời lượng: 00:14:52
