@@ -1,0 +1,62 @@
+{
+ "files": [
+  {
+   "mtime": 1795699192,
+   "name": "bao-cao.txt",
+   "sha256": "e9248a554243e5a942a74d81ae501fe7c5737da7e298cfca33a49cec93a187d1",
+   "size": 1464
+  },
+  {
+   "mtime": 1795699198,
+   "name": "desktop-after-release-20261126T201451+0700.png",
+   "sha256": "4490386bf07ef87b7adca8e79f0c685347089339140c72a503919a901066bb01",
+   "size": 528650
+  },
+  {
+   "mtime": 1795699200,
+   "name": "drive-log.txt",
+   "sha256": "9ce3b99d04c2449daa5b86befdf6579b91a86a971dcca4c45108cbf12be7035f",
+   "size": 6559
+  },
+  {
+   "mtime": 1795699201,
+   "name": "end_time.txt",
+   "sha256": "ec6b6d97c0f78119fff01b0a28f93559dd41a533186b752b2fff5c7343010a59",
+   "size": 26
+  },
+  {
+   "mtime": 1795699205,
+   "name": "imv-overlay-20261126T195101+0700.png",
+   "sha256": "8bcb8eb4adebfc355e156089ea691e140581d26f6f687b7b8452853e8510cc50",
+   "size": 1697536
+  },
+  {
+   "mtime": 1795699207,
+   "name": "ket-qua.txt",
+   "sha256": "9d8b131add79b9ee921c16ba04c3fa717559fcb5e4e6d59d475ac7e54e0b182a",
+   "size": 198
+  },
+  {
+   "mtime": 1795699222,
+   "name": "r3-072-driver-pillcheck.png",
+   "sha256": "2c6f0937ca08664551280ed23862bcfb6d74d59bc93fd71f746f2acdd6849188",
+   "size": 528753
+  },
+  {
+   "mtime": 1795699209,
+   "name": "start_time.txt",
+   "sha256": "4df02d8fac8bb273e09be57d197e6813fd3fa4ffdb97885b92a43ff6a3657836",
+   "size": 26
+  },
+  {
+   "mtime": 1795699437,
+   "name": "tier-a-output.json",
+   "sha256": "6b98ab789f7ae5a8d0f6610eca0560694cee42ae0aa7d58d60a89b3bc289b5cd",
+   "size": 550
+  }
+ ],
+ "manifest_sha256": "5623a6af94404b3e987aac4656e12a2934260bca6630c3b84da8e9884c9ee8fb",
+ "snapshot_dir": "/home/hatch/workspace/rung3-snapshots/R3-072-L3",
+ "source_dir": "/tmp/r3-072-evidence",
+ "task": "r3-072-evidence"
+}

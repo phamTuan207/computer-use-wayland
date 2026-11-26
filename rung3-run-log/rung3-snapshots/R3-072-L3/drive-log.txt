@@ -1,0 +1,83 @@
+R3-072 drive log (Asia/Ho_Chi_Minh)
+
+Anomaly 1 — runner PID in initial event entry
+Failure: the first task_start event contained shell PID 3256344 instead of the computer-use session-driver PID.
+Reasoning: the pgrep expression matched the shell command that contained the expression.
+Attempts: inspected the process table after the append.
+Decision: retain the original audit entry and append a correction with the observed driver PID.
+Fix: appended the full correction chain and task_start record for PID 3256215.
+Outcome: the event log contains the original entry, correction, and actual session PID.
+
+Anomaly 2 — initial file-manager shortcut
+Failure: Super+E opened Omafile, not Nautilus; Alt+F4 did not close that window.
+Reasoning: the desktop maps the shortcut to Omafile.
+Attempts: checked the visible window title/class, then tried Alt+F4; a later Super+Q closed the owned window.
+Decision: use the application launcher to find Nautilus explicitly.
+Fix: searched the launcher for Nautilus and opened the Files result; navigated through Nautilus to rung3/d72-anh.
+Outcome: Nautilus showed the five fixture files and opened the selected files in the default viewer /usr/bin/imv-wayland. Omafile was closed.
+
+Anomaly 3 — editor launcher result was a setup action
+Failure: searching Text Editor selected a Sublime Text setup result; Enter opened an Omarchy terminal with a sudo password prompt.
+Reasoning: the highlighted result was setup/install, not an installed text editor.
+Attempts: inspected the prompt; no password or other text was entered; closed the owned terminal with Super+Q and verified it was gone.
+Decision: choose the installed Omawrite application result instead.
+Fix: opened Omawrite from the launcher and wrote the table in its editor.
+Outcome: no sudo action occurred; the table was saved through the GUI.
+
+Anomaly 4 — launcher focus race
+Failure: typing Omawrite in the same batch as opening the launcher went into Nautilus search, producing No Results Found.
+Reasoning: launcher focus had not transferred before the text input.
+Attempts: closed the launcher with Escape; cleared the Nautilus search with Ctrl+A and BackSpace; confirmed the five files returned.
+Decision: separate opening the launcher from entering its search text.
+Fix: opened the launcher, then typed Omawrite in a later input batch.
+Outcome: the installed Omawrite result opened; no fixture file was changed.
+
+Anomaly 5 — save-dialog focus and stale evidence copy
+Failure: a save-path attempt was sent while the editor, rather than the save dialog, had keyboard focus; /home/james/rung3 was appended to the document. The first evidence copy was made before that text was removed.
+Reasoning: the save dialog was a separate portal window and keyboard input to the parent editor did not reliably target it.
+Attempts: cancelled the dialog, inspected the document, used Ctrl+Z and Ctrl+S, copied and reopened the evidence copy; the reopened copy exposed the stale appended path.
+Decision: replace the complete table in the editor, then use the visible Save As dialog and its folder list to save to rung3/d72-ket-qua.txt.
+Fix: rewrote the table, saved through the GUI, confirmed the overwrite, recopied the corrected source, and reopened the evidence copy using the dialog's focused location field.
+Outcome: the reopened evidence copy visibly shows the exact five rows; source and evidence copy have matching SHA-256.
+
+Anomaly 6 — overlay filename clipping
+Failure: imv's info overlay clipped the long path after the prefix d72-a in its window.
+Reasoning: the viewer window was not wide enough for the full overlay line.
+Attempts: tried the Super+ArrowUp maximize shortcut and re-observed; the window geometry did not change.
+Decision: retain the required image-1 overlay screenshot and match the [1/5] overlay to the full basename in the visible Nautilus list. All dimensions were read from the visible overlay.
+Fix: none; the overlay filename remained clipped.
+Outcome: screenshot includes image 1, the overlay and the visible Nautilus file list; report records the clipped-name limitation.
+
+Anomaly 7 — event-log helper unavailable
+Failure: log-event.sh was not present in the workspace.
+Reasoning: helper discovery returned no file, while the laptop event log existed.
+Attempts: searched the home tree for log-event.sh.
+Decision: append directly to ~/agent-event-log/events.log and retain a correction trail for the PID entry.
+Fix: appended task_start, correction, and completion records.
+Outcome: the laptop event log contains the run records; no coordinator state was written.
+
+End-of-run checks: computer-use session finished; no session driver/indicator process remained; post-release grim screenshot shows the pill absent; pgrep -x imv-wayland returned empty.
+
+Anomaly 8 — hard timeout overrun
+Failure: the 30-minute limit from 19:46:13+07:00 was 20:16:13+07:00; final report/hash completion occurred after that time.
+Reasoning: GUI capture, editor correction, reopened-copy verification, cleanup, and required reporting extended the run.
+Attempts: continued through the final verification and desktop release rather than leaving incomplete evidence.
+Decision: record the actual end time and overrun plainly.
+Fix: no retroactive correction is possible.
+Outcome: task work and cleanup completed; the final end time was 20:17:42+07:00, an elapsed run of 31 minutes 29 seconds and an overrun of 1 minute 29 seconds.
+
+Anomaly 9 — runner invocation method
+Failure: this lane used the active Codex process with `computer-use session -- computer-use session-driver`; it did not start a nested `codex exec` process with the requested model flag.
+Reasoning: the active Codex shell used the installed persistent computer-use driver documented for Codex CLI.
+Attempts: no nested Codex process was launched.
+Decision: complete through the active Codex session and record the invocation difference.
+Fix: none.
+Outcome: GUI run completed under session-driver PID 3256215; no session process remained after finish.
+
+Anomaly 10 — VM evidence transfer
+Failure: evidence was not pulled to a VM staging directory.
+Reasoning: the brief supplied no VM hostname or SSH destination; the active environment was the laptop workspace.
+Attempts: evidence files were hashed on the laptop; no remote destination was guessed.
+Decision: leave the authoritative evidence in the requested laptop evidence folder and report the missing transfer.
+Fix: none; remote transfer needs a destination.
+Outcome: evidence is available under rung3-chung-cu/R3-072 on the laptop only.

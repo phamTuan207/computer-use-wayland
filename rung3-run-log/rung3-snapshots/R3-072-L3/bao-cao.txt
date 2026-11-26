@@ -1,0 +1,22 @@
+R3-072 acceptance run report
+
+Viewer title at step 2 (home-directory component redacted): imv - [1/5] [800x600] [100%] /home/[redacted]/rung3/d72-anh/d72-anh-1.png [scale to fit]
+
+Values read from the visible imv info overlay:
+1. d72-anh-1.png — 800 x 600
+2. d72-anh-2.png — 1024 x 768
+3. d72-anh-3.png — 640 x 480
+4. d72-anh-4.png — 1280 x 720
+5. d72-anh-5.png — 400 x 400
+
+Nautilus was still open after q: yes (window title d72-anh). The imv-wayland process was absent after q. The owned Nautilus and editor windows were closed after their checks; the pre-existing Zen window remained on workspace 2.
+
+Overlay screenshot: imv-overlay-20261126T195101+0700.png. The overlay size was legible. Its basename was horizontally clipped in the overlay; the basename was matched to the visible Nautilus five-file list and image position [1/5]. No CLI image-size tools were used.
+
+Evidence copy ket-qua.txt was reopened in Omawrite and visually verified with five data rows.
+
+Anomalies and full event chains are in drive-log.txt.
+
+Runner notes: the active Codex session used the persistent computer-use CLI, not a nested codex exec process. Evidence was hashed on the laptop; no VM host/destination was supplied for a remote pull. The 30-minute limit was exceeded; see drive-log.txt for the complete timing chain.
+
+Run timing: start 2026-11-26T19:46:13+07:00; end 2026-11-26T20:17:42+07:00; elapsed 31 minutes 29 seconds, 1 minute 29 seconds over the hard limit.
