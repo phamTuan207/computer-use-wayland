@@ -1,0 +1,26 @@
+R3-028 time zone conversions (timeanddate.com Time Zone Converter)
+Zones: Asia/Ho_Chi_Minh (Hanoi), Europe/London, America/New_York
+Values read from the saved result screenshots in this folder.
+
+1. UTC 2026-12-01 12:00 (Tue, 1 Dec 2026 12:00)
+   - Asia/Ho_Chi_Minh (Hanoi, ICT): Tue, 1 Dec 2026 19:00
+   - Europe/London (GMT): Tue, 1 Dec 2026 12:00
+   - America/New_York (EST): Tue, 1 Dec 2026 07:00
+   Screenshot: 20261126-073106-result1-utc-2026-12-01-1200.jpg
+
+2. UTC 2026-12-01 18:00 (Tue, 1 Dec 2026 18:00)
+   - Asia/Ho_Chi_Minh (Hanoi, ICT): Wed, 2 Dec 2026 01:00
+   - Europe/London (GMT): Tue, 1 Dec 2026 18:00
+   - America/New_York (EST): Tue, 1 Dec 2026 13:00
+   Screenshot: 20261126-073257-result2-utc-2026-12-01-1800.jpg
+
+3. UTC 2026-12-02 00:00 (Wed, 2 Dec 2026 00:00)
+   - Asia/Ho_Chi_Minh (Hanoi, ICT): Wed, 2 Dec 2026 07:00
+   - Europe/London (GMT): Wed, 2 Dec 2026 00:00
+   - America/New_York (EST): Tue, 1 Dec 2026 19:00
+   Screenshot: 20261126-073507-result3-utc-2026-12-02-0000.jpg
+
+Zone offsets from UTC at these moments (same for all 3 times):
+   - Asia/Ho_Chi_Minh (Hanoi): ICT, UTC +7 (7 hours ahead)
+   - Europe/London: GMT, UTC +0 (same as UTC)
+   - America/New_York: EST, UTC -5 (5 hours behind)
