@@ -783,3 +783,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 16. R3-035 PASS, R3-036 released (2026-11-26 13:30 +07)
 - R3-035 GRADED PASS (commit 33a3eeb8, A1+A2 agree, khong can tiebreaker; heartbeat 13:26:00, ledger 33 rows, validators exit 0); Rule-A 27 PASS / 0 FAIL + 5 INVALID. R3-036 RELEASED ngay sau (commit 0db8cc75, vi tri 27, Muse lane, runner 1e25ec14, task_start 13:25:33, deadline ~13:55:33). Epoch 21 coordinator f79cb9eb (takeover b93cfa4b), deputy 7dc113ac confirmed fe17669b (dry run 5/5 PASS). R3-036 la INVALID candidate da dinh danh (timeanddate, chung nguyen nhan), scorers Mochi + Fresh.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 17. R3-036 PASS, R3-037 released (2026-11-26 14:10 +07)
+- R3-036 drive hoan thanh 14:04:51 (commit 36687609, khong bot block, INVALID candidate KHONG triggered); snapshot f857cf4f (14 files, gate PASS), pii manual-review PASS (chi URL task doc). Scoring dispatched 14:05:23 (Mochi run 240 + Fresh 861775d2). R3-036 GRADED PASS (commit df09d8ce, A1+A2 agree, khong block, khong tiebreaker; heartbeat 14:07:58, ledger 34 rows, validators exit 0); Rule-A 28 PASS / 0 FAIL + 5 INVALID. R3-037 RELEASED ngay sau (commit b02bf39c, vi tri 28, FCC lane, driver 8d044b59, task_start provisional).
+- Em khong cham diem, khong doc ledger/snapshot.
