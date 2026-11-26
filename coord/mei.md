@@ -908,3 +908,12 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - R3-083 drive COMPLETED 00:01:57 trong gioi han (commit 2a1dab22, heartbeat 00:09:34, gate PASS, pii clean); GRADED PASS (commit 7f8a861b; heartbeat 00:19:56, Fresh B1 + Fresh B2, measured, Rule-A 41/1, ledger 49 rows).
 - R3-085 DRIVING tu 00:19:08 (PID 3687272; briefs 2b4d1fa9, runner + Fresh1 + Fresh2, Mochi seat reassigned per owner order 21:36, Clone2 prepped). Mei khong duoc giao R3-085. Bar can 9 PASS tu 10 valid con lai (50/52; voi task 56: 10 tu 11, 51/53), toi da 1 FAIL nua.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 43. R3-085, R3-086, R3-088, R3-089, R3-093 PASS; R3-094 drive xong (2026-11-27 02:20 +07)
+- R3-085 drive COMPLETED 00:34:34 trong gioi han (commit dbbc2618); GRADED PASS (commit 7f1e0c5e, Fresh B1 + Fresh B2, measured, ledger 50 rows, Rule-A 42/1).
+- R3-086 drive COMPLETED 00:56:36 trong gioi han, attempt 2 (commit 070526dc, pii clean sau redaction 11 header lines curl-2 + attempt1 subdir held out); GRADED PASS (commit cdfd633a, Fresh B1 + Fresh B2, redaction impact none, ledger 51 rows, Rule-A 43/1).
+- R3-088 drive COMPLETED 01:25:36 trong gioi han (commit 5592a141); GRADED PASS (commit f69a8b98, Clone2 B1 + Fresh B2, counted, ledger 52 rows, Rule-A 44/1).
+- R3-089 drive COMPLETED 01:36:08 trong gioi han (commit 85a9ae9c, pill gap recorded, fixture check 6); GRADED PASS (commit 9ec89fc0, Clone2 B1 + Fresh B2, counted, ledger 53 rows, Rule-A 45/1).
+- R3-093 drive COMPLETED 02:01:24 trong gioi han (commit 1fc66c86); GRADED PASS 02:07:22 (commit 7acc9b77, Fresh B1 + Fresh B2, recomputed, ledger 54 rows, Rule-A 46/1).
+- R3-094 drive COMPLETED 02:16:44 trong gioi han (commit 7e62b232, heartbeat 02:18:50); snapshot sealed (gate PASS, pii clean); scoring tiep theo (Clone2 + Fresh). R3-096 briefs staged (commit b3a8772e, runner + Clone2 + Fresh, Mochi seat reassigned, prep coordinator-live, Class L). Bar can 4 PASS tu 5 valid con lai (50/52; voi task 56: 5 tu 6, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
