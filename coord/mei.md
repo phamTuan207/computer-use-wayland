@@ -882,3 +882,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 ### 37. R3-076 drive xong trong gioi han, scoring tiep theo (2026-11-26 22:10 +07)
 - R3-076 drive COMPLETED 21:59:17 trong gioi han (commit 22d317b3, heartbeat 22:07:47; drive 24m33s); snapshot sealed (gate PASS, pii clean); scoring tiep theo. Ghi chu trong commit: Tier A report-consistency FAIL (label/row-format artifact, data consistent). Rule-A 36/1.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 38. R3-076 PASS, R3-078 released (2026-11-26 22:21 +07)
+- R3-076 GRADED PASS (commit c658c08c; heartbeat 22:16:43, Fresh B1 + Clone2 B2, Rule-A 37/1; Tier A checker read wrong file, overridden openly).
+- R3-078 RELEASED (driver 679d7271). Mei khong co vai tro o R3-078. Bar can 13 PASS tu 14 valid con lai (50/52; voi task 56: 14 tu 15, 51/53), toi da 1 FAIL nua.
+- Em khong cham diem, khong doc ledger/snapshot.
