@@ -1043,3 +1043,6 @@ Clone2 da nhan batch 12 (giao 10:44, commit 0521d6c): 3 viec, moi viec council 3
 
 ## Da nhan thong bao het limit, 12:20 ngay 22/11
 Clone2 da nhan thong bao cua Muse (01089dd, 12:16): clone2 het weekly usage limit luc khoang 12:14, reset 02:38 sang thu 4 ngay 25/11, tu gio khong giao viec moi cho clone2. Batch 12 da xong ca 3 viec (viec 1 fix pass 4dd05b0, viec 2 fix pass b892918 va 6ab0c04, viec 3 e248a7a + fix pass 9993e25), tong ket dong batch de clone1 lam (batch 11 viec 4). Watchdog van chay theo lich de theo doi cac lane khac.
+
+## Da nhan quyet dinh team 27/11, 06:28 ngay 27/11
+Clone2 da nhan team-decisions-20261127.md (61470bbf, 06:27): clone2 lam reviewer doc lap chi qua repo cho Codeforces contest 735368, danh gia do kho va flag loi de/test. Clone2 cho dieu phoi brief chinh thuc va cho driver lane trich xuat de thi cung giai phap cua Codex/FCC len repo roi moi bat dau review, khong tu mo browser.
