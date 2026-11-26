@@ -1,0 +1,15 @@
+Kiểm tra mạng
+
+Domain: example.com
+Packets sent: 4
+Packets received: 4
+Loss rate: 0%
+DNS IP address(es): 2606:4700:10::ac42:93f3, 2606:4700:10::6814:179a
+HTTP status code: 200
+
+Domain: en.wikipedia.org
+Packets sent: 4
+Packets received: 4
+Loss rate: 0%
+DNS IP address(es): 2001:df2:e500:ed1a::1
+HTTP status code: 200

@@ -1,0 +1,12 @@
+REDACTION NOTE (coordinator, epoch 24, 2026-11-27)
+File curl-2-20261127-005436.txt (en.wikipedia.org curl -L -s -I output): 11 header lines
+were replaced with a marker line in this snapshot copy only. Reason: the raw output contains
+server-set browser state values (a unique-id token) and a GeoIP value with city-level
+location data. pii-scan blocked the push (25 hits) and the standing rule forbids personal
+info on GitHub. The HTTP status lines (HTTP/2 301, HTTP/2 200) and all other lines are
+byte-identical to the original.
+Original file sha256 (laptop ~/rung3-chung-cu/R3-086/curl-2-20261127-005436.txt, untouched):
+c8f424ed7556c440311fea6832ad546b034c478a54aca36f45f5459d680341c7
+The attempt1-failclosed/ subdir (5 files, incl. a codex log with fixture emails/phones)
+was held out of the snapshot entirely (precedent R3-067/R3-072) and kept on the VM at
+/tmp/r3-086-heldout/; its content is summarized in drive-log.txt.

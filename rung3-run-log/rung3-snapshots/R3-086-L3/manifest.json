@@ -1,0 +1,92 @@
+{
+ "files": [
+  {
+   "mtime": 1795716128,
+   "name": "REDACTION.txt",
+   "sha256": "eceb91c26c17318d532217df648a8f0d7a17eeadf14f78c2acd9c28166dc0228",
+   "size": 926
+  },
+  {
+   "mtime": 1795715955,
+   "name": "bao-cao.txt",
+   "sha256": "76e537382dfb94fa254bc59c3bf8854489611fcc9185be28ed296653ce52475a",
+   "size": 1706
+  },
+  {
+   "mtime": 1795716128,
+   "name": "curl-2-20261127-005436.txt",
+   "sha256": "112a125c489ff1bdfa4ecd42a4ba3fb79d2d1b9d756026c959eaca2f0f56e92e",
+   "size": 10467
+  },
+  {
+   "mtime": 1795715943,
+   "name": "curl-20261127-005433.txt",
+   "sha256": "634523ec4226afb037f70fbf3900f529790e132c29bbf5a3a4ad4881c728f182",
+   "size": 288
+  },
+  {
+   "mtime": 1795715959,
+   "name": "desktop-after-release-20261127-005620.png",
+   "sha256": "7a13a812f38c605dce5895c314655157a15d9617e3c9eb0a20300fe81a1354e7",
+   "size": 702297
+  },
+  {
+   "mtime": 1795715946,
+   "name": "dns-2-20261127-005436.txt",
+   "sha256": "022ce76e02baa4ec0a3fbea77fc557e2682195e07c4d1f78deb84e6ff05054c4",
+   "size": 41
+  },
+  {
+   "mtime": 1795715942,
+   "name": "dns-20261127-005433.txt",
+   "sha256": "366f4d042853925698cf1f94d1196c1d9a63f0ce3f71b10caddb8c30c08d0ada",
+   "size": 72
+  },
+  {
+   "mtime": 1795715953,
+   "name": "drive-log.txt",
+   "sha256": "e687d1e6f7ca409c3c092414bfc506209edcfe631a817f15ad5e5661412d7566",
+   "size": 4203
+  },
+  {
+   "mtime": 1795715956,
+   "name": "end_time.txt",
+   "sha256": "8d4958cbefe46bf02adba6b3fc60e1727b457fc4482a945132c1b295cb219b91",
+   "size": 26
+  },
+  {
+   "mtime": 1795715948,
+   "name": "nd06-bao-cao.txt",
+   "sha256": "e5ed624f8f9f8fb726a3d14d34920cc118ba37cb56955efb6c5a8a303fa02e74",
+   "size": 320
+  },
+  {
+   "mtime": 1795715944,
+   "name": "ping-2-20261127-005433.txt",
+   "sha256": "27286c835c1ca81397449cb7f2bde93e3db72dafb8d218706d3542bac0d8e489",
+   "size": 610
+  },
+  {
+   "mtime": 1795715941,
+   "name": "ping-20261127-005430.txt",
+   "sha256": "1e07ded34e78230287e89ceecbb6a2a9aa0148fdf3a170d263a6833eff2248b1",
+   "size": 490
+  },
+  {
+   "mtime": 1795715940,
+   "name": "start_time.txt",
+   "sha256": "365f002e16f50f789ab52b96b802a63692baac8bcc03948761e59d9a8f14e3ba",
+   "size": 26
+  },
+  {
+   "mtime": 1795715952,
+   "name": "terminal-before-release-20261127-005553.png",
+   "sha256": "11ea836c742be9826ba7c8fb2ca3f1458267e3dc8143452451d201c4210b182c",
+   "size": 1428324
+  }
+ ],
+ "manifest_sha256": "43cf66ba9c8764baddae37a37999f94e4910ff802d13b8789920235bd07a9689",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-086-L3",
+ "source_dir": "/tmp/r3-086-evidence",
+ "task": "r3-086-evidence"
+}

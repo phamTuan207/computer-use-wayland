@@ -1,0 +1,9 @@
+PING example.com (2606:4700:10::ac42:93f3) 56 data bytes
+64 bytes from 2606:4700:10::ac42:93f3: icmp_seq=1 ttl=56 time=57.0 ms
+64 bytes from 2606:4700:10::ac42:93f3: icmp_seq=2 ttl=56 time=57.9 ms
+64 bytes from 2606:4700:10::ac42:93f3: icmp_seq=3 ttl=56 time=64.5 ms
+64 bytes from 2606:4700:10::ac42:93f3: icmp_seq=4 ttl=56 time=58.0 ms
+
+--- example.com ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3001ms
+rtt min/avg/max/mdev = 56.971/59.337/64.519/3.017 ms

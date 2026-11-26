@@ -1,0 +1,11 @@
+Task R3-086, attempt 2. Started 2026-11-27T00:53:55+07:00. Used the attempt-1 leftover foot terminal (PID 3737940) on ws2; it was the only foot window on ws2 and was focused. The terminal is visible and was used to type and run the six requested commands in order; each output was saved using tee in this evidence directory.
+
+Results read from the saved command output files:
+- example.com: 4 sent, 4 received, 0% packet loss; DNS returned 2606:4700:10::ac42:93f3 and 2606:4700:10::6814:179a; curl final HTTP status 200.
+- en.wikipedia.org: 4 sent, 4 received, 0% packet loss; DNS returned 2001:df2:e500:ed1a::1; curl followed the 301 redirect and its final HTTP status was 200.
+
+Report re-check: read ~/rung3/nd06-bao-cao.txt back and compared every domain, sent/received count, loss rate, DNS address, and final HTTP status against the six saved command output files. All values matched. The checked report was copied to this evidence directory.
+
+Pill: observed visible=true and label "Computer use active" before the final evidence capture. The pill was reacquired after each empty status; complete failure/reasoning/attempts/decision/fix/outcome chains are in drive-log.txt. Initial short-lived shell PID expired, so final reacquire used the terminal PID 3737940. One act-now refusal (600-second deadline above its 120-second limit) sent no input; retry at 120 seconds succeeded. See drive-log.txt for the attempt-1 summary and all anomaly chains.
+
+Cleanup: the pill was released for exact holder PID 3737940 and status verified holders={} and visible=false at 2026-11-27T00:56:19+07:00. Closed only the task-owned foot terminal. Replacement desktop screenshot was captured after release verification.

@@ -1,0 +1,9 @@
+PING en.wikipedia.org (2001:df2:e500:ed1a::1) 56 data bytes
+64 bytes from text-lb.eqsin.wikimedia.org (2001:df2:e500:ed1a::1): icmp_seq=1 ttl=56 time=53.5 ms
+64 bytes from text-lb.eqsin.wikimedia.org (2001:df2:e500:ed1a::1): icmp_seq=2 ttl=56 time=53.5 ms
+64 bytes from text-lb.eqsin.wikimedia.org (2001:df2:e500:ed1a::1): icmp_seq=3 ttl=56 time=51.9 ms
+64 bytes from text-lb.eqsin.wikimedia.org (2001:df2:e500:ed1a::1): icmp_seq=4 ttl=56 time=52.7 ms
+
+--- en.wikipedia.org ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3043ms
+rtt min/avg/max/mdev = 51.930/52.912/53.495/0.645 ms
