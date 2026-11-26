@@ -134,3 +134,4 @@
 2026-11-26T12:49:30+07:00 epoch 20 deputy confirmed (4b4924ac, G-24/G-38 closed); R3-029 A2 PASS audited, A1 pending
 2026-11-26T12:55:00+07:00 epoch 20: R3-029 GRADED PASS (A1+A2 agree); ledger 32 rows, validators exit 0; releasing R3-035 next
 2026-11-26T12:54:03+07:00 epoch 20: R3-035 RELEASED (runner 069510f3, task_start set); R3-029 PASS filed
+2026-11-26T13:21:00+07:00 epoch20 R3-035 snapshot pushed, scoring dispatched, awaiting verdicts

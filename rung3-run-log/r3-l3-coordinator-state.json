@@ -24,7 +24,7 @@
  "completed_positions": 25,
  "coordinator": "68a84d25-2e88-48b1-b2ee-9911e2a4191c (Phase 0 coordinator, spawned 2026-11-24 17:06 +07)",
  "current_position": 26,
- "current_task": "EPOCH 20: R3-035 (position 26, Muse lane) DRIVE COMPLETED 2026-11-26T13:15:42+07:00 (runner 069510f3, start 12:54:46, 21 min, inside 30-min timeout). Snapshot sealed manifest 976ef57d (61 files), manifest-gate PASS. Pair A scoring dispatching: Mochi scorer 1 + Clone2 scorer 2. Rule-A 26/0 before R3-035 grading.",
+ "current_task": "EPOCH 20: R3-035 (position 26) snapshot pushed bdf8a7e3 (manifest 976ef57d, 62 files incl force-added PNGs). Pair A scoring dispatched 13:20: Mochi scorer 1 (daemon run 239, verified=True) + Clone2 scorer 2 (PWA sent). Verdicts due ~13:51 on branches mochi/verdict-R3-035-L3 + clone2/verdict-R3-035-L3. Rule-A 26/0.",
  "deputy": "4b4924ac-9e6c-48fd-936a-20ad6786c5bb (epoch 20 deputy; declaration appended to rung3-run-log/r3-l3-deputy-declaration.md at 2026-11-26T12:48:30+07:00, after state last_updated 2026-11-26T12:47:39+07:00, G-24 freshness satisfied; dry run 5/5 PASS: laptop SSH omarchy, FCC tmux r3-fcc-runner-L3 alive untouched, codex-cli 0.172.0, state parse epoch 20 coordinator_active 0ace6385, snapshot + verdict paths exist; declaration pushed d6f39875; epoch 19 deputy 51154780 SUPERSEDED; on STANDBY under section 7 fencing)",
  "fail_count": 3,
  "freeze": {
@@ -1244,6 +1244,11 @@
    "ts": "2026-11-26T13:22:00+07:00",
    "by": "coordinator-epoch-20",
    "text": "R3-035 DRIVE COMPLETED 2026-11-26T13:15:42+07:00 (runner 069510f3, Muse lane; start 12:54:46, 21 min, inside 30-min timeout). Conversions screenshot-verified: 100 USD=2,584,215 VND (rate 25,842.15), 50 EUR=1,416,004 VND (28,320.08), 200 GBP=6,771,047 VND (33,855.23), total 10,771,266 VND. Online doc created (Google Docs, task-required), saved, reopened via reload, screenshot saved. ket-qua.txt 4-row table matches screenshots. Probe clean (webdriver false, own_on_proto true, own_on_navigator false, get_name get webdriver, toString empty-name form; shim bb49ff3f in probe-ready.json). Pill visible whole drive, released 13:16:04 with grim proof. No bot block, no INVALID candidate. No cookies cleared. Runner flags for scorer: doc rows entered by clipboard paste as pipe-separated text rows, not a native Docs table object (native table insert was lost via focus escape); one CAD misclick corrected before conv3 screenshot. collect-evidence FAIL on naming only (screenshots named YYYYMMDD-HHMM, checker wants HHMMSS; 4 real screenshots present); manifest-gate PASS (61 files). pii-scan v1: 1 hit, ket-qua.txt Google Docs URL of the task-created document (contains only the conversion table, no personal data) - coordinator manual review PASS per R3-040/R3-029 precedent. task_start/runner_pid CLEARED at drive end. Snapshot manifest 976ef57d5d7a5dd9c0d1d79ca6b8bbee28522aa511607632494f90a48100c134."
+  },
+  {
+   "ts": "2026-11-26T13:22:00+07:00",
+   "by": "coordinator-epoch-20",
+   "text": "R3-035 SCORING DISPATCHED 2026-11-26T13:20:26+07:00. Snapshot pushed in two commits: 84dad0c9 (53 text files + state) + bdf8a7e3 (10 PNGs force-added past *.png gitignore, reviewed task evidence). 62 files total in rung3-run-log/rung3-snapshots/R3-035-L3, ls-remote verified bdf8a7e3. Mochi scorer 1 assigned via daemon run 239 (outcome=sent verified=True, 13:20:26). Clone2 scorer 2 assigned via PWA (sent, textareaCleared). Verdicts due within 30 min (~13:51) on branches mochi/verdict-R3-035-L3 and clone2/verdict-R3-035-L3. Next: file verdicts to ~/workspace/rung3-verdicts as R3-035-A1/A2.json, validate + cross-check, ledger row, per-task report, then release R3-036 (position 27, Muse lane)."
   }
  ],
  "pass_count": 22,
