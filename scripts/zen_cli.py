@@ -38,6 +38,14 @@ session by this worker (it would add a tab to his Zen while he sleeps),
 so it is marked PROPOSED-live in the skill. Use it only when he asked
 for a page in his own Zen.
 
+Pill gate (R3): control commands (open, navigate, activate, close)
+acquire the central overlay pill before their BiDi session starts and
+release it at session end; reads never acquire. `session start`
+preflights overlay availability before spawning and holds the pill
+(keyed to the Zen pid) until `session stop`. When the pill cannot be
+shown the drive is refused ('BiDi pill unavailable'). CU_ZEN_PILL=0
+disables the gate for fixture tests only, never for live work.
+
 History reads his real profile read-only: places.sqlite is copied to a
 temp file first (the live DB is locked while Zen runs) and opened
 read-only. Nothing is ever written to the profile. Default profile is
@@ -128,6 +136,94 @@ MAX_LIMIT = 200
 DEFAULT_TEXT_CHARS = 2000
 MAX_TEXT_CHARS = 10000
 LOOPBACK_HOST = "127.0.0.1"
+
+
+# ---------------------------------------------------------------------------
+# Pill gate (R3, mirroring scripts/cdp.mjs): the computer-use pill must
+# show whenever ANY agent controls the machine, whatever the method.
+# Control commands (open, navigate, activate, close) acquire the central
+# overlay pill (scripts/overlay.py) before the BiDi session starts and
+# release it when the session ends; read-only commands (tabs, current,
+# page, history, status) never acquire: reading is not control. The
+# dedicated session itself also holds the pill for its whole lifetime:
+# `session start` acquires keyed to the spawned Zen pid (the CLI process
+# exits right after start, so its own pid would be pruned at once) and
+# `session stop` releases it. Fail closed: when the pill cannot be
+# raised, the drive is refused with 'BiDi pill unavailable' and no input
+# runs. A spawn preflight checks overlay availability before `session
+# start` spawns Zen, so a broken overlay fails before the spawn instead
+# of surprising the first drive. The one opt-out is CU_ZEN_PILL=0,
+# fixture tests only (no compositor there), never for live work.
+# CU_OVERLAY_PY overrides the overlay.py path (test seam, same as
+# cdp.mjs); CU_PILL_AGENT names the holder (default Muse).
+# ---------------------------------------------------------------------------
+
+class PillUnavailable(RuntimeError):
+    """The overlay pill cannot be shown; the drive must be refused."""
+
+
+def _pill_enabled():
+    return os.environ.get("CU_ZEN_PILL", "1") != "0"
+
+
+def _pill_agent():
+    return os.environ.get("CU_PILL_AGENT") or "Muse"
+
+
+def _overlay_py_path():
+    override = os.environ.get("CU_OVERLAY_PY")
+    if override:
+        return override
+    return str(Path(__file__).resolve().parent / "overlay.py")
+
+
+def _run_overlay_cli(args, timeout_s=30):
+    try:
+        done = subprocess.run(
+            [sys.executable, _overlay_py_path()] + args,
+            capture_output=True, text=True, timeout=timeout_s)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise PillUnavailable(
+            "pill unavailable: overlay.py %s could not run: %s"
+            % (args[0], exc))
+    if done.returncode != 0:
+        raise PillUnavailable(
+            "pill unavailable: overlay.py %s failed: %s" % (
+                args[0], (done.stderr or done.stdout).strip()[:300]))
+    try:
+        return json.loads(done.stdout)
+    except ValueError:
+        raise PillUnavailable(
+            "pill unavailable: overlay.py %s returned non-JSON output"
+            % args[0])
+
+
+def _pill_preflight():
+    """Fail before any spawn when the overlay cannot be reached."""
+    path = _overlay_py_path()
+    if not Path(path).is_file():
+        raise PillUnavailable(
+            "pill unavailable: overlay.py not found at %s "
+            "(set CU_OVERLAY_PY)" % path)
+    _run_overlay_cli(["status"], timeout_s=10)
+
+
+def _pill_acquire(pid):
+    reply = _run_overlay_cli(
+        ["acquire", "--agent", _pill_agent(), "--method", "BiDi",
+         "--pid", str(pid)], timeout_s=60)
+    if not isinstance(reply, dict) or reply.get("visible") is not True:
+        raise PillUnavailable(
+            "pill unavailable: pill not visible: %s" % (str(reply)[:300],))
+
+
+def _pill_release(pid):
+    try:
+        _run_overlay_cli(
+            ["release", "--agent", _pill_agent(), "--method", "BiDi",
+             "--pid", str(pid)], timeout_s=10)
+    except Exception as exc:
+        print("BiDi pill release failed: %s" % exc, file=sys.stderr)
 
 
 def validate_url(raw):
@@ -433,11 +529,18 @@ class BidiSession:
     session holds the slot wedges. The lock is released in end(),
     which never raises; a session that never ends keeps the slot
     until the process exits.
+
+    With pill=True (control commands only), start() acquires the
+    overlay pill before session.new and end() releases it; a pill
+    that cannot be shown refuses the session (PillUnavailable).
+    Probes and read-only commands keep pill=False.
     """
 
-    def __init__(self, port, timeout=BIDI_TIMEOUT_SECONDS):
+    def __init__(self, port, timeout=BIDI_TIMEOUT_SECONDS, pill=False):
         self.port = port
         self.timeout = timeout
+        self._pill = pill
+        self._pill_held = False
         ZEN_DOM_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
         self._lock_file = open(ZEN_DOM_LOCK_PATH, "w")
         try:
@@ -482,14 +585,31 @@ class BidiSession:
             return message.get("result", {})
 
     def start(self):
-        """session.new; records the session id and browser details."""
-        result = self.call("session.new", {"capabilities": {}})
+        """session.new; records the session id and browser details.
+
+        With pill=True the overlay pill is acquired first (preflight,
+        then acquire); when it cannot be shown the session is refused
+        before session.new, so no control runs invisibly.
+        """
+        if self._pill and _pill_enabled():
+            try:
+                _pill_preflight()
+                _pill_acquire(os.getpid())
+            except PillUnavailable:
+                self.end()
+                raise
+            self._pill_held = True
+        try:
+            result = self.call("session.new", {"capabilities": {}})
+        except BaseException:
+            self.end()
+            raise
         self.session_id = result.get("sessionId")
         return result
 
     def end(self):
         """session.end, then close the socket, then release the slot
-        lock. Never raises."""
+        lock and the pill (when held). Never raises."""
         try:
             self.call("session.end", {})
         except (RuntimeError, OSError):
@@ -506,6 +626,9 @@ class BidiSession:
             except Exception:
                 pass
             self._lock_file = None
+        if getattr(self, "_pill_held", False):
+            self._pill_held = False
+            _pill_release(os.getpid())
 
     def __enter__(self):
         self.start()
@@ -683,12 +806,18 @@ def resolve_tracked(session):
     return tabs[0]
 
 
-def open_session(port):
-    """A BiDi session on the dedicated port, or a clear error."""
+def open_session(port, pill=False):
+    """A BiDi session on the dedicated port, or a clear error.
+
+    PillUnavailable is re-raised unwrapped: a refused pill is not a
+    missing session, and wrapping it would hide the real cause.
+    """
     try:
-        session = BidiSession(port)
+        session = BidiSession(port, pill=pill)
         session.start()
         return session
+    except PillUnavailable:
+        raise
     except (RuntimeError, OSError) as exc:
         raise RuntimeError(
             "no dedicated Zen session on port %d: %s; run "
@@ -745,11 +874,21 @@ def cmd_session_start(args):
         raise RuntimeError(
             "refusing profile inside ~/.config/zen (his real profiles): "
             + str(profile))
+    if _pill_enabled():
+        _pill_preflight()
     requested = args.port if args.port is not None else DEFAULT_PORT
     state = read_state()
     if state and state.get("port") == requested:
         info = bidi_session_info(requested, timeout=10)
         if info is not None and bidi_session_profile(info) == str(resolved):
+            if _pill_enabled():
+                pid = state.get("pid")
+                if not isinstance(pid, int):
+                    raise PillUnavailable(
+                        "pill unavailable: recorded session has no pid "
+                        "to hold the pill; run `session stop` then "
+                        "`session start`")
+                _pill_acquire(pid)
             return {"ok": True, "command": "session start",
                     "reused": True, "port": requested,
                     "profile": str(resolved), "pid": state.get("pid"),
@@ -789,6 +928,21 @@ def cmd_session_start(args):
         raise RuntimeError(
             "dedicated Zen did not answer BiDi on port %d within %ds; "
             "see %s" % (port, SESSION_START_TIMEOUT_SECONDS, SESSION_LOG))
+    if _pill_enabled():
+        try:
+            _pill_acquire(proc.pid)
+        except PillUnavailable:
+            # Fail closed: never leave a controllable Zen running
+            # without the pill up.
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+            raise
     write_state({"port": port, "profile": str(profile), "pid": proc.pid,
                  "ws_url": ws_url(port), "headless": not args.no_headless})
     return {"ok": True, "command": "session start", "reused": False,
@@ -812,6 +966,8 @@ def cmd_session_stop(args):
     try:
         cmdline = Path("/proc/%d/cmdline" % pid).read_bytes()
     except OSError:
+        if _pill_enabled():
+            _pill_release(pid)
         clear_state()
         return {"ok": True, "command": "session stop", "running": False,
                 "note": "recorded pid %d is not running; state cleared" % pid}
@@ -836,6 +992,8 @@ def cmd_session_stop(args):
             os.kill(pid, signal.SIGKILL)
         except OSError:
             pass
+    if _pill_enabled():
+        _pill_release(pid)
     clear_state()
     return {"ok": True, "command": "session stop", "running": False,
             "pid": pid, "profile": profile}
@@ -891,7 +1049,7 @@ def cmd_open(args):
                         "remoting; the tab was not read back (no debug "
                         "port on his session)"}
     port = resolve_port(args)
-    session = open_session(port)
+    session = open_session(port, pill=True)
     try:
         if args.tab is not None:
             opener_index = parse_tab_index(args.tab)
@@ -928,7 +1086,7 @@ def cmd_open(args):
 def cmd_navigate(args):
     url = validate_url(args.url)
     port = resolve_port(args)
-    session = open_session(port)
+    session = open_session(port, pill=True)
     try:
         if args.tab is not None:
             index = parse_tab_index(args.tab)
@@ -949,7 +1107,7 @@ def cmd_navigate(args):
 def cmd_activate(args):
     index = parse_tab_index(args.index)
     port = resolve_port(args)
-    session = open_session(port)
+    session = open_session(port, pill=True)
     try:
         _, context = resolve_tab(session, index)
         session.call("browsingContext.activate", {"context": context})
@@ -963,7 +1121,7 @@ def cmd_activate(args):
 def cmd_close(args):
     index = parse_tab_index(args.index)
     port = resolve_port(args)
-    session = open_session(port)
+    session = open_session(port, pill=True)
     try:
         entries = list_contexts(session)
         if not 0 <= index < len(entries):

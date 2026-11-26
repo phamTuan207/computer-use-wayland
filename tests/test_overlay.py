@@ -621,6 +621,96 @@ def test_daemon_keeps_live_native():
         assert live.commands == ['label Codex via DOM', 'show']
 
 
+def test_session_show_hide_send_protocol_commands():
+    """R4 wiring: session_show/session_hide must send the exact
+    indicator protocol commands ('show'/'hide') for BASE, the same
+    strings indicator.serve validates."""
+    import types
+    calls = []
+    fake = types.ModuleType('indicator')
+    fake.request = lambda state, command: calls.append((state, command)) or True
+    orig = sys.modules.get('indicator')
+    sys.modules['indicator'] = fake
+    try:
+        assert overlay.session_show() is True
+        assert overlay.session_hide() is True
+    finally:
+        if orig is None:
+            sys.modules.pop('indicator', None)
+        else:
+            sys.modules['indicator'] = orig
+    assert calls == [(overlay.BASE, 'show'), (overlay.BASE, 'hide')], calls
+
+
+def test_session_show_label_sends_explicit_show_not_probe():
+    """R4 (redteam 1.5): the session branch of _show_label must send
+    'show' explicitly after 'label', never rely on session_live()
+    sending 'show' as a probe side effect. session_live is rigged to
+    explode here: the show path must not touch it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        calls = []
+        orig_label = overlay.session_label
+        orig_show = overlay.session_show
+        orig_live = overlay.session_live
+        try:
+            overlay.session_label = lambda label: calls.append(('label', label)) or True
+            overlay.session_show = lambda: calls.append(('show',)) or True
+            def boom():
+                raise AssertionError('show path must not probe session_live')
+            overlay.session_live = boom
+            daemon = overlay.Daemon()
+            daemon.owner = 'session'
+            assert daemon._show_label('Computer use active') is True
+            assert calls == [('label', 'Computer use active'), ('show',)], calls
+            # A failed explicit show is a failed show (fail closed).
+            overlay.session_show = lambda: False
+            assert daemon._show_label('Computer use active') is False
+        finally:
+            overlay.session_label = orig_label
+            overlay.session_show = orig_show
+            overlay.session_live = orig_live
+
+
+def test_session_owner_two_acquire_release_cycles():
+    """R4 (redteam 1.5): TWO full cycles with a fake session
+    indicator. Cycle 1 acquire shows, release hides; cycle 2 acquire
+    shows AGAIN, release hides again. A single-cycle test would pass
+    with the old latent bug (release never hid, re-show only via the
+    probe side effect), so both cycles and the exact command order
+    are asserted."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        commands = []
+        orig_live = overlay.session_live
+        orig_label = overlay.session_label
+        orig_show = overlay.session_show
+        orig_hide = overlay.session_hide
+        try:
+            overlay.session_live = lambda: True
+            overlay.session_label = lambda label: commands.append('label ' + label) or True
+            overlay.session_show = lambda: commands.append('show') or True
+            overlay.session_hide = lambda: commands.append('hide') or True
+            daemon = overlay.Daemon()
+            for cycle in (1, 2):
+                overlay.add_holder('Muse', 'BiDi', pid=os.getpid())
+                status = daemon.apply_holders()
+                assert status['visible'] is True, (cycle, status)
+                assert status['owner'] == 'session', (cycle, status)
+                overlay.remove_holder('Muse', os.getpid())
+                status = daemon.apply_holders()
+                assert status['visible'] is False, (cycle, status)
+                assert daemon.owner == 'none', (cycle, daemon.owner)
+            assert commands == [
+                'label Computer use active', 'show', 'hide',
+                'label Computer use active', 'show', 'hide'], commands
+        finally:
+            overlay.session_live = orig_live
+            overlay.session_label = orig_label
+            overlay.session_show = orig_show
+            overlay.session_hide = orig_hide
+
+
 if __name__ == '__main__':
     test_wayland_env_discovers_signature_from_hypr_dir()
     test_wayland_env_keeps_caller_signature()
@@ -650,6 +740,9 @@ if __name__ == '__main__':
     test_cmd_acquire_failure_leaks_nothing()
     test_daemon_respawns_dead_native()
     test_daemon_keeps_live_native()
+    test_session_show_hide_send_protocol_commands()
+    test_session_show_label_sends_explicit_show_not_probe()
+    test_session_owner_two_acquire_release_cycles()
     print('all overlay tests pass')
 
 

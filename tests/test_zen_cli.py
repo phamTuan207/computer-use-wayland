@@ -220,6 +220,10 @@ class ZenCliTest(unittest.TestCase):
         self.env = dict(os.environ)
         self.env["HOME"] = str(self.home)
         self.env["PATH"] = os.environ.get("PATH", "")
+        # Fixture mode: no compositor here, so the pill gate is off
+        # (mirrors cdp.mjs CU_CDP_PILL=0). Pill tests below remove
+        # this and point CU_OVERLAY_PY at a fake overlay instead.
+        self.env["CU_ZEN_PILL"] = "0"
 
     def unused_loopback_port(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -445,6 +449,126 @@ class ZenCliTest(unittest.TestCase):
         self.assertTrue(parsed["ok"])
         self.assertEqual(parsed["index"], 0)
         self.assertIn("browsingContext.close", server.calls)
+
+    def make_fake_overlay(self, visible=True):
+        """A fake overlay.py: logs argv, answers status/acquire/release.
+
+        acquire reports visible per `visible`; every call appends its
+        argv (one JSON list per line) to the log file next to it.
+        Returns (script_path, log_path)."""
+        script = Path(self.tmp.name) / "fake_overlay.py"
+        log = Path(self.tmp.name) / "fake_overlay.log"
+        script.write_text(
+            "import json, sys\n"
+            "LOG = %r\n"
+            "VISIBLE = %r\n"
+            "with open(LOG, 'a') as fh:\n"
+            "    fh.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "cmd = sys.argv[1] if len(sys.argv) > 1 else ''\n"
+            "if cmd == 'acquire':\n"
+            "    print(json.dumps({'visible': VISIBLE, 'holders': {}}))\n"
+            "elif cmd == 'release':\n"
+            "    print(json.dumps({'visible': False, 'holders': {}}))\n"
+            "else:\n"
+            "    print(json.dumps({'visible': False, 'holders': {}}))\n"
+            % (str(log), visible))
+        return script, log
+
+    def overlay_calls(self, log):
+        if not log.exists():
+            return []
+        return [json.loads(line)
+                for line in log.read_text().splitlines() if line.strip()]
+
+    def enable_pill(self, visible=True):
+        script, log = self.make_fake_overlay(visible=visible)
+        self.env.pop("CU_ZEN_PILL", None)
+        self.env["CU_OVERLAY_PY"] = str(script)
+        return log
+
+    def test_control_refused_without_pill(self):
+        # R3 fail-closed: no pill, no drive. The refusal happens
+        # before session.new, so the fake BiDi server sees no drive.
+        log = self.enable_pill(visible=False)
+        with FakeBidiServer(two_contexts()) as server:
+            code, _, parsed = self.run_wrapper(
+                "--port", str(server.port), "navigate",
+                "https://example.com/")
+            self.assertEqual(code, 1)
+            self.assertIn("pill unavailable", parsed["error"])
+            self.assertNotIn("session.new", server.calls)
+            self.assertNotIn("browsingContext.navigate", server.calls)
+        cmds = [c[0] for c in self.overlay_calls(log)]
+        self.assertIn("acquire", cmds)
+        self.assertNotIn("release", cmds,
+                         "nothing was held, so nothing to release")
+
+    def test_control_acquires_and_releases_pill(self):
+        # R3: with the pill available the drive proceeds, and the
+        # session end releases exactly what start acquired.
+        log = self.enable_pill(visible=True)
+        with FakeBidiServer(two_contexts()) as server:
+            code, _, parsed = self.run_wrapper(
+                "--port", str(server.port), "navigate",
+                "https://example.com/")
+            self.assertEqual(code, 0, parsed)
+            self.assertTrue(parsed["ok"])
+            self.assertIn("browsingContext.navigate", server.calls)
+        calls = self.overlay_calls(log)
+        cmds = [c[0] for c in calls]
+        self.assertEqual(cmds.count("acquire"), 1, calls)
+        self.assertEqual(cmds.count("release"), 1, calls)
+        self.assertLess(cmds.index("acquire"), cmds.index("release"))
+        acquire = next(c for c in calls if c[0] == "acquire")
+        self.assertIn("--pid", acquire)
+        release = next(c for c in calls if c[0] == "release")
+        self.assertEqual(
+            release[release.index("--pid") + 1],
+            acquire[acquire.index("--pid") + 1],
+            "release must drop exactly the key acquire added")
+
+    def test_read_commands_do_not_acquire_pill(self):
+        # R3 mirrors cdp.mjs: reading is not control, so tabs works
+        # with the pill unavailable and never acquires.
+        log = self.enable_pill(visible=False)
+        with FakeBidiServer(two_contexts()) as server:
+            code, _, parsed = self.run_wrapper(
+                "--port", str(server.port), "tabs")
+            self.assertEqual(code, 0, parsed)
+            self.assertEqual(len(parsed["tabs"]), 2)
+        cmds = [c[0] for c in self.overlay_calls(log)]
+        self.assertNotIn("acquire", cmds)
+
+    def test_session_start_preflight_refuses_without_overlay(self):
+        # R3 spawn preflight: a missing overlay fails session start
+        # before Zen is spawned (the stub zen-browser would exit 0
+        # and the start would otherwise fail later, less clearly).
+        bindir = Path(self.tmp.name) / "bin"
+        bindir.mkdir()
+        stub = bindir / "zen-browser"
+        stub.write_text("#!/bin/sh\nexit 0\n")
+        stub.chmod(0o755)
+        self.env.pop("CU_ZEN_PILL", None)
+        self.env["CU_OVERLAY_PY"] = str(
+            Path(self.tmp.name) / "no-such-overlay.py")
+        code, _, parsed = self.run_wrapper(
+            "session", "start", extra_path=str(bindir))
+        self.assertEqual(code, 1)
+        self.assertIn("pill unavailable", parsed["error"])
+        state = (self.home / ".local" / "share" / "agent-computer-use"
+                 / "zen-cli-state.json")
+        self.assertFalse(state.exists(),
+                         "preflight must fail before any spawn/state")
+
+    def test_pill_opt_out_is_fixture_only_escape(self):
+        # CU_ZEN_PILL=0 (setUp default) keeps fixture drives working
+        # with no overlay at all; live work must never set it.
+        with FakeBidiServer(two_contexts()) as server:
+            code, _, parsed = self.run_wrapper(
+                "--port", str(server.port), "navigate",
+                "https://example.com/")
+            self.assertEqual(code, 0, parsed)
+            self.assertTrue(parsed["ok"])
 
 
 if __name__ == "__main__":

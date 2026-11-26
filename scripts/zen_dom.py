@@ -7,6 +7,8 @@ until Zen restarts, see docs/zen-dom-control-comparison.md section 7).
 
 Rules enforced here, not by convention:
 - One session at a time across all processes (file lock).
+- The overlay pill is up before geckodriver spawns and released in
+  cleanup; no pill, no session (fail closed, R3).
 - The session is ALWAYS deleted in a finally block, even on error.
 - geckodriver is started per session and terminated with it.
 - DOM is used to LOCATE and READ. Clicks are NOT done through the DOM
@@ -118,6 +120,83 @@ VIEWPORT_SETTLE_STABLE_READS = 3
 
 class ZenDomError(RuntimeError):
     pass
+
+
+# Pill gate (R3, mirroring scripts/cdp.mjs): the computer-use pill
+# must show whenever ANY agent controls the machine, whatever the
+# method. ZenSession.__enter__ acquires the central overlay pill
+# (scripts/overlay.py) before geckodriver spawns and _cleanup
+# releases it; when the pill cannot be shown the session is refused
+# (ZenDomError 'pill unavailable') and no control runs invisibly. A
+# preflight checks overlay availability before the spawn so a broken
+# overlay fails before any session exists. The one opt-out is
+# CU_ZEN_PILL=0, fixture tests only (no compositor there), never for
+# live work. CU_OVERLAY_PY overrides the overlay.py path (test seam,
+# same as cdp.mjs); CU_PILL_AGENT names the holder (default Muse).
+
+def _pill_enabled():
+    return os.environ.get('CU_ZEN_PILL', '1') != '0'
+
+
+def _pill_agent():
+    return os.environ.get('CU_PILL_AGENT') or 'Muse'
+
+
+def _overlay_py_path():
+    override = os.environ.get('CU_OVERLAY_PY')
+    if override:
+        return override
+    return str(Path(__file__).resolve().parent / 'overlay.py')
+
+
+def _run_overlay_cli(args, timeout_s=30):
+    try:
+        done = subprocess.run(
+            [sys.executable, _overlay_py_path()] + args,
+            capture_output=True, text=True, timeout=timeout_s)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ZenDomError(
+            'pill unavailable: overlay.py %s could not run: %s'
+            % (args[0], exc))
+    if done.returncode != 0:
+        raise ZenDomError(
+            'pill unavailable: overlay.py %s failed: %s' % (
+                args[0], (done.stderr or done.stdout).strip()[:300]))
+    try:
+        return json.loads(done.stdout)
+    except ValueError:
+        raise ZenDomError(
+            'pill unavailable: overlay.py %s returned non-JSON output'
+            % args[0])
+
+
+def _pill_preflight():
+    """Fail before any spawn when the overlay cannot be reached."""
+    path = _overlay_py_path()
+    if not Path(path).is_file():
+        raise ZenDomError(
+            'pill unavailable: overlay.py not found at %s '
+            '(set CU_OVERLAY_PY)' % path)
+    _run_overlay_cli(['status'], timeout_s=10)
+
+
+def _pill_acquire(pid):
+    reply = _run_overlay_cli(
+        ['acquire', '--agent', _pill_agent(), '--method', 'Marionette',
+         '--pid', str(pid)], timeout_s=60)
+    if not isinstance(reply, dict) or reply.get('visible') is not True:
+        raise ZenDomError(
+            'pill unavailable: pill not visible: %s' % (str(reply)[:300],))
+
+
+def _pill_release(pid):
+    try:
+        _run_overlay_cli(
+            ['release', '--agent', _pill_agent(),
+             '--method', 'Marionette', '--pid', str(pid)],
+            timeout_s=10)
+    except Exception as exc:
+        logger.warning('pill release failed: %s', exc)
 
 
 def _is_transport_failure(exc):
@@ -490,37 +569,48 @@ class ZenSession:
         # arm_typed_flag records the unpredictable name it installed
         # for each selector, and typed_flag reads that name back.
         self._typed_flag_props = {}
+        self._pill_held = False
+        self._pill_pid = None
 
     def __enter__(self):
-        LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
-        self._lock_file = open(LOCK_PATH, "w")
+        if _pill_enabled():
+            _pill_preflight()
+            _pill_acquire(os.getpid())
+            self._pill_held = True
+            self._pill_pid = os.getpid()
         try:
-            fcntl.flock(self._lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            self._lock_file.close()
-            raise ZenDomError(
-                "another process already holds the Zen remote session; "
-                "only one remote session is allowed per Zen instance")
-        self.gecko_proc = subprocess.Popen(
-            [self.geckodriver, "--connect-existing",
-             "--marionette-host", "127.0.0.1",
-             "--marionette-port", str(self.marionette_port),
-             "--port", str(self.wd_port), "--log", "warn"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if not _wait_http(f"http://127.0.0.1:{self.wd_port}/status",
-                          self.timeout_s):
+            LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+            self._lock_file = open(LOCK_PATH, "w")
+            try:
+                fcntl.flock(self._lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                self._lock_file.close()
+                raise ZenDomError(
+                    "another process already holds the Zen remote session; "
+                    "only one remote session is allowed per Zen instance")
+            self.gecko_proc = subprocess.Popen(
+                [self.geckodriver, "--connect-existing",
+                 "--marionette-host", "127.0.0.1",
+                 "--marionette-port", str(self.marionette_port),
+                 "--port", str(self.wd_port), "--log", "warn"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if not _wait_http(f"http://127.0.0.1:{self.wd_port}/status",
+                              self.timeout_s):
+                self._cleanup()
+                raise ZenDomError("geckodriver status endpoint did not answer")
+            try:
+                resp = self._wd("POST", "/session", {"capabilities": {
+                    "alwaysMatch": {"browserName": "firefox"}}})
+            except ZenDomError as exc:
+                self._cleanup()
+                raise ZenDomError(
+                    "could not create a remote session (is the single session "
+                    "slot leaked by a hung client? only a Zen restart clears "
+                    f"it): {exc}")
+            self.session = resp["value"]["sessionId"]
+        except BaseException:
             self._cleanup()
-            raise ZenDomError("geckodriver status endpoint did not answer")
-        try:
-            resp = self._wd("POST", "/session", {"capabilities": {
-                "alwaysMatch": {"browserName": "firefox"}}})
-        except ZenDomError as exc:
-            self._cleanup()
-            raise ZenDomError(
-                "could not create a remote session (is the single session "
-                "slot leaked by a hung client? only a Zen restart clears "
-                f"it): {exc}")
-        self.session = resp["value"]["sessionId"]
+            raise
         return self
 
     def __exit__(self, *exc):
@@ -548,6 +638,9 @@ class ZenSession:
             except Exception:
                 pass
             self._lock_file = None
+        if getattr(self, '_pill_held', False):
+            self._pill_held = False
+            _pill_release(self._pill_pid)
 
     def _wd(self, method, path, body=None):
         """One WebDriver call. Every transport failure becomes a

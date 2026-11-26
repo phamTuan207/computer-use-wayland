@@ -199,6 +199,22 @@ def session_label(label):
         return False
 
 
+def session_show():
+    try:
+        import indicator
+        return bool(indicator.request(BASE, 'show'))
+    except (RuntimeError, OSError, ValueError):
+        return False
+
+
+def session_hide():
+    try:
+        import indicator
+        return bool(indicator.request(BASE, 'hide'))
+    except (RuntimeError, OSError, ValueError):
+        return False
+
+
 def wayland_env():
     """Env for spawning the native indicator. Steals the live Wayland
     session vars when the caller (e.g. SSH) does not carry them.
@@ -303,7 +319,13 @@ class Daemon:
                         _log('native_command_failed')
                 return False
         elif self.owner == 'session':
-            return bool(session_label(label) and session_live())
+            # R4 pair (redteam 1.5): send "show" explicitly after
+            # "label". The old code relied on session_live() sending
+            # "show" as a probe side effect, so a hide on final
+            # release would leave the next acquire invisible if the
+            # probe ever changed. Visibility must not depend on a
+            # liveness probe.
+            return bool(session_label(label) and session_show())
         return False
 
     def apply_holders(self):
@@ -318,6 +340,14 @@ class Daemon:
                     except (OSError, RuntimeError):
                         pass
                     self._close_native()
+                elif self.owner == 'session':
+                    # R4 pair (redteam 1.5): the session owner must
+                    # hide on final release too. The old code returned
+                    # visible False without sending "hide", so the
+                    # pill stayed on screen while status said hidden.
+                    if not session_hide():
+                        _log('session_hide_failed')
+                    self.owner = 'none'
                 return {'visible': False, 'owner': 'none', 'holders': {}}
             latest = sorted(holders.items(), key=lambda kv: kv[1].get('acquired', ''))[-1]
             label = _label_for(latest[1].get('agent', latest[0]),
@@ -448,6 +478,11 @@ class Daemon:
                 except (OSError, RuntimeError, AttributeError):
                     pass
                 self._close_native()
+            elif self.owner == 'session':
+                # R4 pair: daemon shutdown must not leave a
+                # session-owned pill stuck on either.
+                if not session_hide():
+                    _log('session_hide_failed')
             try:
                 server.close()
             except OSError:

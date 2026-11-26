@@ -14,9 +14,11 @@ faked below; _wd conversion is tested by mocking urlopen.
 """
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -1068,6 +1070,113 @@ class TestGeckodriverDefault(unittest.TestCase):
         self.assertEqual(
             zen_dom._default_geckodriver(home=self.home, env={}),
             '/tmp/geckodriver')
+
+
+class TestPillGate(unittest.TestCase):
+    """R3 fail-closed pill gate in ZenSession.__enter__/_cleanup.
+
+    No Zen, no geckodriver: Popen, _wait_http and _wd are faked, and
+    the overlay CLI is faked at the _run_overlay_cli seam (the same
+    seam CU_OVERLAY_PY exercises in production).
+    """
+
+    def _fake_enter_env(self, pill_reply):
+        """Patch the session-start surroundings; return (events, patches).
+
+        pill_reply: the dict the fake overlay acquire returns, or an
+        exception instance the fake overlay raises.
+        """
+        events = []
+
+        def fake_overlay(args, timeout_s=30):
+            events.append(('overlay', args[0]))
+            if isinstance(pill_reply, BaseException):
+                raise pill_reply
+            if args[0] == 'acquire':
+                return pill_reply
+            return {'visible': False, 'holders': {}}
+
+        class FakeProc:
+            def poll(self):
+                return None
+
+            def terminate(self):
+                events.append(('gecko', 'terminate'))
+
+            def wait(self, timeout=None):
+                return 0
+
+            def kill(self):
+                events.append(('gecko', 'kill'))
+
+        def fake_popen(*args, **kwargs):
+            events.append(('gecko', 'spawn'))
+            return FakeProc()
+
+        def fake_wd(self, method, path, body=None):
+            events.append(('wd', method, path))
+            if path == '/session':
+                return {'value': {'sessionId': 'pill-test-session'}}
+            return {'value': None}
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        patches = [
+            mock.patch.object(zen_dom, '_run_overlay_cli', fake_overlay),
+            mock.patch.object(zen_dom.subprocess, 'Popen', fake_popen),
+            mock.patch.object(zen_dom, '_wait_http',
+                              lambda *a, **k: True),
+            mock.patch.object(ZenSession, '_wd', fake_wd),
+            mock.patch.object(
+                zen_dom, 'LOCK_PATH', Path(tmp.name) / 'zen_dom.lock'),
+            mock.patch.dict(os.environ, {'CU_ZEN_PILL': '1'}),
+        ]
+        return events, patches
+
+    def _run_patches(self, patches):
+        for patcher in patches:
+            patcher.start()
+        self.addCleanup(lambda: [p.stop() for p in reversed(patches)])
+
+    def test_session_refused_without_pill(self):
+        # No pill, no session: __enter__ raises before geckodriver
+        # spawns, so nothing controllable ever exists invisibly.
+        events, patches = self._fake_enter_env(
+            {'visible': False, 'holders': {}})
+        self._run_patches(patches)
+        with self.assertRaises(ZenDomError) as caught:
+            with ZenSession():
+                pass
+        self.assertIn('pill unavailable', str(caught.exception))
+        self.assertNotIn(('gecko', 'spawn'), events,
+                         'geckodriver must not spawn without the pill')
+
+    def test_session_acquires_before_spawn_and_releases_on_exit(self):
+        events, patches = self._fake_enter_env(
+            {'visible': True, 'holders': {}})
+        self._run_patches(patches)
+        with ZenSession() as session:
+            self.assertEqual(session.session, 'pill-test-session')
+        kinds = [(e[0], e[1]) for e in events]
+        self.assertLess(kinds.index(('overlay', 'acquire')),
+                        kinds.index(('gecko', 'spawn')),
+                        'pill must be up before geckodriver spawns')
+        self.assertEqual(kinds.count(('overlay', 'acquire')), 1)
+        self.assertEqual(kinds.count(('overlay', 'release')), 1,
+                         'exit must release exactly what enter acquired')
+        self.assertLess(kinds.index(('gecko', 'spawn')),
+                        kinds.index(('overlay', 'release')))
+
+    def test_pill_opt_out_skips_gate(self):
+        # CU_ZEN_PILL=0 is the fixture-only escape (mirrors
+        # CU_CDP_PILL=0): the overlay is never consulted.
+        events, patches = self._fake_enter_env(
+            ZenDomError('pill unavailable: must not be consulted'))
+        self._run_patches(patches)
+        with mock.patch.dict(os.environ, {'CU_ZEN_PILL': '0'}):
+            with ZenSession() as session:
+                self.assertEqual(session.session, 'pill-test-session')
+        self.assertEqual([e for e in events if e[0] == 'overlay'], [])
 
 
 if __name__ == '__main__':
