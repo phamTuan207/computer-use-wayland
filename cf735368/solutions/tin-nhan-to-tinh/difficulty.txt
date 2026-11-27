@@ -1,0 +1,2 @@
+AI-estimated rating: Nhan biet.
+The task uses one basic string scan to group adjacent equal characters and retain the longest group; a strict greater-than update naturally preserves the first group on ties. The only small edge case is a one-character string, while the 10^5 limit is easily handled in linear time and does not force an advanced technique.

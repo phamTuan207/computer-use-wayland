@@ -1,0 +1,3 @@
+Anchor 1: Bubble Sort — Nhan biet. The task directly asks for the taught bubble-sort simulation, with no extra algorithmic insight; printing after each pass is part of that simulation.
+Anchor 2: In Search of an Easy Problem — Nhan biet. A single scan with a flag or early exit directly applies a basic conditional pattern, with no meaningful edge-case or complexity pressure.
+Anchor 3: Candies range sum — Nhan biet. Summing one inclusive range is a direct loop (or prefix-sum) exercise; the input size and limits do not require a more advanced approach.

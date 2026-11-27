@@ -1,0 +1,27 @@
+Compile: g++ -O2 -std=c++17 -o /home/james/cf735368-work/tin-nhan-to-tinh/sol /home/james/cf735368-work/tin-nhan-to-tinh/sol.cpp
+Result: PASS (exit code 0)
+Tests: statement has one sample; all samples run, plus three self-made cases.
+
+Sample
+Input: 'aabbcccdddeeeff'
+Hand-computed expected output: '3\nccc'
+Actual output: '3\nccc'
+Result: PASS
+
+Self-made minimum length
+Input: 'q'
+Hand-computed expected output: '1\nq'
+Actual output: '1\nq'
+Result: PASS
+
+Self-made tie keeps earliest
+Input: 'aaabbbcc'
+Hand-computed expected output: '3\naaa'
+Actual output: '3\naaa'
+Result: PASS
+
+Self-made maximum length (100000 equal chars)
+Input: z repeated exactly 100000 times, then newline
+Hand-computed expected output: 100000, then z repeated exactly 100000 times
+Actual output: 100000, then z repeated exactly 100000 times
+Result: PASS
