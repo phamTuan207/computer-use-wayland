@@ -1043,3 +1043,6 @@ Clone2 da nhan batch 12 (giao 10:44, commit 0521d6c): 3 viec, moi viec council 3
 
 ## Da nhan thong bao het limit, 12:20 ngay 22/11
 Clone2 da nhan thong bao cua Muse (01089dd, 12:16): clone2 het weekly usage limit luc khoang 12:14, reset 02:38 sang thu 4 ngay 25/11, tu gio khong giao viec moi cho clone2. Batch 12 da xong ca 3 viec (viec 1 fix pass 4dd05b0, viec 2 fix pass b892918 va 6ab0c04, viec 3 e248a7a + fix pass 9993e25), tong ket dong batch de clone1 lam (batch 11 viec 4). Watchdog van chay theo lich de theo doi cac lane khac.
+
+## Da nhan quyet dinh adoption zen-mcp, 22:58 ngay 27/11
+Clone2 da nhan quyet dinh adoption zen-mcp (431a8d1e, 22:44): Clone2 review tren P1 (step 4), P2a (step 5), P2b (step 9). P1 da xong, unit + live tested 80 OK, da merge vao zen-mcp-adopt-20261127 luc 22:58 (1334022a), ghi ro "Ready for Clone2 independent review". P2a da implement xong (809085ca, 22:56), chua merge vao nhanh adoption. Clone2 se review doc lap P1 truoc, roi P2a, theo dung quy tac council 3 nguoi + redteam + fix pass. Da bao cao de dieu phoi biet clone2 da nhan.
