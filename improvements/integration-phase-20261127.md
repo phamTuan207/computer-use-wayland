@@ -48,7 +48,7 @@ PILOT (running, unproven).
 | 4 | I13 architecture guard (import map first; docs + name denylist) | agent-desktop I13 | IMPLEMENTED | 4b2cf7cf; found+fixed 7 hardcoded home paths |
 | 5 | I21 blocked key-combo list (conservative subset; full after Hyprland check) | agent-desktop I21 | IMPLEMENTED | 2e4369ac; full list from live Hyprland binds |
 | 6 | I3 snapshot-qualified refs (additive, id in file, grandfather legacy) | agent-desktop I3 | IMPLEMENTED + LIVE-TESTED | ec7e60b7; live on laptop AT-SPI app: id in file, qualified ground ok, bare warns, foreign refused |
-| 7 | M2 one-pass seal wrapper (gate stays separately runnable) | bottleneck M2 | QUEUED | PROVEN manifest identity |
+| 7 | M2 one-pass seal wrapper (gate stays separately runnable) | bottleneck M2 | IMPLEMENTED | rung3-ci/seal.py + test-seal.py (3 tests OK) |
 | 8 | I8 probes/ + probe ledger | agent-desktop I8 | QUEUED | Measurement layer for later pilots |
 | 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | QUEUED | Needs scripts/zen-rdp/ brought in; compat shim |
 | 10 | I17 post-action wait flags (after I1, no default timeout) | agent-desktop I17 | QUEUED | |
@@ -252,6 +252,20 @@ b73818eabcf2:e1); bare ref ok with deprecation warning;
 foreign id refused. Owner Zen PID 807599 untouched. Test
 files removed. Pre-existing stale indicator socket from
 2026-11-21 left in place (not from this work).
+
+### Item 7: M2 one-pass seal wrapper (2026-11-27)
+
+rung3-ci/seal.py: runs collect-evidence.py, snapshot.py,
+manifest-gate.py as subprocesses in sequence, echoes output,
+stops at the first non-zero exit, parses the SNAPSHOT: path
+for the gate step, prints SEALED: <dir>. No reimplementation
+(manifest identity by construction, matching the study's
+PROVEN 59-hash identity). The gate is unchanged and remains
+separately runnable (test proves it). rung3-ci/test-seal.py:
+3 tests OK (happy path seals + gate PASS; missing evidence
+stops at collect with no snapshot created; gate re-run over
+the sealed output passes). No time saving claimed (per M2:
+machine delta 0.35s, agent-minute effect UNPROVEN).
 
 ## Sources cited during this phase
 
