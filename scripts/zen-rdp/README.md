@@ -150,7 +150,7 @@ runtime_error, unexpected), `message`, and the same
 `delivery_uncertain`, `delivered_unverified`,
 `delivered_verified`. Retry vocabulary: `safe` (nothing was
 sent), `unsafe` (input may have landed; never replay),
-`not_applicable`. Per command: reads (probe/tabs/report)
+`not_applicable`. Per command: reads (probe/tabs/report/snapshot)
 succeed as delivered_verified; eval/peval/navigate succeed as
 delivered_unverified (JS ran / navigate sent, page effect not
 verified by the tool, including whether a navigate actually
@@ -185,3 +185,21 @@ post-action verification when the question is whether the
 action itself took effect; use I10 auto-wait on the a11y lane
 for element readiness before acting. Never use a fixed sleep
 in place of any of the three.
+
+## Page snapshot (P1)
+
+`snapshot [--load-timeout SECONDS]` reads the attached tab with
+one fixed, client-owned script (never caller-supplied JS),
+routed through the same guarded evaluate() as `eval`, so tab
+scope and the credential denylist apply. An I17 readyState
+wait runs first (default budget 10 s; on expiry the read still
+happens with `loadComplete: false`). Output: url, title,
+readyState, `snapshotId`, element records (tag, name, type,
+href, role) capped at 200 with `totalElements` /
+`returnedElements` / `elementsTruncated`, a 1500-char text
+preview with `textTruncated` / `textLength`, and a rolled-up
+`complete` flag. Field values are never read: inputs report
+`hasValue` (presence only). I22 redaction runs over the full
+output. Use `snapshot` for page reads instead of hand-written
+DOM-walk JS through `eval`: one think-step less per read, and
+truncation is accounted instead of silent.
