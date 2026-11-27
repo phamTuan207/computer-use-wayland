@@ -387,6 +387,11 @@ def _classify_error(message, cmd):
         if needle in msg:
             return code, "not_delivered", "safe"
     action = cmd not in _READ_COMMANDS
+    if "tab destroyed" in msg:
+        # F11 terminal state: the waited tab's descriptor was
+        # destroyed mid-wait. Distinct from a timeout so callers
+        # never retry a wait on a dead tab.
+        return "tab_destroyed", "delivered_unverified", "unsafe"
     if "wait_for timeout" in message or "wait_load timeout" in message:
         # The action landed; only the post-action wait expired.
         return "wait_timeout", "delivered_unverified", "unsafe"
@@ -1121,6 +1126,13 @@ class RDPClient:
         self._probe_result = None
         self._pinned_tab_id = None
         self._pinned_url = ""
+        # F11 terminal-death flag: set by the demux skip paths when a
+        # descriptor-destroyed packet for the pinned descriptor is
+        # skipped. Waits check it each poll iteration and fail fast
+        # instead of burning their budget on a dead tab. Per-client
+        # (dies with the connection); cleared on a successful attach
+        # to a live tab. No log, no cursor, no public API.
+        self._terminal_destroyed = None
         self._retries = 0
         self._actions = {"evaluate": 0, "navigate": 0, "get_target": 0,
                          "parent_evaluate": 0, "act": 0}
@@ -1287,6 +1299,39 @@ class RDPClient:
         data = json.dumps(obj).encode()
         self.sock.sendall(f"{len(data)}:".encode() + data)
 
+    def _observe_skipped(self, msg):
+        """F11 side observation on demux-skipped packets. When a
+        skipped packet is descriptor-destroyed for the descriptor
+        this client has pinned, record the terminal flag. Matching
+        logic is untouched; this must never raise.
+        descriptor-destroyed carries no URL, so no redaction surface
+        is added."""
+        try:
+            if msg.get("type") != "descriptor-destroyed" \
+                    or not getattr(self, "desc_actor", None):
+                return
+            if _canon_tab_id(msg.get("from")) == \
+                    _canon_tab_id(self.desc_actor):
+                self._terminal_destroyed = {
+                    "descriptor": msg.get("from"), "at": _now_iso()}
+        except Exception:
+            pass
+
+    def _terminal_flag_for(self, descriptor):
+        """The terminal-destroyed record if it matches `descriptor`
+        (canonical compare), else None. A descriptor-destroyed for
+        any other tab is ignored by waits."""
+        rec = getattr(self, "_terminal_destroyed", None)
+        if rec and descriptor and _canon_tab_id(rec["descriptor"]) \
+                == _canon_tab_id(descriptor):
+            return rec
+        return None
+
+    def _tab_destroyed_error(self, descriptor, where):
+        return RDPError(
+            f"tab destroyed: descriptor {descriptor!r} destroyed "
+            f"during {where} (terminal, F11)")
+
     def request(self, obj, expect_from=None, timeout=15, expect_key=None):
         # Guarded packet types (evaluate/navigate) must go through the
         # guarded methods, which set _internal_call. Raw request() of
@@ -1303,11 +1348,13 @@ class RDPClient:
         while True:
             msg = self._recv()
             if expect_from is not None and msg.get("from") != expect_from:
+                self._observe_skipped(msg)
                 continue
             # Unsolicited root events (e.g. tabListChanged) also carry
             # from=root; require the response key when asked.
             if expect_key is not None and expect_key not in msg \
                     and not msg.get("error"):
+                self._observe_skipped(msg)
                 continue
             if msg.get("error"):
                 raise RDPError(f"RDP error for {obj.get('type')}: {msg}")
@@ -1410,6 +1457,11 @@ class RDPClient:
         if not self.console_actor:
             raise RDPError(f"getTarget gave no consoleActor: {str(msg)[:500]}")
         self._actions["get_target"] += 1
+        # F11: a successful attach means the pinned descriptor is a
+        # live tab; any terminal flag for a previous descriptor is
+        # history (descriptor ids are positional and can be reused
+        # by a new tab, so a stale flag must not fire on it).
+        self._terminal_destroyed = None
         # Pin this tab: a later target swap (DevTools close) kills the
         # consoleActor, and recovery must land back on THIS tab.
         self._pinned_tab_id = _canon_tab_id(self.desc_actor)
@@ -1527,11 +1579,21 @@ class RDPClient:
         if not self.console_actor:
             raise RDPError("evaluate before attach (no console actor)")
         self._guard_current("evaluate")
+        # F11: a pinned tab already known destroyed fails fast here
+        # instead of sending into a dead console actor.
+        if self._terminal_flag_for(self.desc_actor) is not None:
+            raise self._tab_destroyed_error(self.desc_actor, "evaluate")
         try:
             return self._evaluate_once(expr, timeout)
         except RDPError as e:
             if not replay or not _is_no_such_actor(str(e)):
                 raise
+            # F11: never replay past a terminal flag. A target swap
+            # (RT-06) leaves the descriptor alive; a destroyed
+            # descriptor means the tab itself is gone.
+            if self._terminal_flag_for(self.desc_actor) is not None:
+                raise self._tab_destroyed_error(self.desc_actor,
+                                                "evaluate")
             # Target swap killed the held consoleActor (RT-06): re-attach
             # pinned to the same tab and retry the evaluate once.
             self._reattach_pinned()
@@ -1551,6 +1613,7 @@ class RDPClient:
                 return self._unwrap_full(m.get("result"))
             if m.get("error"):
                 raise RDPError(f"evaluate error: {str(m)[:400]}")
+            self._observe_skipped(m)
 
     # -- ambiguity-refusing act (P2a) -----------------------------------------
     def act(self, descriptor, action, text=None, timeout=20):
@@ -1748,7 +1811,13 @@ class RDPClient:
         what the page actually showed."""
         deadline = time.monotonic() + timeout
         last = None
+        wait_desc = getattr(self, "desc_actor", None)
         while True:
+            # F11: fail fast when the waited tab is known destroyed
+            # instead of burning the budget (M8 shape: evaluate on
+            # the dead tab's console returns falsy, never errors).
+            if self._terminal_flag_for(wait_desc) is not None:
+                raise self._tab_destroyed_error(wait_desc, "wait_for")
             try:
                 last = self.evaluate(expr, timeout=5)
             except Exception as e:
@@ -1757,6 +1826,8 @@ class RDPClient:
                 last = None
             if last:
                 return last
+            if self._terminal_flag_for(wait_desc) is not None:
+                raise self._tab_destroyed_error(wait_desc, "wait_for")
             if time.monotonic() >= deadline:
                 raise RDPError(
                     f"wait_for timeout after {timeout}s: {expr!r} "
@@ -1766,7 +1837,11 @@ class RDPClient:
     def wait_load(self, url_substr, timeout=30):
         deadline = time.monotonic() + timeout
         last_reattach = 0.0
+        wait_desc = getattr(self, "desc_actor", None)
         while time.monotonic() < deadline:
+            # F11: fail fast on a known-destroyed waited tab.
+            if self._terminal_flag_for(wait_desc) is not None:
+                raise self._tab_destroyed_error(wait_desc, "wait_load")
             try:
                 v = self.evaluate(
                     "document.readyState + '|' + location.href", timeout=5)
@@ -1777,6 +1852,8 @@ class RDPClient:
             if isinstance(v, str) and v.startswith("complete|") \
                     and url_substr in v:
                 return v
+            if self._terminal_flag_for(wait_desc) is not None:
+                raise self._tab_destroyed_error(wait_desc, "wait_load")
             # Stale target after navigation: refresh actors periodically.
             # Pinned re-attach when a tab is pinned (never selected-pick).
             if time.monotonic() - last_reattach > 1.0:
