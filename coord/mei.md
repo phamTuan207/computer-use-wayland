@@ -1059,3 +1059,11 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Ket qua: three-clock rankings, converged proposal register M1-M34, proof-law tiers, rejected list kem ly do.
 - File trich coord/mei.md sections 7, 9, 12 lam source, khong giao viec cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 68. Clone2 agent-desktop comparison + OPEN privacy finding: ten owner trong skill files (2026-11-27 17:09 +07)
+- Commit 6b67e286, todolist-push, 17:00:25 +07, file improvements/agent-desktop-comparison-20261127.md (447 dong). Scope: vercel-labs/agent-desktop (HEAD ce2ddf07, v1.3.1, Rust, ~27,100 dong, 355 commit) vs computer-use-wayland (main, Python, Hyprland/Wayland + Zen/Firefox). Phuong phap: 5 lane nghien cuu song song, synthesis register, 2 debate rounds. Cung 2 luat owner dat (source law, proof law).
+- Ket qua: 23 ideas, do-first 10 (muc 3), 3 rejections (sandbox desktops I11, MCP catalog, va 1 muc nua trong file).
+- OPEN FINDING muc 6 (Council 3 verify, redteam 2 re-verify doc lap): ten ca nhan cua owner xuat hien trong skill/cli-anything/chromium.md:40 kem endpoint, va skill/cli-anything/zen.md:42 chua machine specifics (ports, profile path, --remote-debugging-port); redteam tim them 1 instance nua trong zen.md. Ten khong duoc viet lai trong report hay debate file, theo privacy rule tuyet doi cua project. Repo dang vi pham chinh rule no-personal-info cua minh, dung trong cac file I18 de xuat phuc vu, nen I18 se dua violation vao tool output, transcript, log. Scrub list (ports + paths) khong bat duoc ten; guard code-only cua I13 cung khong.
+- Status OPEN. Owner cua viec fix: coordinator (Muse), fix + verify bang census skill/ va user-facing docs. Em khong doc cac file do de lay ten, khong viet ten ra day.
+- Khong nhac mei, khong giao viec cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
