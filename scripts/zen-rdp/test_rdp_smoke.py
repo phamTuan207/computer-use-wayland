@@ -12,7 +12,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from rdp_smoke import EXIT, check_deployed_hash, parse_bind
+from rdp_smoke import (EXIT, bench_dedicated_proof, check_deployed_hash,
+                       parse_bind, run_smoke)
 
 TEST_PORT = 12345  # arbitrary example port (pure-logic test only)
 OTHER_PORT = 23456
@@ -52,7 +53,19 @@ def main():
     assert EXIT.get("h_navigate") == 16, f"navigate check code: {EXIT}"
     assert EXIT.get("i_pinned_methods") == 19, f"pinned check code: {EXIT}"
     assert EXIT.get("z_deployed_hash") == 17, f"drift check code: {EXIT}"
-    assert EXIT.get("i_bench") == 18, f"bench check code: {EXIT}"
+    assert EXIT.get("j_bench") == 18, f"bench check code: {EXIT}"
+    assert "i_bench" not in EXIT, f"stale i_bench key: {EXIT}"
+    # M6: bench leg refused without dedicated proof, before attach.
+    ok, detail = bench_dedicated_proof(TEST_PORT, None)
+    assert not ok and "no --bench-profile-dir" in detail["reason"], detail
+    ok, detail = bench_dedicated_proof(
+        TEST_PORT, "/nonexistent/profile-dir")
+    assert not ok, detail
+    report, code = run_smoke(
+        TEST_PORT, "marker", bench_local_url="http://127.0.0.1/x.html")
+    assert code == 18, (code, report)
+    assert report["failed_check"] == "j_bench", report
+    assert "BENCH REFUSED" in report["error"], report
     with tempfile.TemporaryDirectory() as td:
         ref = Path(td) / "ref.py"
         same = Path(td) / "same.py"

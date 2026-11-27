@@ -346,3 +346,73 @@ changed-file scan (rdp_client.py token= comment) is pre-existing at
 431a8d1e. Machine-layer copies must be refreshed from the final
 merged tree after landing (the D2 hash gate will flag the drift
 until then, by design).
+
+## Gate-fix addendum (2026-11-27, branch adopt-gatefix)
+
+Council verdict LAND-WITH-FIXES and redteam verdict BLOCK on the
+adoption branch, plus Clone2's independent P1 review FAIL
+(improvements/p1-snapshot-review-20261127.md, ce5287c3, 4 MAJOR).
+All findings fixed on adopt-gatefix (bf43b542 + c8902d7f); every
+finding was verified against the code first, all were real.
+
+- B1: act refuses on a truncated scan even at examined count 1
+  (JS scan_truncated return before any click, plus a python-side
+  conversion if a script ever acts truncated). Live: 10001-button
+  page refused target_scan_truncated with count=1.
+- B2: evaluate(replay=False) for act; exactly one execution, read
+  paths keep the RT-06 retry. Live via the P2b noSuchActor variant.
+- B3: P3 probe requires a verified launch_dedicated profile and
+  closes only tabs it tagged. Live: 4 opened, 4 tagged closed,
+  pre-storm tabs intact, demux paired.
+- B4: launch_dedicated stop() runs full session validation
+  (marker+nonce, profile/port agreement, exact profile cmdline
+  token, pid start-time pin) before signaling. Forged-session
+  unit tests refuse; live stop of the test session worked.
+- M1 + Clone2 A-2/A-3/A-5/A-6: bare-secret redaction in text
+  (sensitive key=value pairs, Bearer, sk-/ghp_/AKIA prefixes,
+  32+ char token-like strings), bare-token fragments, token path
+  segments, data:/javascript: payloads, list-of-strings walk.
+  Residual limit documented in README (pattern-based).
+- M2/C-M1: field and contenteditable content excluded from
+  snapshot names, the text preview (text-node walk skipping form
+  subtrees), and act summaries. Settled live: Firefox textarea
+  innerText returns '' (not the value); the exclusion holds
+  regardless. Planted-secret live fixture: all absent.
+- M3: act visibility via computed style (display/visibility/
+  opacity); disabled excluded for click, typed refusals for type
+  (target_disabled/target_readonly). Live-verified.
+- M4: type verdicts carry hasValue/valueLength only. Live: typed
+  password absent from verdict bytes.
+- M5: wait_for/wait_load re-raise guard refusals. Live: denylist
+  snapshot refusal 0.00 s (was the full 10 s budget).
+- M6/C3: smoke bench leg requires dedicated-session proof
+  (--bench-profile-dir or explicit any-session flag), refused
+  before attach otherwise; i_bench renamed j_bench. Live smoke
+  PASS all checks including j_bench.
+- M7: create_space captures activeWorkspace before/after and
+  fails loud on change; slot cleanup in finally (m3). Live:
+  space created, active workspace unchanged.
+- M8: P2b settling test (a) drives shipped RDPClient.act()
+  through the dropping proxy (dropped response + noSuchActor
+  variants), submit counter stays 1, retry=unsafe; descriptor
+  vs SNAPSHOT_JS field mapping documented in the test file.
+- C-M2: snapshot payload validated client-side (required keys,
+  returnedElements recomputed, flag consistency) - the
+  delivered_verified label is earned, not relabelled.
+- C-M3: 25,919 B is now an enforced byte cap (bytesTruncated);
+  role/title/url capped in JS; all caps are Python constants
+  interpolated into the JS (m6/B6).
+- C-M4/F2: longString reassembly advances by actual chunk
+  length, verifies total length, rejects error packets;
+  fake-transport longString tests incl. chunk-error case.
+- C1: launch kills the launched process on port timeout or
+  port-owner failure; the temp dir itself refused as a profile.
+
+Suite: 159 tests OK (3 live skip without a session; 8/8 with the
+dedicated session incl. both P2b fault-injection tests), smoke /
+bench / launch script tests PASS. pii-scan delta zero (17
+pre-existing hits at base 2729de6a, unchanged count). Live session
+was a dedicated throwaway on port 9236 via launch_dedicated,
+stopped through the tool afterwards; the owner's Zen was never
+touched. Clone2's P2a review was still pending at gate-fix time;
+if it lands, its findings need a follow-up pass.

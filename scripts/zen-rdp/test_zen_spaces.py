@@ -80,38 +80,66 @@ class TestListCreate(unittest.TestCase):
         self.assertIn(json.dumps("Docs"), stub.exprs[0])
         self.assertIn(json.dumps(["example.com"]), stub.exprs[0])
 
+    def _spaces_reply(self, active="{aaa}"):
+        return json.dumps({"activeWorkspace": active, "spaces": []})
+
     def test_create_space_fire_and_poll(self):
         stub = StubClient([
+            self._spaces_reply(),  # active before (M7 capture)
             "token",  # fire returns the token string
             json.dumps({"done": False}),
             json.dumps({"done": True, "ok": True, "uuid": "{bbb}",
                         "name": "Work"}),
             True,  # slot cleanup
+            self._spaces_reply(),  # active after: unchanged
         ])
         out = zen_spaces.create_space(stub, "Work")
         self.assertEqual(out, {"uuid": "{bbb}", "name": "Work"})
-        self.assertIn("createAndSaveWorkspace", stub.exprs[0])
-        self.assertIn(json.dumps("Work"), stub.exprs[0])
-        self.assertIn("undefined, true", stub.exprs[0],
+        self.assertIn("createAndSaveWorkspace", stub.exprs[1])
+        self.assertIn(json.dumps("Work"), stub.exprs[1])
+        self.assertIn("undefined, true", stub.exprs[1],
                       "create must not switch the visible space")
-        self.assertEqual(len(stub.exprs), 4)
+        self.assertEqual(len(stub.exprs), 6)
+
+    def test_create_space_switch_detected_loud(self):
+        # M7: if the active workspace changed despite dontChange,
+        # create_space must fail loud instead of reporting success.
+        stub = StubClient([
+            self._spaces_reply("{aaa}"),
+            "token",
+            json.dumps({"done": True, "ok": True, "uuid": "{bbb}",
+                        "name": "Work"}),
+            True,
+            self._spaces_reply("{bbb}"),  # switched!
+        ])
+        with self.assertRaises(RDPError) as cm:
+            zen_spaces.create_space(stub, "Work")
+        self.assertIn("active workspace changed", str(cm.exception))
 
     def test_create_space_js_error_state(self):
         stub = StubClient([
+            self._spaces_reply(),
             "token",
             json.dumps({"done": True, "ok": False,
                         "error": "Error: boom"}),
             True,
+            self._spaces_reply(),
         ])
         with self.assertRaises(RDPError) as cm:
             zen_spaces.create_space(stub, "Work")
         self.assertIn("boom", str(cm.exception))
 
     def test_create_space_timeout(self):
-        stub = StubClient(["token"] + [json.dumps({"done": False})] * 50)
+        stub = StubClient([self._spaces_reply(), "token"]
+                          + [json.dumps({"done": False})] * 50
+                          + [True])
         with self.assertRaises(RDPError) as cm:
             zen_spaces.create_space(stub, "Work", timeout=0.2)
         self.assertIn("did not settle", str(cm.exception))
+        # m3: the pending slot is cleaned up even on timeout.
+        self.assertTrue(
+            any("= undefined" in e for e in stub.exprs),
+            f"slot cleanup missing on timeout: {stub.exprs}")
 
     def test_non_json_result_refused(self):
         stub = StubClient([{"type": "object", "class": "Promise"}])
