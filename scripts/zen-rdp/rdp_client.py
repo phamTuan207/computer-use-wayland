@@ -33,6 +33,12 @@ RT-20 additions (enforced IN the tool, not in briefs):
 - Drive report (JSON): webdriver probe, tab list before/after with diff,
   scope used, denylist hits, scope refusals, approvals used, action counts.
   Written to --drive-report on session end, or on demand via `report`.
+- Ambiguity-refusing act (P2a): the `act` subcommand resolves a target
+  descriptor (role/name/text/selector/label, the I3 ref shape) in ONE
+  eval with an exhaustive match count and acts only when count == 1.
+  Refusals carry the true count (or candidatesTruncated=true when the
+  scan cap cut the pool) and retry=unsafe in the envelope. No
+  first-match fallback anywhere in this path.
 
 Runs on the laptop next to the browser. No geckodriver, no DevTools
 frontend. ydotool is banned (not used here; this client sends no OS input).
@@ -344,7 +350,7 @@ def _classify_error(message, cmd):
 
 
 def _success_disposition(cmd):
-    if cmd in ("eval", "peval", "navigate", "space-create",
+    if cmd in ("eval", "peval", "navigate", "act", "space-create",
                "folder-create"):
         # JS executed (eval/peval) or navigateTo sent (navigate); the
         # tool does not verify page effect, including whether the
@@ -378,6 +384,198 @@ def _fail(cmd, code, message, delivery, retry, exit_code, legacy,
                       "disposition": {"delivery": delivery,
                                       "retry": retry}}, indent=1))
     return exit_code
+
+
+# --- P2a: ambiguity-refusing act (single-eval verify-and-act) ---
+# One eval script resolves the target descriptor in-page with an
+# EXHAUSTIVE match count and acts only when count == 1. The descriptor
+# (role/name/text/selector/label) is the same shape snapshot refs
+# carry (I3): this is the act-time resolver; the snapshot-time
+# resolver (persistent registry + digest) is P2b, gated, not here.
+# The count is the TRUE count over the examined pool; when the pool
+# exceeds the scan cap the verdict carries candidatesTruncated=true
+# and count is a lower bound (zen-mcp's silent capped count, "6" on a
+# 100-button page, must not be copied). Refusal envelope:
+# delivery=delivered_verified (the script ran and its verdict
+# arrived), retry=unsafe (the act command class is never replayed:
+# a lost response cannot distinguish refusal from a landed click).
+_ACT_JS = r"""
+(() => {
+  const spec = __SPEC__;
+  const SCAN_CAP = 10000;
+  const CANDIDATE_CAP = 10;
+  const norm = s => (s == null ? '' : String(s)).trim().replace(/\s+/g, ' ');
+  const eq = (a, b) => norm(a).toLowerCase() === norm(b).toLowerCase();
+  function accName(el) {
+    const al = el.getAttribute && el.getAttribute('aria-label');
+    if (al && al.trim()) return al;
+    const lb = el.getAttribute && el.getAttribute('aria-labelledby');
+    if (lb) {
+      const t = lb.split(/\s+/).map(id => {
+        const n = document.getElementById(id);
+        return n ? n.textContent : '';
+      }).join(' ');
+      if (norm(t)) return t;
+    }
+    if (el.labels && el.labels.length) {
+      const t = [...el.labels].map(l => l.textContent).join(' ');
+      if (norm(t)) return t;
+    }
+    if (el.tagName === 'INPUT' &&
+        ['submit', 'button', 'reset', 'image'].includes((el.type || '').toLowerCase())) {
+      return el.value || '';
+    }
+    const txt = el.textContent || '';
+    if (norm(txt)) return txt;
+    const ph = el.getAttribute && el.getAttribute('placeholder');
+    if (ph) return ph;
+    const ti = el.getAttribute && el.getAttribute('title');
+    if (ti) return ti;
+    return '';
+  }
+  function roleOf(el) {
+    const r = el.getAttribute && el.getAttribute('role');
+    if (r && r.trim()) return r.trim().toLowerCase();
+    const t = el.tagName;
+    if (t === 'BUTTON') return 'button';
+    if (t === 'A') return el.hasAttribute('href') ? 'link' : '';
+    if (t === 'INPUT') {
+      const ty = (el.type || 'text').toLowerCase();
+      if (['button', 'submit', 'reset', 'image'].includes(ty)) return 'button';
+      if (ty === 'checkbox') return 'checkbox';
+      if (ty === 'radio') return 'radio';
+      if (ty === 'range') return 'slider';
+      if (ty === 'number') return 'spinbutton';
+      if (ty === 'search') return 'searchbox';
+      return 'textbox';
+    }
+    if (t === 'TEXTAREA') return 'textbox';
+    if (t === 'SELECT') return el.multiple ? 'listbox' : 'combobox';
+    if (t === 'OPTION') return 'option';
+    return '';
+  }
+  function labelText(el) {
+    if (el.labels && el.labels.length) {
+      return [...el.labels].map(l => l.textContent).join(' ');
+    }
+    if (el.id) {
+      const l = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+      if (l) return l.textContent;
+    }
+    return '';
+  }
+  function summary(el) {
+    return {tag: el.tagName.toLowerCase(), role: roleOf(el),
+            name: norm(accName(el)).slice(0, 120),
+            text: norm(el.textContent).slice(0, 120)};
+  }
+  let pool;
+  try {
+    pool = spec.selector
+      ? document.querySelectorAll(spec.selector)
+      : document.querySelectorAll(
+          'a[href],button,input,select,textarea,label,[role],[tabindex],' +
+          '[contenteditable="true"],[contenteditable=""]');
+  } catch (e) {
+    return JSON.stringify({acted: false, reason: 'bad_selector', count: 0,
+      candidatesTruncated: false, candidates: [],
+      error: String(e).slice(0, 200)});
+  }
+  const truncated = pool.length > SCAN_CAP;
+  const examined = Math.min(pool.length, SCAN_CAP);
+  const matches = [];
+  for (let i = 0; i < examined; i++) {
+    const el = pool[i];
+    if (el.getClientRects().length === 0) continue;
+    if (spec.role && !eq(roleOf(el), spec.role)) continue;
+    if (spec.name && !eq(accName(el), spec.name)) continue;
+    if (spec.text && !eq(el.textContent, spec.text)) continue;
+    if (spec.label && !eq(labelText(el), spec.label)) continue;
+    matches.push(el);
+  }
+  const count = matches.length;
+  if (count !== 1) {
+    return JSON.stringify({acted: false,
+      reason: count === 0 ? 'not_found' : 'ambiguous', count: count,
+      candidatesTruncated: truncated,
+      candidates: matches.slice(0, CANDIDATE_CAP).map(summary)});
+  }
+  const el = matches[0];
+  if (spec.action === 'click') {
+    el.click();
+    return JSON.stringify({acted: true, action: 'click', count: 1,
+      candidatesTruncated: truncated, target: summary(el)});
+  }
+  const tag = el.tagName;
+  if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+    return JSON.stringify({acted: false, reason: 'not_editable', count: 1,
+      candidatesTruncated: truncated, candidates: [summary(el)]});
+  }
+  const proto = tag === 'TEXTAREA'
+    ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, spec.value);
+  el.dispatchEvent(new Event('input', {bubbles: true}));
+  el.dispatchEvent(new Event('change', {bubbles: true}));
+  return JSON.stringify({acted: true, action: 'type', count: 1,
+    candidatesTruncated: truncated, target: summary(el), value: el.value});
+})()
+""".strip()
+
+
+def _normalize_descriptor(descriptor):
+    """Strip descriptor values; empty strings become None (no filter)."""
+    out = {}
+    for key in ("role", "name", "text", "selector", "label"):
+        value = (descriptor or {}).get(key)
+        if isinstance(value, str):
+            value = value.strip() or None
+        out[key] = value
+    return out
+
+
+def _act_usage_error(descriptor, action, value):
+    """(code, message) for an invalid act request, else None. Shared by
+    the CLI pre-connect validation (exit 2) and RDPClient.act()."""
+    d = _normalize_descriptor(descriptor)
+    if not any(d.values()):
+        return ("act_target_required",
+                "act requires a target: pass at least one of "
+                "--role/--name/--text/--selector/--label")
+    if action not in ("click", "type"):
+        return ("act_action_invalid",
+                f"act action must be click or type (got {action!r})")
+    if action == "type" and value is None:
+        return ("act_value_required", "act type requires a value argument")
+    if action == "click" and value is not None:
+        return ("act_value_unexpected", "act click takes no value argument")
+    return None
+
+
+def _act_script(descriptor, action, value=None):
+    spec = dict(_normalize_descriptor(descriptor), action=action,
+                value=value)
+    return _ACT_JS.replace("__SPEC__", json.dumps(spec))
+
+
+class ActRefusal(RDPError):
+    """The in-page act script ran and refused to act (count != 1, or
+    the unique target is not editable, or the selector is invalid).
+    Carries the verdict dict; the CLI emits it as the envelope result
+    with retry=unsafe."""
+
+    _CODES = {"ambiguous": "target_ambiguous",
+              "not_found": "target_not_found",
+              "not_editable": "target_not_editable",
+              "bad_selector": "bad_selector"}
+
+    def __init__(self, refusal):
+        self.refusal = refusal
+        self.code = self._CODES.get(refusal.get("reason"), "act_refused")
+        super().__init__(
+            f"ACT REFUSED ({self.code}): count={refusal.get('count')} "
+            f"candidatesTruncated={refusal.get('candidatesTruncated')} "
+            f"descriptor={refusal.get('descriptor')!r} "
+            f"action={refusal.get('action')!r}")
 
 
 class Scope:
@@ -734,7 +932,8 @@ class RDPClient:
         self._pinned_url = ""
         self._retries = 0
         self._actions = {"evaluate": 0, "navigate": 0, "get_target": 0,
-                         "parent_evaluate": 0}
+                         "parent_evaluate": 0, "act": 0}
+        self._act_refusals = []
         self._denylist_hits = []
         self._scope_refusals = []
         self._approvals_used = []
@@ -1139,6 +1338,44 @@ class RDPClient:
             if m.get("error"):
                 raise RDPError(f"evaluate error: {str(m)[:400]}")
 
+    # -- ambiguity-refusing act (P2a) -----------------------------------------
+    def act(self, descriptor, action, text=None, timeout=20):
+        """Single-eval verify-and-act: resolve `descriptor` in-page with
+        an exhaustive match count and act only when exactly one visible
+        element matches. Returns the verdict dict on success; raises
+        ActRefusal (carrying the verdict: true count or
+        candidatesTruncated, candidate summaries) when the script
+        refuses. Transport failures propagate as RDPError (the click
+        may have landed; callers must not replay). Goes through
+        evaluate(), so tab scope/denylist and the RT-06 pinned
+        re-attach apply unchanged."""
+        err = _act_usage_error(descriptor, action, text)
+        if err is not None:
+            raise RDPError(err[1])
+        raw = self.evaluate(_act_script(descriptor, action, text),
+                            timeout=timeout)
+        if not isinstance(raw, str):
+            raise RDPError(
+                f"act verdict is not a string (got {type(raw).__name__}); "
+                "the act script contract is broken")
+        try:
+            verdict = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise RDPError(f"act verdict is not valid JSON: {e}")
+        if not isinstance(verdict, dict) or "acted" not in verdict:
+            raise RDPError(f"act verdict has no 'acted' field: {raw[:200]!r}")
+        verdict["descriptor"] = _normalize_descriptor(descriptor)
+        verdict["action"] = action
+        if verdict["acted"]:
+            self._actions["act"] += 1
+            return verdict
+        self._act_refusals.append(
+            {"descriptor": verdict["descriptor"], "action": action,
+             "reason": verdict.get("reason"), "count": verdict.get("count"),
+             "candidatesTruncated": verdict.get("candidatesTruncated"),
+             "at": _now_iso()})
+        raise ActRefusal(verdict)
+
     # -- parent-process target (chrome JS, gated) -----------------------------
     def _open_parent(self):
         """Resolve the parent-process console actor (cached).
@@ -1413,6 +1650,7 @@ class RDPClient:
             "tab_diff": _tab_diff(tabs_before, tabs_after),
             "denylist_hits": list(self._denylist_hits),
             "scope_refusals": list(self._scope_refusals),
+            "act_refusals": list(self._act_refusals),
             "approvals_used": list(self._approvals_used),
             "approvals_configured": dict(self.credential_approvals),
             "actions": dict(self._actions),
@@ -1619,7 +1857,22 @@ def main():
     pe.add_argument("expr")
     n = sub.add_parser("navigate")
     n.add_argument("url")
-    for p in (e, n):
+    a = sub.add_parser("act")
+    a.add_argument("--role", default=None,
+                   help="target ARIA/implicit role (e.g. button)")
+    a.add_argument("--name", default=None,
+                   help="target accessible name (exact, normalized)")
+    a.add_argument("--text", default=None,
+                   help="target visible text (exact, normalized)")
+    a.add_argument("--selector", default=None,
+                   help="target CSS selector")
+    a.add_argument("--label", default=None,
+                   help="target form label text (exact, normalized)")
+    a.add_argument("action", choices=("click", "type"))
+    a.add_argument("value", nargs="?", default=None,
+                   help="text to type (required for type, forbidden "
+                        "for click)")
+    for p in (e, n, a):
         p.add_argument("--wait-for", default=None, metavar="EXPR",
                        help="after the action, poll this JS expression "
                             "until truthy (I17). Requires "
@@ -1666,6 +1919,15 @@ def main():
                      f"(got {args.load_timeout}); the load-wait budget "
                      "must be positive",
                      "not_delivered", "safe", 2, legacy)
+    if args.cmd == "act":
+        # P2a: descriptor/action validation fires before connect.
+        err = _act_usage_error(
+            {"role": args.role, "name": args.name, "text": args.text,
+             "selector": args.selector, "label": args.label},
+            args.action, args.value)
+        if err is not None:
+            return _fail(args.cmd, err[0], err[1], "not_delivered",
+                         "safe", 2, legacy)
     try:
         try:
             scope, deny, approvals = _build_scope(args)
@@ -1759,6 +2021,22 @@ def main():
             elif args.cmd == "navigate":
                 c.navigate(args.url)
                 action_result = {"navigated": _redact_url(args.url)}
+                if not args.wait_for:
+                    _emit(args.cmd, action_result, legacy)
+            elif args.cmd == "act":
+                try:
+                    verdict = c.act(
+                        {"role": args.role, "name": args.name,
+                         "text": args.text, "selector": args.selector,
+                         "label": args.label},
+                        args.action, args.value)
+                except ActRefusal as r:
+                    # The script ran and refused: delivery verified,
+                    # retry unsafe (act commands are never replayed).
+                    return _fail(args.cmd, r.code, str(r),
+                                 "delivered_verified", "unsafe", 1,
+                                 legacy, result=r.refusal)
+                action_result = {"act": verdict}
                 if not args.wait_for:
                     _emit(args.cmd, action_result, legacy)
             elif args.cmd == "report":
