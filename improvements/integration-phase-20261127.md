@@ -57,16 +57,16 @@ PILOT (running, unproven).
 | 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | IMPLEMENTED + LIVE-TESTED | c2a3e47f; ground live 106ms ok; battery stays pilot-first |
 | 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | IMPLEMENTED + LIVE-TESTED | 98c4243a; live: 22/30 real rects drawn; outputs stay local |
 | 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | IMPLEMENTED + LIVE-TESTED | 9df12d97; live matrix: all lanes true except zen_rdp (not installed on laptop yet, correctly reported) |
-| 16 | I15 root-level incomplete marking | agent-desktop I15 | QUEUED | |
-| 17 | I19-substitute: MCP drift test | agent-desktop I19 | QUEUED | |
-| 18 | I20-substitute: RDP lock hardening + lock map doc | agent-desktop I20 | QUEUED | |
-| 19 | M14 adversarial probe gate (Y1b suite) | bottleneck M14 | QUEUED | PROVEN cost 15.478 s |
-| 20 | M7 stall detector parts a+b (backtests required) | bottleneck M7 | QUEUED | Flag-only, never auto-takeover |
-| 21 | M11c Marionette pre-flight session check | bottleneck M11c | QUEUED | Detection + cheap recovery |
-| 22 | M11d pre-freeze triage (process + verify-list gate) | bottleneck M11d | QUEUED | |
-| 23 | M28a watchdog rolling branch (append-only) | bottleneck M28a | QUEUED | Needs coordinator approval recorded |
+| 16 | I15 root-level incomplete marking | agent-desktop I15 | DONE (merged) | d725684f int-i15; read_errors + incomplete root marking, ground/act surface it; 45 a11y tests OK; live on 6 AT-SPI apps |
+| 17 | I19-substitute: MCP drift test | agent-desktop I19 | IN PROGRESS | worker running |
+| 18 | I20-substitute: RDP lock hardening + lock map doc | agent-desktop I20 | DONE (merged) | e1c52422 int-i20; 5 lock weaknesses fixed + LOCK-MAP.md; 63 zen-rdp tests OK; live lock refusal proven |
+| 19 | M14 adversarial probe gate (Y1b suite) | bottleneck M14 | DONE (merged) | c0b5d14b int-m14; frozen-hash gate v1 + fast-pass FLAG; 5 tests OK; live PASS VM+laptop |
+| 20 | M7 stall detector parts a+b (backtests required) | bottleneck M7 | DONE (merged) | f3033aa8 int-m7; union detector, backtest reproduces study numbers; proposed threshold 45min union silence; flag-only |
+| 21 | M11c Marionette pre-flight session check | bottleneck M11c | DONE (merged) | 2889ca6e int-m11c; marionette_preflight() 4 named checks; 27 tests OK; live pass+fail configs |
+| 22 | M11d pre-freeze triage (process + verify-list gate) | bottleneck M11d | DONE (merged) | 482aca7c int-m11d; procedure doc + pre-freeze-gate.py wrapper; 5 tests OK; live PASS VM+laptop; catch rate unmeasured until first use |
+| 23 | M28a watchdog rolling branch (append-only) | bottleneck M28a | DONE (merged) | 877afe6d int-m28a; watchdog_append.py (plumbing, ff-only, pii gate) + doc; 5 scratch-repo tests OK incl. concurrency; lane switch-over still a coordinator decision |
 | 24 | M18-reduced, M20, M23, M28d, M29, M34f (guidance/rules) | bottleneck | DONE (merged 1314b088) | 6 commits on int-guidance; pii clean, arch-guard PASS; rejected constant absent |
-| 25 | M10-reduced pre-calibrated spare scorer (process) | bottleneck M10 | QUEUED | |
+| 25 | M10-reduced pre-calibrated spare scorer (process) | bottleneck M10 | DONE (merged) | 89072e10 int-m10; spare-scorer.md + check-spare-scorer.py; 10 tests OK; no cap-hours claims ever |
 
 ### Pilots (UNPROVEN until they report)
 
@@ -450,6 +450,24 @@ unified lane interface stays pilot-first after I23.
   Muse subagents already running finish as-is; the NEXT
   wave (pilots, gate rework) routes to laptop CLIs. Mochi
   gets no new tasks (resting).
+- Council gate items 1-15 (delivered 20:2x): LAND-WITH-FIXES.
+  All 15 items PASS; 3 fixes: (1) cmd_shard fail on non-zero
+  shard exit (covered by int-fix-discover worker), (2)
+  zen-rdp test_scope_unittest cwd independence, (3)
+  wait_actionable docstring accuracy. Fixes 2+3 routed to a
+  laptop CLI (first routed task). Decisions accepted by
+  coordinator: arch-guard personal-name denylist patterns
+  land on main as-is (guard cannot function without them);
+  I22 fragment/userinfo redaction gap becomes a follow-up
+  item, not a landing blocker; hermetic CI cost (suite twice)
+  accepted for now. Redteam items 1-15 still running.
+- Parallel wave 1 merged 20:3x (58013edd): int-i15, int-i20,
+  int-m11c, int-m28a, int-m7, int-m14, int-m11d, int-m10.
+  Post-merge verification green: a11y 45, zen-sidebar 27,
+  zen-rdp 63, stall-detector 7, pre-freeze-gate 5,
+  spare-scorer 10, probe-gate 5 + PASS, arch-guard PASS,
+  lineage ok, pre-freeze gate PASS. README item-numbering
+  conflict resolved (spare-scorer = item 11).
 
 ## Sources cited during this phase
 
