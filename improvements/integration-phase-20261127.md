@@ -53,7 +53,7 @@ PILOT (running, unproven).
 | 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | IMPLEMENTED + LIVE-TESTED | 5313179d; live on owner Zen 6021: tabs/probe/eval envelopes, unscoped exit 2, legacy bare; 38 tests OK |
 | 10 | I17 post-action wait flags (after I1, no default timeout) | agent-desktop I17 | IMPLEMENTED + LIVE-TESTED | ad6476f0 + 5ea67253; live: satisfied + timeout preserves action outcome |
 | 11 | I22 secure-field redaction, DOM/RDP only | agent-desktop I22 | IMPLEMENTED | d1b67da4; field_value sentinel + URL query redaction + AX protected; 49 zen-rdp tests OK, zen_dom back to 4 pre-existing errors |
-| 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | QUEUED | |
+| 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | IMPLEMENTED | e12fcf47; children_count both modes + cut flags + complete; walk half stays pilot-first |
 | 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | QUEUED | |
 | 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | QUEUED | |
 | 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | QUEUED | |
@@ -341,6 +341,21 @@ its 4 pre-existing VM errors. Live: tabs listing on owner
 Zen intact with redaction active (contents not recorded
 here). A live password-field proof needs a throwaway-profile
 session; deferred, unit+fake proof recorded honestly.
+
+### Item 12: I5 accounting half (2026-11-27)
+
+a11y.observe(): children_count now recorded in both modes
+(was skeleton-only); per-node cut flags mark nodes whose
+children were not walked (depth limit, 100-child cap, or
+budget stop leaving pending children); snapshot gains an
+explicit complete flag (= not truncated). Skeleton and drill
+already existed. Tests: 2 new in test_a11y_skeleton.py (36
+total OK with test_a11y). Live: skeleton observe on a real
+AT-SPI app (quickshell, 1-element tree): complete=true,
+children_count present; the live tree was too small to
+exercise cut, which is unit-proven on a deeper fake tree.
+The walk half (bounded-concurrency rewrite) stays
+pilot-first per the source report.
 
 ## Sources cited during this phase
 
