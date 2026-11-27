@@ -20,7 +20,7 @@ Scout lane files (full evidence, same directory):
 - Subagent workers (VM): coding, review, research; inherit parent skills.
 - clone1, clone2 (separate Muse accounts, NO SSH): repo + web research only.
   clone1 token-capped (weekly reset Nov 30), use sparingly.
-- mei, mochi (separate Muse accounts, NO SSH): repo work, research (last30days),
+- mei, mochi (separate Muse accounts, NO SSH): repo work, research,
   scoring (mochi Pair A), analysis (mei).
 - Codex (laptop CLI, gpt-6-luna): R3-L3 runner positions 32-55. Plugins via
   `codex plugin marketplace`. Verified 26/11: 70 skills in ~/.codex/skills/
@@ -57,8 +57,14 @@ Scout lane files (full evidence, same directory):
   - Subagent workers (VM): INSTALLED (inherit parent skills).
   - clone1, clone2: UNKNOWN (parent messaged the rule 26/11 via pwa-send;
     install state on their accounts not verified).
-  - mei, mochi: UNKNOWN (asked directly 26/11 via daemon runs mei 34 /
-    mochi 235; awaiting replies).
+  - mochi: INSTALLED (self-verified by mochi; not independently
+    verified by the scout) (per mochi's reply to run 235, relayed
+    verbatim by the owner 27/11): ~/workspace/custom-skills/ponytail/SKILL.md,
+    52 lines, upstream commit ebd8654c, verified byte-for-byte by
+    mochi. It is the only custom skill on mochi's account.
+  - mei: UNKNOWN (asked directly 26/11 via daemon run 34; no reply
+    found in mei's chat transcript or coord/mei.md as of 27/11;
+    questions re-posed 27/11 in this registry, awaiting reply).
   - Codex (laptop): INSTALLED as skill folder in ~/.codex/skills/ (verified
     read-only 26/11 by ecosystem scout; 70 skills incl. ponytail). The Codex
     PLUGIN route is not installed; the skill folder covers the discipline.
@@ -114,7 +120,11 @@ Scout lane files (full evidence, same directory):
   180s through the VM proxy; global install succeeded.)
 - Install status:
   - Muse (VM) + subagent workers: INSTALLED (global npm, 0.126.0).
-  - mei, mochi: UNKNOWN MCP/CLI capability; asked 26/11, awaiting reply.
+  - mochi: MCP capability ANSWERED 27/11 (see open unknown 1): MCP
+    is usable via the custom-connector flow, not a raw config file.
+    Mochi's promptfoo/CLI install status itself is still UNKNOWN
+    (mochi's reply covered MCP only).
+  - mei: UNKNOWN MCP/CLI capability; asked 26/11, awaiting reply.
     PROPOSED: encode 3-5 past R3-L3 rubrics (incl. one fabricated case),
     run against stored snapshots, compare with mochi verdicts.
   - Codex, FCC, opencode, agy: NOT INSTALLED; not needed there now.
@@ -169,7 +179,15 @@ Scout lane files (full evidence, same directory):
   - Codex, opencode (laptop): NOT INSTALLED (verified 26/11). PROPOSED:
     Codex install via `npx skills add mvanhorn/last30days-skill -g` so
     Codex research tasks get the same brief quality.
-  - mei, mochi: asked 26/11 (daemon runs 34/235), awaiting replies.
+  - mochi: NOT INSTALLED, and no version exists to report (per
+    mochi's reply to run 235, relayed verbatim by the owner 27/11):
+    nothing named last30days exists in mochi's catalog, custom
+    skills, or workspace. The "last30days crawl" on mochi's side was
+    a deep-research run with a date window (27 Oct-26 Nov 2026), not
+    a versioned tool.
+  - mei: asked 26/11 (daemon run 34); no reply found in mei's chat
+    transcript or coord/mei.md as of 27/11; questions re-posed
+    27/11 in this registry, awaiting reply.
   - Warning from upstream README: marketplace + npx copies do not dedupe;
     pick one install method per machine.
 
@@ -408,9 +426,12 @@ Scout lane files (full evidence, same directory):
   browser sandbox (Docker). Parked: needs a concrete parallel-session
   use case; unauthenticated ports need a loopback plan. Beta.
 - **Exa MCP** (exa-labs/exa-mcp-server, MIT): hosted search/fetch.
-  Deferred pending one fact: can mei/mochi/clone accounts run MCP
-  servers? Asked mei + mochi 26/11, awaiting replies. If yes, propose a
-  research bake-off vs current search.
+  Was deferred pending one fact: can mei/mochi/clone accounts run MCP
+  servers? MOCHI ANSWERED YES 27/11 (via the custom-connector flow;
+  see open unknown 1), so the research bake-off vs current search can
+  be proposed for mochi, with the caveat that the route is end-to-end
+  UNPROVEN and the first connection through the flow would be part
+  of the bake-off setup. Mei still pending.
 - **Firecrawl MCP** (firecrawl/firecrawl-mcp-server, license NOT
   verified): hosted scraping, credit cost, token-blowup risk, feedback-
   tool telemetry pattern. Deferred until a concrete JS-heavy research
@@ -431,9 +452,28 @@ Scout lane files (full evidence, same directory):
 
 ## Open unknowns (check-first, do not guess)
 
-1. Can clone1, clone2, mei, mochi run MCP servers? Asked mei (run 34) +
-   mochi (run 235) on 26/11; awaiting replies. clone1/clone2 not asked
-   yet (clone1 token-capped; ask when a concrete need appears).
+1. Can clone1, clone2, mei, mochi run MCP servers? MOCHI ANSWERED
+   27/11 (reply to run 235, relayed verbatim by the owner): yes, but
+   not via a raw npx/uvx config file. The supported route is the
+   custom-connector flow: find the provider's official MCP server,
+   connect the credential through the Muse secure flow (API key or
+   OAuth 2.0; an OAuth-protected MCP server needs its resource URI),
+   then build a helper CLI from the MCP client template
+   (/opt/muse/skills/custom-connector-setup/templates/mcp_client.py,
+   per references/mcp-cli.md) exposing list-tools / call-tool under
+   ~/workspace/custom-connectors/custom.<provider>/. No MCP config
+   file exists on mochi's VM and no custom connector is installed
+   there yet. Proven-by-use status: the route is documented in the
+   custom-connector skill and the two template files it names are
+   present (mochi's check on its own VM), but no MCP server has
+   actually been connected through the flow yet, so end-to-end use
+   is UNPROVEN. MEI: still awaiting reply (no reply
+   in mei's chat transcript or coord/mei.md as of 27/11; questions
+   re-posed 27/11). clone1/clone2 not asked yet (clone1 token-capped;
+   ask when a concrete need appears). clone2 note: the
+   custom-connector skill and template are present in clone2's own
+   environment, so the same route is available to clone2 by
+   construction; not separately tested.
 2. Can the VM Muse lane attach arbitrary MCP servers, or only Hatch
    connectors? Affects Context7/Exa fit for VM workers (CLI modes
    sidestep this).
@@ -442,7 +482,13 @@ Scout lane files (full evidence, same directory):
    server, computer-use-linux, codex-plugin-cc. Confirm before install.
 5. FCC last30days version (not read); bun presence on laptop (not
    confirmed); agy skill state (quota until ~28/11).
-6. Mei/mochi ponytail + caveman install state (asked 26/11).
+6. Mei/mochi ponytail + caveman install state (asked 26/11). MOCHI
+   ANSWERED 27/11: ponytail INSTALLED (self-verified by mochi; see
+   section 1); caveman NOT INSTALLED (per mochi's own check: no
+   file, no skill, no match anywhere in system skills or custom
+   skills on mochi's account; a self-reported negative, not
+   scout-verified). MEI: still open, awaiting
+   reply.
 
 ## First-pass summary (2026-11-26)
 
@@ -459,3 +505,35 @@ Scout lane files (full evidence, same directory):
 - Top proposals for parent: codex-plugin-cc for FCC; webapp-testing +
   skill-creator single-folder installs; caveman skill-only for FCC+VM;
   Context7 for Codex; ponytail skill folder for FCC.
+
+## Update 2026-11-27: mochi consolidated, mei outstanding
+
+- Mochi's capability answers (daemon run 235) were relayed verbatim
+  by the owner on 27/11 and are consolidated above: MCP servers YES
+  via the custom-connector flow (open unknown 1), ponytail INSTALLED
+  (section 1), caveman NOT INSTALLED (open unknown 6), last30days
+  NOT INSTALLED and not a versioned tool (section 5).
+- Proven-by-use marking for mochi's claims: ponytail's presence is
+  self-reported as verified byte-for-byte by mochi against upstream
+  ebd8654c; the scout did not independently verify it. The MCP route
+  is documented in the custom-connector skill and its template
+  files are present (checked by mochi on its own VM), but no MCP
+  server has been connected through
+  it yet, so end-to-end MCP use is UNPROVEN. Caveman and last30days
+  absences are self-reported negative checks.
+- Mei's answers (daemon run 34) are still outstanding. The owner
+  searched mei's full chat transcript and coord/mei.md on 27/11: no
+  skill-scout reply exists in either. The four questions were
+  re-posed on 27/11, recorded here in the same form mochi answered,
+  for relay to mei through the coordinator (clone2 has no direct
+  channel to mei):
+  (1) MCP servers: can you run them, and by what route (raw config
+  file, custom-connector flow, or not at all)? Is any MCP config or
+  custom connector present on your machine?
+  (2) Ponytail: installed? If yes, path, line count, and upstream
+  commit; is it your only custom skill?
+  (3) Caveman: installed anywhere (system skills or custom skills)?
+  (4) last30days: installed? If yes, what version; if the name
+  appears in your work, is it a tool or a research run?
+  Mei's answers must not be guessed; this section is updated when
+  the reply arrives.
