@@ -217,6 +217,72 @@ async function snapshot(explicitScope) {
       ${resolve?'scoped:true,':''}};
   })()`);
 }
+async function harvest(request) {
+  // One-shot bulk grounding (VISION 1, CDP path): one JS evaluate
+  // returns rects for every requested selector plus the viewport
+  // metrics, one Accessibility.getFullAXTree call returns the
+  // protocol's own interactive inventory (roles/names/values), and
+  // DOM.getBoxModel cross-checks each requested selector's quad
+  // against the JS rect where the element is reachable from the
+  // document root. Shadow-DOM elements are not reachable by CDP
+  // querySelector, so their box_model is null and the JS rect stands.
+  // No screenshot is taken and no observation is needed: the executor
+  // clicks from these rects. Open item: the remote-debugging-port
+  // needs a custom profile/relaunch vs the already-logged-in Brave
+  // (Brave holds no debugging port on its default profile), so this
+  // operation runs against the agent-managed Chromium, not Brave,
+  // until that is resolved.
+  if (request.selectors !== undefined) {
+    if (!Array.isArray(request.selectors) || request.selectors.some(s => typeof s !== 'string' || !s.trim() || s.length > 1024))
+      throw new Error('selectors must be an array of non-empty CSS selectors');
+  }
+  const selectors = request.selectors ?? [];
+  const dom = await evaluate(`(()=>{const out={device_pixel_ratio:window.devicePixelRatio,screen_pixels_per_css_pixel:(typeof window.screenPixelsPerCSSPixel==='number'?window.screenPixelsPerCSSPixel:null),zoom:(window.visualViewport?window.visualViewport.scale:1),inner_size:[window.innerWidth,window.innerHeight],outer_size:[window.outerWidth,window.outerHeight],scroll:[window.scrollX,window.scrollY],items:{}};
+  function pierce(sel,root){let e=root.querySelector(sel);if(e)return e;const all=root.querySelectorAll('*');for(const el of all){if(el.shadowRoot){e=pierce(sel,el.shadowRoot);if(e)return e;}}return null;}
+  function interactive(el){if(!el)return false;const tag=(el.tagName||'').toUpperCase();if(/^(BUTTON|A|INPUT|TEXTAREA|SELECT|OPTION|LABEL|SUMMARY)$/.test(tag))return true;if(el.closest&&el.closest('[role="button"],[role="link"],[role="checkbox"],[role="menuitem"],[role="tab"]'))return true;return false;}
+  let a=document.activeElement;while(a&&a.shadowRoot&&a.shadowRoot.activeElement)a=a.shadowRoot.activeElement;
+  for(const sel of ${JSON.stringify(selectors)}){const e=pierce(sel,document);if(!e){out.items[sel]=null;continue;}const r=e.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const hit=document.elementFromPoint(x,y);out.items[sel]={rect:{x:r.x,y:r.y,width:r.width,height:r.height,center_x:x,center_y:y},hit:!!hit&&(e===hit||(e.contains(hit)&&!interactive(hit))),focused:(a===e),tag:e.tagName,role:e.getAttribute('role')||'',name:(e.getAttribute('aria-label')||e.getAttribute('placeholder')||'').slice(0,120)};}
+  return out;})()`);
+  const ax = await call('Accessibility.getFullAXTree', {});
+  const axTree = [];
+  for (const node of ax.nodes ?? []) {
+    const role = node.role?.value;
+    if (!role || !/^(button|link|textbox|checkbox|radio|combobox|searchbox|spinbutton|slider|menuitem|menuitemcheckbox|menuitemradio|tab|switch|treeitem)$/i.test(role)) continue;
+    axTree.push({nodeId: node.nodeId, backendDOMNodeId: node.backendDOMNodeId ?? null,
+      role, name: node.name?.value ?? '',
+      // I22: never carry a protected (password) field's value.
+      value: (node.properties ?? []).some(p => p.name === 'protected' && p.value?.value === true) ? '[redacted]' : (node.value?.value ?? null),
+      focused: (node.properties ?? []).some(p => p.name === 'focused' && p.value?.value === true),
+      disabled: (node.properties ?? []).some(p => p.name === 'disabled' && p.value?.value === true)});
+  }
+  const doc = await call('DOM.getDocument', {depth: 0});
+  const rootId = doc.root.nodeId;
+  for (const sel of selectors) {
+    const item = dom.items[sel];
+    if (!item) continue;
+    try {
+      const found = await call('DOM.querySelector', {nodeId: rootId, selector: sel});
+      if (!found.nodeId) {
+        item.box_model = null;
+        item.box_model_note = 'not reachable from the document root (shadow DOM or iframe)';
+        continue;
+      }
+      const box = await call('DOM.getBoxModel', {nodeId: found.nodeId});
+      const q = box.model.border;
+      const xs = [q[0], q[2], q[4], q[6]], ys = [q[1], q[3], q[5], q[7]];
+      const bx = Math.min(...xs), by = Math.min(...ys);
+      const bw = Math.max(...xs) - bx, bh = Math.max(...ys) - by;
+      // The quad is document-space (viewport rect plus scroll), so
+      // the cross-check compares the scroll-invariant size; x/y are
+      // recorded as-is for the caller.
+      item.box_model = {x: bx, y: by, width: bw, height: bh};
+      item.box_model_matches = Math.abs(bw - item.rect.width) <= 1 && Math.abs(bh - item.rect.height) <= 1;
+    } catch (_) {
+      item.box_model = null;
+    }
+  }
+  return {ok: true, ...dom, ax_tree: axTree};
+}
 async function click(a) {
   const point=await evaluate(elementExpression(a,`
     if(e.disabled)throw new Error('element disabled');

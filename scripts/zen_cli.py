@@ -19,7 +19,7 @@ browsingContext.createContext is "unknown command" in this build, so a
 new tab is opened with window.open from an existing tab, then found in
 getTree by its opener. Headless mode starts with two about:blank tabs.
 
-Session rule (the safety core): Pham Tuan's own Zen runs WITHOUT a
+Session rule (the safety core): the owner's own Zen runs WITHOUT a
 remote debugging port (verified 2026-11-18: nothing listening on 9222,
 2828 or 6000), so this wrapper can never attach to his session. Tab
 commands only ever talk to a dedicated session this wrapper started
@@ -199,16 +199,15 @@ def ws_url(port):
 
 
 def detect_real_profile():
-    """Pham Tuan's real Zen profile dir, or None.
+    """the owner's real Zen profile dir, or None.
 
     Reads ~/.config/zen/profiles.ini. The Install sections name the
     default profile path; a Profile section may also carry Default=1.
-    On this laptop the two disagree: the Install default points at
-    ae59l0ak.Default (release) (the profile with places.sqlite),
-    while a second profile (pkdwoij3.Default Profile) carries
-    Default=1 and has no places.sqlite. So a candidate only counts
-    when its dir exists, and a dir with places.sqlite beats one
-    without. Never writes anything.
+    On the reference laptop the two disagree: the Install default
+    points at one profile dir (the one with places.sqlite), while a
+    second profile carries Default=1 and has no places.sqlite. So a
+    candidate only counts when its dir exists, and a dir with
+    places.sqlite beats one without. Never writes anything.
     """
     ini = REAL_PROFILE_HOME / "profiles.ini"
     try:

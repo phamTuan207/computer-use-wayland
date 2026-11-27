@@ -1,10 +1,15 @@
 """Skeleton traversal and drill use the real adapter with fake AT-SPI nodes."""
 import json
 from pathlib import Path
+import sys
 import tempfile
 import time
 import unittest
 from unittest import mock
+
+# Single-pass discover (shard children) may not have the repo
+# root on sys.path yet; the package import below needs it.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests import test_a11y
 
 
@@ -47,6 +52,69 @@ class SkeletonTests(unittest.TestCase):
         self.assertEqual(out['elements'],[])
         self.assertFalse(out['truncated'])
 
+    def test_cut_flags_and_complete_accounting(self):
+        out=self.a11y.observe(4242,skeleton=True)
+        by_name={e['name']:e for e in out['elements']}
+        # Depth limit (skeleton depth 3) cuts the container: its
+        # child exists but was not walked.
+        self.assertTrue(by_name['container'].get('cut'))
+        self.assertEqual(by_name['container']['children_count'],1)
+        # Fully walked nodes carry no cut flag.
+        self.assertNotIn('cut',by_name['app'])
+        self.assertNotIn('cut',by_name['frame'])
+        self.assertNotIn('cut',by_name['panel'])
+        self.assertTrue(out['truncated'])
+        self.assertFalse(out['complete'])
+        # Drill into the cut node: complete, no cut flags.
+        expanded=self.a11y.drill(out['snapshot'],by_name['container']['ref'])
+        self.assertTrue(expanded['complete'])
+        self.assertFalse(expanded['truncated'])
+        self.assertTrue(all('cut' not in e for e in expanded['elements']))
+        self.assertEqual(expanded['elements'][-1]['children_count'],0)
+
+    def test_read_failure_marks_snapshot_incomplete_at_root(self):
+        bad=self.node('bad')
+        bad.get_name.side_effect=RuntimeError('app hung')
+        good=self.node('good')
+        self.tree=self.node('app',[good,bad])
+        self.a11y.applications=lambda: [self.tree]
+        out=self.a11y.observe(4242,skeleton=True)
+        # The unreadable node is dropped from elements but the
+        # root marking says so: unknown, not absent (I15).
+        self.assertEqual([e['name'] for e in out['elements']],['app','good'])
+        self.assertEqual(out['read_errors'],1)
+        self.assertTrue(out['incomplete'])
+        self.assertFalse(out['complete'])
+        self.assertFalse(out['truncated'])
+        # The stored snapshot file carries the same marking.
+        stored=json.loads(Path(out['snapshot']).read_text())
+        self.assertTrue(stored['incomplete'])
+        self.assertEqual(stored['read_errors'],1)
+
+    def test_clean_walk_is_complete_with_zero_read_errors(self):
+        out=self.a11y.observe(4242,skeleton=True)
+        self.assertEqual(out['read_errors'],0)
+        # This tree is depth-cut, so incomplete via truncated.
+        self.assertTrue(out['incomplete'])
+        expanded=self.a11y.drill(out['snapshot'],out['elements'][-1]['ref'])
+        self.assertEqual(expanded['read_errors'],0)
+        self.assertFalse(expanded['incomplete'])
+        self.assertTrue(expanded['complete'])
+
+    def test_children_count_present_in_default_mode(self):
+        leaf=self.node('leaf')
+        iface=mock.Mock()
+        iface.get_n_actions.return_value=1
+        iface.get_action_name.return_value='click'
+        leaf.get_action_iface.return_value=iface
+        parent=self.node('parent',[leaf])
+        self.tree=self.node('app',[parent])
+        self.a11y.applications=lambda: [self.tree]
+        out=self.a11y.observe(4242)
+        self.assertEqual([e['name'] for e in out['elements']],['leaf'])
+        self.assertEqual(out['elements'][0]['children_count'],0)
+        self.assertTrue(out['complete'])
+
     def test_drill_rejects_invalid_stale_changed_and_disabled_ref(self):
         out=self.a11y.observe(4242,skeleton=True)
         for ref in ('e999',None):
@@ -74,6 +142,26 @@ class SkeletonTests(unittest.TestCase):
         last=out['elements'][-1]
         self.assertEqual(last['children_count'],1)
         self.assertEqual(len(self.a11y.drill(out['snapshot'],last['ref'])['elements']),2)
+
+    def test_eighty_item_cap_marks_incomplete_in_default_mode(self):
+        # M7: 80 actionable children, the 80th still has unwalked children
+        # and pending is empty. The cap must mark the snapshot incomplete.
+        def actionable(name,children=()):
+            e=self.node(name,children)
+            iface=mock.Mock()
+            iface.get_n_actions.return_value=1
+            iface.get_action_name.return_value='click'
+            e.get_action_iface.return_value=iface
+            return e
+        children=[actionable(str(i)) for i in range(79)]
+        children.append(actionable('last',[self.node('g%d'%i) for i in range(5)]))
+        self.tree=self.node('app',children)
+        out=self.a11y.observe(4242)
+        self.assertEqual(len(out['elements']),80)
+        self.assertEqual(out['elements'][-1]['children_count'],5)
+        self.assertTrue(out['truncated'])
+        self.assertTrue(out['incomplete'])
+        self.assertFalse(out['complete'])
 
     def test_two_second_budget_preserves_root_drill_ref(self):
         with mock.patch.object(self.a11y.time,'monotonic',side_effect=[0,0,3]):

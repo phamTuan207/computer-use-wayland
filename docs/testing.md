@@ -78,10 +78,10 @@ cleanup. The only driver command is read-only `doctor`; the fixture does not
 take screenshots, move the pointer, type, focus windows, or launch apps.
 
 ```sh
-env -i HOME=/home/james USER=james LOGNAME=james PATH=/usr/bin:/bin \
+env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" PATH=/usr/bin:/bin \
   PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -B tests/envsteal_live.py \
   --case bare --repeat 2
-env -i HOME=/home/james USER=james LOGNAME=james PATH=/usr/bin:/bin \
+env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" PATH=/usr/bin:/bin \
   PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -B tests/envsteal_live.py \
   --case stale --repeat 2
 ```
@@ -165,7 +165,12 @@ automatic retry or replay after a failure or an Escape.
 ## Customising the code
 
 Change code and its focused tests together, then run the focused tests and the
-full offline suite before you trust the change. Build or install from source and
+full offline suite before you trust the change. In the dev loop, run the
+changed module's tests first (for example `python3 -m unittest
+tests.test_<module>`), then the full discover above before any gate, review,
+or push: a module run proves speed, not selection safety, so automatic
+coverage-based test selection is not used and the full discover stays
+mandatory at every gate. Build or install from source and
 verify the CLI you run matches your source — for example by comparing file
 hashes — because a stale installed CLI will silently keep the old behaviour.
 

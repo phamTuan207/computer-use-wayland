@@ -1,0 +1,4 @@
+# Lineage manifest: fixes that must be present on the branch in use.
+# Format: <commit> <file> <marker-substring>
+# Cherry-picks rewrite hashes; presence is checked by content marker.
+c7bc697e tests/test_tc02_controller.py patch.object(tc02_controller.shutil, 'which'

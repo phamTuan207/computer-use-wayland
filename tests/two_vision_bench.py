@@ -45,11 +45,12 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
-FF = "/home/hatch/workspace/tools/firefox/firefox"
-GD = "/home/hatch/workspace/tools/geckodriver"
-FIXTURE = "file:///home/hatch/workspace/computer-use-wayland/tests/two_vision_fixture.html"
-FIXTURE_DIR = "file:///home/hatch/workspace/computer-use-wayland/tests/"
+FF = str(Path.home() / "workspace/tools/firefox/firefox")
+GD = str(Path.home() / "workspace/tools/geckodriver")
+FIXTURE = (Path(__file__).resolve().parent / "two_vision_fixture.html").as_uri()
+FIXTURE_DIR = Path(__file__).resolve().parent.as_uri() + "/"
 DEFAULT_WORKDIR = "/tmp/two_vision_bench"
 
 # TODO (step-6 loop hygiene): prompt caching, diff-gated
