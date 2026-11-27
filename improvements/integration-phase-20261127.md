@@ -468,6 +468,20 @@ unified lane interface stays pilot-first after I23.
   spare-scorer 10, probe-gate 5 + PASS, arch-guard PASS,
   lineage ok, pre-freeze gate PASS. README item-numbering
   conflict resolved (spare-scorer = item 11).
+- Gate-fix merges 20:3x (03ad960a): int-fix-blocklist
+  (2f0adddd: uniform subset semantics, power family +
+  KP_Delete + AltGr refused; live bind dump 254 binds;
+  super+shift+q Calculator bind refused for agent only,
+  human bind untouched), int-fix-zenlive (4497e195:
+  overall frame deadline + 4MiB cap + MarionetteError;
+  value-unwrap nit deliberately left, protocol-correct;
+  merged with M11c, 30 tests OK), int-fix-ci (b3ecaf2f:
+  7 guard test files + 4 zen-rdp test files in CI, PR
+  trigger for main; test_rdp_client excluded, needs live
+  Zen). Post-merge: workflow YAML valid (11 steps),
+  test_core 41 ran / 1 pre-existing wtype error,
+  arch-guard PASS. Still out: redteam 1-15,
+  int-fix-archguard, int-fix-discover, FCC council-fixes.
 
 ## Sources cited during this phase
 
