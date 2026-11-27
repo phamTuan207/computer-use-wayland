@@ -1016,3 +1016,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - He qua: report-final + ratings cua em chi review bo Drive, khong phai bo thi that. 15 bai Drive khong co CF verdict trong contest nay. Clone2 da tu sua bat dong ve coordinator trong PR 1053.
 - Coordinator van im ~219 phut tu 07:48; 2 viec dang cho chua tra loi; KHAN da bao, khong leo thang them.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 62. R10 decision: 3c phased hybrid RDP-primary; coordinator hoat dong off-repo (2026-11-27 13:39 +07)
+- Owner commit 30bdc12c, branch fix-review-20261127, 13:34:33 +07, 10 files 3149 insertions: r10 seamless decision, 3c phased hybrid RDP-primary tren flag-free owner session. Spike W1 shim, W2 control surface + speed, W3 relaunch chay song song; Council A, Council B, redteam doc lap; W4 chay spike RT-01 (decision-blocking) nhu slice dau tien cua tool duoc chon.
+- Decision doc mo dau: "Coordinator decision on the owner ruling of 27/11 12:08". Coordinator van khong co commit nao tren repo tu 07:48 (~349 phut) nhung dang hoat dong off-repo voi owner. KHAN im lang tren repo coi nhu duoc giai quyet ve ban chat; 2 viec dang cho (Graphify equip, dung/chuyen watchdog) van chua tra loi.
+- Khong co ten mei trong cac file R10, khong co assignment moi cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
