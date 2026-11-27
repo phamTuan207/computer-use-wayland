@@ -74,24 +74,24 @@ def run_suite(suite):
     return result.outcomes
 
 
-def suite_for_modules(modules, start_dir="tests"):
-    # Discover names modules without the start-dir prefix
-    # (test_tc02_controller, not tests.test_tc02_controller);
-    # accept both forms and make the start dir importable.
-    # Test modules import repo packages (scripts.*), so the repo
-    # root (parent of the start dir) must be importable too; when
-    # this file runs as a script, sys.path[0] is rung3-ci/, not cwd.
-    for p in (os.path.abspath(start_dir),
-              os.path.dirname(os.path.abspath(start_dir))):
-        if p not in sys.path:
-            sys.path.insert(0, p)
+def suite_for_modules(modules, start_dir="tests", pattern="test_*.py"):
+    # Filter a discovered suite instead of loadTestsFromName:
+    # discover and by-name loading produce different test ids for
+    # modules that fail to import (unittest.loader._FailedTest.*),
+    # which breaks per-test identity against the serial run.
     prefix = os.path.basename(os.path.normpath(start_dir)) + "."
-    loader = unittest.TestLoader()
+    wanted = {m[len(prefix):] if m.startswith(prefix) else m
+              for m in modules}
+    full = load_suite(start_dir, pattern)
     suite = unittest.TestSuite()
-    for mod in modules:
-        if mod.startswith(prefix):
-            mod = mod[len(prefix):]
-        suite.addTests(loader.loadTestsFromName(mod))
+    for test in iter_tests(full):
+        mod = test.__class__.__module__
+        if mod in wanted:
+            suite.addTest(test)
+        elif mod == "unittest.loader":
+            # _FailedTest id ends with the failing module name.
+            if test.id().rsplit(".", 1)[-1] in wanted:
+                suite.addTest(test)
     return suite
 
 
@@ -100,6 +100,10 @@ def module_test_counts(start_dir, pattern):
     counts = {}
     for test in iter_tests(suite):
         mod = test.__class__.__module__
+        if mod == "unittest.loader":
+            # _FailedTest for a module that failed to import; the
+            # failing module name is the last id component.
+            mod = test.id().rsplit(".", 1)[-1]
         counts[mod] = counts.get(mod, 0) + 1
     return counts
 
@@ -132,7 +136,7 @@ def run_subprocess(args, env=None, timeout=1800):
     wall = time.monotonic() - start
     outcomes = {}
     for line in proc.stdout.splitlines():
-        if line.startswith("RESULT "):
+        if line.startswith("@@RESULT@@ "):
             parts = line.split(" ", 2)
             if len(parts) == 3:
                 outcomes[parts[1]] = parts[2]
@@ -158,7 +162,7 @@ def cmd_run(args):
         suite = load_suite(args.start_dir, args.pattern)
     outcomes = run_suite(suite)
     for test_id in sorted(outcomes):
-        print(f"RESULT {test_id} {outcomes[test_id]}")
+        print(f"@@RESULT@@ {test_id} {outcomes[test_id]}")
     counts = {}
     for s in outcomes.values():
         counts[s] = counts.get(s, 0) + 1
@@ -200,7 +204,10 @@ def cmd_hermetic(args):
 def cmd_shard(args):
     counts = module_test_counts(args.start_dir, args.pattern)
     if args.modules:
-        counts = {m: c for m, c in counts.items() if m in args.modules}
+        prefix = os.path.basename(os.path.normpath(args.start_dir)) + "."
+        wanted = {m[len(prefix):] if m.startswith(prefix) else m
+                  for m in args.modules}
+        counts = {m: c for m, c in counts.items() if m in wanted}
     shards = balance_shards(counts, args.shards)
     start = time.monotonic()
     procs = []
@@ -216,7 +223,7 @@ def cmd_shard(args):
     for p in procs:
         out, _ = p.communicate(timeout=args.timeout)
         for line in out.splitlines():
-            if line.startswith("RESULT "):
+            if line.startswith("@@RESULT@@ "):
                 parts = line.split(" ", 2)
                 if len(parts) == 3:
                     outcomes[parts[1]] = parts[2]
