@@ -55,6 +55,50 @@ repo default.
   and `--profile-marker` as required arguments; it never guesses a
   port. The navigate check replaces the attached tab content: run
   smoke on a throwaway or tasked tab, never a valued owner tab.
+- `zen_spaces.py` - typed Spaces/Folders list+create wrappers (P4,
+  see `../../improvements/zen-mcp-adoption-decision-20261127.md`):
+  `list_spaces`, `list_folders`, `create_space` (no switch),
+  `create_folder`, owning the `gZenWorkspaces` / `gZenFolders` JS
+  strings behind the parent gate + audit. List+create only:
+  move/switch are a separate later decision and removal is
+  rejected by charter, absent by construction (no wrapper, no JS
+  string). `PINNED_METHODS` is the whole surface; the smoke test
+  asserts it after every Zen update. CLI: `spaces`, `folders`,
+  `space-create [--name NAME]`, `folder-create --label L
+  --tab-url PART [...]` (all require `--allow-parent`).
+- `test_zen_spaces.py` - unit tests for the P4 wrappers (stub +
+  fake transport, no browser): happy paths, create fire+poll,
+  validation before any evaluate, gate refusal, audit shape,
+  pinned set, removal absence.
+  Two opt-in checks: `--deployed-client <path>` byte-compares the
+  deployed (machine-layer) `rdp_client.py` against the landed copy
+  next to the smoke script and fails loud on drift (exit 17);
+  `--bench-local-url <url>` runs the bench instrument (runs=1)
+  against that local URL as a self-test (exit 18 on failure).
+  The bench leg requires dedicated-session proof
+  (`--bench-profile-dir` with a verified launch_dedicated
+  session for the port, or the explicit
+  `--bench-allow-any-session` opt-in) and is refused before
+  attach otherwise, so it cannot run on an owner session by
+  construction.
+- `launch_dedicated.py` - one-command launcher for dedicated
+  throwaway RDP sessions (D3): creates a fresh profile under the
+  temp dir, writes the devtools `user.js` prefs, starts Zen with
+  `--start-debugger-server`, waits for the port, and records a
+  session file (pid + profile + port + nonce + pid start-time
+  pin). Fail closed: it only uses marker-carrying profiles it
+  created, refuses anything outside the temp dir (the owner's
+  profile by construction, and the temp dir itself), kills the
+  launched process if the port never listens (no orphan without
+  a session file), and `stop` runs the full session validation
+  (marker + nonce, profile/port agreement, exact profile token
+  in the live cmdline, start-time pin) before signaling only
+  the recorded pid.
+- `probes/p3_unsolicited_probe.py` - P3 spike probe (evidence
+  only). Fail closed: `--profile-marker` is required and must
+  name a verified launch_dedicated profile for the port; the
+  storm phase closes only tabs it opened (unique attribute tag),
+  never pre-existing tabs.
 - `test_scope_unittest.py` - unit tests (fake transport, no browser):
   scoping, denylist + approvals, drive-report diff, fail-closed
   marker, noSuchActor retry pinning.
@@ -62,6 +106,10 @@ repo default.
   exit-code map (no browser).
 - `test_rdp_client.py` - small live self-test against a throwaway
   browser (see its docstring for the fixture contract).
+- `test_act.py` - unit tests for the P2a ambiguity-refusing act:
+  descriptor validation, single-eval script contract, verdict
+  handling (true count / candidatesTruncated), refusal envelope
+  shape with retry=unsafe, CLI pre-connect validation (no browser).
 - `test_lock.py` - unit tests for the single-drive lock hardening:
   holder identity (pid + process start time), stale-record
   classification, release on failed attach, CLOEXEC, symlink
@@ -111,7 +159,7 @@ continues; do not retry-drive on a failed smoke.
 Unit tests (no browser):
 
 ```
-python3 -m unittest test_scope_unittest -v
+python3 -m unittest test_scope_unittest test_envelope test_act test_lock test_redaction test_zen_spaces test_snapshot -v
 python3 test_rdp_smoke.py
 ```
 
@@ -138,19 +186,25 @@ configuration until acceptance passes on the real profile.
                  "retry": "not_applicable"}}
 ```
 
-On failure `ok` is false, `result` is null, and `error` carries
+On failure `ok` is false, `result` is null (except act refusals
+and wait timeouts, which carry their verdict in `result`), and
+`error` carries
 `code` (closed set: unscoped_refused, scope_refused,
 denylist_refused, lock_held, lock_unavailable,
 raw_packet_refused, parent_evaluate_refused,
 port_owner_mismatch, scope_config_invalid,
 profile_marker_required, not_attached, tab_not_found,
 attach_failed, evaluate_failed, transport_error,
-runtime_error, unexpected), `message`, and the same
+runtime_error, invalid_argument, unexpected, target_ambiguous,
+target_not_found, target_not_editable, bad_selector,
+target_scan_truncated, target_disabled, target_readonly,
+act_target_required, act_action_invalid,
+act_value_required, act_value_unexpected), `message`, and the same
 `disposition` object. Delivery vocabulary: `not_delivered`,
 `delivery_uncertain`, `delivered_unverified`,
 `delivered_verified`. Retry vocabulary: `safe` (nothing was
 sent), `unsafe` (input may have landed; never replay),
-`not_applicable`. Per command: reads (probe/tabs/report)
+`not_applicable`. Per command: reads (probe/tabs/report/snapshot)
 succeed as delivered_verified; eval/peval/navigate succeed as
 delivered_unverified (JS ran / navigate sent, page effect not
 verified by the tool, including whether a navigate actually
@@ -170,6 +224,70 @@ text), and treat exit 1 vs 2 as runtime vs usage.
 payload, stderr-only errors, exit 2 on any error) as a compat
 shim. The library API (RDPClient, RDPError) is unchanged.
 
+## Ambiguity-refusing act (P2a)
+
+`act` is the only act path that resolves a target by descriptor.
+One eval script counts all visible matches for the descriptor
+(role/name/text/selector/label, ANDed; exact match after
+whitespace normalization, case-insensitive) in the TOP DOCUMENT
+and acts only when the count is exactly 1. There is no
+first-match fallback. The candidate pool is built from
+`document.querySelectorAll` on the top document only: iframes
+and shadow DOM are not scanned, so a second matching element
+inside a frame or shadow root is invisible to the count and
+does not block the act. Every verdict carries
+`poolScope: "top-document"` so the count is never mistaken for
+a whole-tab uniqueness proof.
+
+```
+rdp_client.py --port <rdp-port> --profile-marker <profile-dir> \
+  --scope-url-pattern '<pattern>' act --text Action click
+rdp_client.py ... act --role button --name Submit click
+rdp_client.py ... act --label Name type 'Bench User'
+```
+
+The count is the true count over the examined pool. When the
+pool exceeds the scan cap (10000 elements) the verdict carries
+`candidatesTruncated: true` and `count` is a lower bound; a
+silently capped count is never reported, and the act REFUSES
+(`target_scan_truncated`) even when the examined count is
+exactly 1, because an unexamined element could be a second
+match. Only visible elements count (computed display /
+visibility / opacity, not just layout rects); disabled targets
+are excluded for `click` and refused by name for `type`
+(`target_disabled` / `target_readonly`). The act script runs
+exactly once: `act` evaluates with replay disabled, so a
+noSuchActor after the click fires never replays it (read paths
+keep the RT-06 retry). A `type` verdict reports `hasValue` /
+`valueLength` only, never the typed value. On refusal the
+envelope is `ok: false` with code `target_ambiguous` /
+`target_not_found` / `target_not_editable` / `bad_selector` /
+`target_scan_truncated` / `target_disabled` /
+`target_readonly`,
+`result` carries the verdict (count, candidatesTruncated,
+poolScope, up to 10 candidate summaries, the descriptor echo),
+delivery is
+`delivered_verified` (the script ran and its verdict arrived),
+and retry is `unsafe`: act commands are never replayed, because
+a lost response cannot distinguish a refusal from a landed
+click. A transport failure mid-act is `delivery_uncertain` /
+`unsafe` by the same rule. Success is `delivered_unverified`
+(JS ran; page effect not verified by the tool), like `eval`.
+`--wait-for` / `--wait-timeout` apply after a successful act,
+as with `eval`. Refusals are recorded in the drive report
+(`act_refusals`).
+
+The descriptor is the I3 ref content: snapshot refs carry
+role+name, and `act` is the act-time resolver for that shape
+(one ref system, two resolvers). The snapshot-time resolver
+(persistent registry + cross-call digest) is P2b, gated on its
+settling tests; it is not part of this command. Text search
+covers actionable elements only (links, buttons, form controls,
+labels, role/tabindex/contenteditable elements), not arbitrary
+divs. `type` sets the value via the native setter plus
+input/change events (the measured 52 ms class path), on
+input/textarea targets only.
+
 ## Post-action waits (I17)
 
 `--wait-for EXPR --wait-timeout SECONDS` after `navigate` or
@@ -185,3 +303,37 @@ post-action verification when the question is whether the
 action itself took effect; use I10 auto-wait on the a11y lane
 for element readiness before acting. Never use a fixed sleep
 in place of any of the three.
+
+## Page snapshot (P1)
+
+`snapshot [--load-timeout SECONDS]` reads the attached tab with
+one fixed, client-owned script (never caller-supplied JS),
+routed through the same guarded evaluate() as `eval`, so tab
+scope and the credential denylist apply (guard refusals fail
+fast; they never burn the load budget). An I17 readyState
+wait runs first (default budget 10 s; on expiry the read still
+happens with `loadComplete: false`). Output: url, title,
+readyState, `snapshotId`, element records (tag, name, type,
+href, role) capped at 200 with `totalElements` /
+`returnedElements` / `elementsTruncated`, a 1500-char text
+preview with `textTruncated` / `textLength`, and a rolled-up
+`complete` flag. Field values are never read: inputs report
+`hasValue` (presence only), and form-field / contenteditable
+content is excluded from element names and from the text
+preview (the preview walks text nodes outside form subtrees).
+The page-authored payload is validated client-side before any
+flag is trusted (required accounting keys, returnedElements
+recomputed, truncation flags checked against totals;
+malformed accounting is an error, never `complete: true`).
+A 25,919 B byte cap is enforced on the serialized output
+(elements truncated from the end, `bytesTruncated: true`).
+I22 redaction runs over the full output: URL parameters,
+bare-token fragments, token-shaped path segments, data: /
+javascript: payloads, and bare secrets in text (sensitive
+key=value pairs, known key prefixes, long token-like strings).
+Redaction is pattern-based, not a guarantee: a secret in an
+unrecognized shape can still pass, so snapshot output is
+treated as page content, not as a sanitized channel. Use
+`snapshot` for page reads instead of hand-written
+DOM-walk JS through `eval`: one think-step less per read, and
+truncation is accounted instead of silent.
