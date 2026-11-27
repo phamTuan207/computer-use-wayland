@@ -56,7 +56,7 @@ PILOT (running, unproven).
 | 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | IMPLEMENTED | e12fcf47; children_count both modes + cut flags + complete; walk half stays pilot-first |
 | 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | IMPLEMENTED + LIVE-TESTED | c2a3e47f; ground live 106ms ok; battery stays pilot-first |
 | 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | IMPLEMENTED + LIVE-TESTED | 98c4243a; live: 22/30 real rects drawn; outputs stay local |
-| 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | QUEUED | |
+| 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | IMPLEMENTED + LIVE-TESTED | 9df12d97; live matrix: all lanes true except zen_rdp (not installed on laptop yet, correctly reported) |
 | 16 | I15 root-level incomplete marking | agent-desktop I15 | QUEUED | |
 | 17 | I19-substitute: MCP drift test | agent-desktop I19 | QUEUED | |
 | 18 | I20-substitute: RDP lock hardening + lock map doc | agent-desktop I20 | QUEUED | |
@@ -388,6 +388,35 @@ rdp_client.py is not yet installed in the laptop scripts dir
 --profile-marker (read from the live cmdline at runtime);
 --legacy-output is a top-level flag. The a11y-rect version
 stays pilot-first after I14.
+
+### Item 15: I9 capability matrix in doctor (2026-11-27)
+
+cu.capability_matrix(): read-only per-lane reporting (a11y,
+cdp, zen_rdp, vision, pointer, keyboard, keybind) with
+available/entry/operations; wired into doctor as
+result['capabilities']. Availability = entry point present +
+hard dependency (gi import for a11y, node for cdp); no lane is
+exercised. Test: shape test in test_core.py (41 ran, 1
+pre-existing VM error, same as item 5). Live on the laptop
+(new cu.py in a temp install-shaped tree, doctor under
+cu.py session): a11y/cdp/vision/pointer/keyboard/keybind
+true, zen_rdp false (rdp_client.py not yet installed on the
+laptop; the matrix reporting that gap is the point). The
+unified lane interface stays pilot-first after I23.
+
+### Coordinator decisions (2026-11-27, parallel wave)
+
+- M28a: coordinator approves the append-only rolling-branch
+  approach for watchdog logs (force-updated variant stays
+  rejected).
+- Items 1-5 gate: the two reviewers spawned ~19:05 finished,
+  but their full reports were lost in a context compaction
+  (only previews survive). The gate is re-run as a combined
+  items 1-15 council+redteam gate before any main landing.
+- Parallel wave: remaining first-batch items run as parallel
+  workers, each on its own branch off integration-20261127;
+  coordinator merges, gates, lands. Quality gates unchanged
+  (unit green, live test, gate, measured numbers).
 
 ## Sources cited during this phase
 
