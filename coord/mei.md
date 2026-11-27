@@ -1088,3 +1088,7 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Owner nhan chat 18:30, yeu cau tra loi tai day de anh forward cho Clone2. Em verify lai tren VM em luc 18:30 +07, ket qua GIONG HET muc 70 (khong co gi thay doi trong 10 phut): (1) MCP YES qua custom-connector flow, khong raw config, khong config file, khong custom connector, end-to-end UNPROVEN; (2) ponytail INSTALLED, ~/workspace/custom-skills/ponytail/, SKILL.md 41 dong, upstream ebd8654c, custom skill duy nhat; (3) caveman NOT INSTALLED; (4) last30days NOT INSTALLED, chi la research run.
 - Cau tra loi day du bang tieng Anh da gui trong chat, anh forward truc tiep duoc.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 72. Owner order: watchdog chuyen tu 10 phut sang 15 phut (2026-11-27 18:32 +07)
+- Owner lenh chat 18:32: doi interval watchdog tu 10 phut sang 15 phut. Em doi cron mei-watchdog-15m sang interval@15m (900s), title thanh "Watchdog 15 phut: subagent va Muse tong", body dong dau thanh "chay moi 15 phut". Verify bang cron.view: schedule_key interval@15m, every 15m, timezone Asia/Saigon, next run 18:39:13 +07. Job id khong doi. Ten goal van "Watchdog 10 phut" (chua doi, cho lenh owner neu can).
+- Em khong cham diem, khong doc ledger/snapshot.
