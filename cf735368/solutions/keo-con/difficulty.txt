@@ -1,0 +1,3 @@
+AI-estimated rating: Nhan biet
+
+The task is to read a sequence and add the values in one contiguous range, using a basic loop and a wide enough integer type for the sum. The main details are including both endpoints and handling N up to 1,000,000; no advanced algorithm is needed.

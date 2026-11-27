@@ -1,0 +1,64 @@
+Keo Con test log
+Start: 2026-11-27 07:01:27 +07
+End: 2026-11-27 07:01:27 +07
+Elapsed: 0:00:00.032921
+Compile command: g++ -O2 -std=c++17 -o ~/cf735368-work/keo-con/sol ~/cf735368-work/keo-con/sol.cpp
+Compile result: success (exit code 0).
+
+[Sample 1]
+Input:
+5
+4 5 9 10 2
+1 3
+Hand-computed expected output: 24
+Actual output: 24
+Result: PASS
+Note: Input reproduced from the statement.
+
+[Sample 2]
+Input:
+2
+2 3
+1 1
+Hand-computed expected output: 3
+Actual output: 3
+Result: PASS
+Note: Input reproduced from the statement.
+
+[Sample 3]
+Input:
+7
+1 2 3 3 3 1 3
+0 6
+Hand-computed expected output: 16
+Actual output: 16
+Result: PASS
+Note: Input reproduced from the statement.
+
+[Self 1: smallest N, A=B=0]
+Input:
+1
+7
+0 0
+Hand-computed expected output: 7
+Actual output: 7
+Result: PASS
+Note: N=1; the query contains one student and uses the lowest valid index.
+
+[Self 2: maximum Ci, both endpoints included]
+Input:
+5
+1000 1000 1000 1000 1000
+0 4
+Hand-computed expected output: 5000
+Actual output: 5000
+Result: PASS
+Note: N=5; every Ci=1000; query covers the entire sequence.
+
+[Self 3: maximum N and Ci]
+Input:
+Generated input: N=1000000; C0..C999999 all 1000; A=0, B=999999.
+Hand-computed expected output: 1000000000
+Actual output: 1000000000
+Result: PASS
+Note: Hand calculation: 1,000,000 * 1,000 = 1,000,000,000; exercises maximum N and Ci.
