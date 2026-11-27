@@ -130,17 +130,17 @@ class WaitForTests(unittest.TestCase):
                                         poll_interval=0.01))
 
     def test_cli_wait_for_requires_timeout(self):
-        proc = run_cli("--port", "1", "--wait-for", "true", "eval", "1")
+        proc = run_cli("--port", "1", "eval", "1", "--wait-for", "true")
         self.assertEqual(proc.returncode, 2)
         env = json.loads(proc.stdout)
         self.assertEqual(env["error"]["code"], "wait_timeout_required")
 
     def test_cli_wait_for_rejected_on_read_command(self):
-        proc = run_cli("--port", "1", "--wait-for", "true",
-                       "--wait-timeout", "1", "tabs")
+        # --wait-for lives on eval/navigate only; elsewhere argparse
+        # rejects it (usage error, exit 2).
+        proc = run_cli("--port", "1", "tabs", "--wait-for", "true",
+                       "--wait-timeout", "1")
         self.assertEqual(proc.returncode, 2)
-        env = json.loads(proc.stdout)
-        self.assertEqual(env["error"]["code"], "wait_for_unsupported")
 
     def test_wait_timeout_classification(self):
         self.assertEqual(

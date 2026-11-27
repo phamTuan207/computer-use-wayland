@@ -1203,13 +1203,6 @@ def main():
                     help="pre-envelope output: bare JSON payload on "
                          "success, ERROR: text on stderr, exit 2 on "
                          "any error (compat shim for old consumers)")
-    ap.add_argument("--wait-for", default=None, metavar="EXPR",
-                    help="after navigate/eval, poll this JS expression "
-                         "until truthy (I17). Requires --wait-timeout; "
-                         "there is no default timeout")
-    ap.add_argument("--wait-timeout", type=float, default=None,
-                    metavar="SECONDS",
-                    help="budget for --wait-for (required with it)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("probe")
     sub.add_parser("tabs")
@@ -1220,20 +1213,26 @@ def main():
     pe.add_argument("expr")
     n = sub.add_parser("navigate")
     n.add_argument("url")
+    for p in (e, n):
+        p.add_argument("--wait-for", default=None, metavar="EXPR",
+                       help="after the action, poll this JS expression "
+                            "until truthy (I17). Requires "
+                            "--wait-timeout; no default timeout")
+        p.add_argument("--wait-timeout", type=float, default=None,
+                       metavar="SECONDS",
+                       help="budget for --wait-for (required with it)")
     b = sub.add_parser("bench")
     b.add_argument("--local-url", required=True)
     b.add_argument("--real-url", default="https://example.com/")
     b.add_argument("--runs", type=int, default=12)
     args = ap.parse_args()
     legacy = args.legacy_output
+    args.wait_for = getattr(args, "wait_for", None)
+    args.wait_timeout = getattr(args, "wait_timeout", None)
     if args.wait_for and args.wait_timeout is None:
         return _fail(args.cmd, "wait_timeout_required",
                      "--wait-for requires --wait-timeout SECONDS "
                      "(no default timeout by design)",
-                     "not_delivered", "safe", 2, legacy)
-    if args.wait_for and args.cmd not in ("navigate", "eval"):
-        return _fail(args.cmd, "wait_for_unsupported",
-                     "--wait-for applies to navigate and eval only",
                      "not_delivered", "safe", 2, legacy)
     try:
         try:
