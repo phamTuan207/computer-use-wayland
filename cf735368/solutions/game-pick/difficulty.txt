@@ -1,0 +1,3 @@
+Mức độ: Van dung (AI-estimated)
+
+Cần nhận ra rằng khi bỏ một giá trị, mỗi đoạn liên tiếp của giá trị đó chỉ làm mất các cạnh kề và có thể tạo một cạnh nối hai hàng xóm. Gom thay đổi theo giá trị cho phép tính mọi lựa chọn trong O(n), phù hợp với n đến 10^5; các trường hợp ở đầu/cuối dãy, cả dãy bằng một giá trị và hòa điểm cần được xử lý đúng.

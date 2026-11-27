@@ -1,0 +1,57 @@
+Game Pick — nhật ký kiểm thử
+Bắt đầu: 2026-11-27 07:22:41 +07 (Asia/Ho_Chi_Minh)
+
+Bước 1 — phân tích và viết lời giải
+- 2026-11-27 07:22:41 +07; elapsed 00:00.
+- Ý tưởng: số lần chán là số cặp kề nhau có |hiệu| > k. Với mỗi giá trị x, trừ các cạnh kề với những đoạn x bị xóa và cộng cạnh mới nối hai phía khi cả hai phía tồn tại. Gom phần thay đổi theo x trong một lượt quét, nên tổng thời gian O(n), bộ nhớ O(n).
+
+Bước 2 — biên dịch
+- 2026-11-27 07:23:19 +07; elapsed 00:38.
+- Lệnh: `g++ -O2 -std=c++17 -o ~/cf735368-work/game-pick/sol ~/cf735368-work/game-pick/sol.cpp`
+- Kết quả: thành công, exit code 0.
+
+Bước 3 — kiểm thử
+- 2026-11-27 07:23:34 +07; elapsed 00:53. Chạy từng input qua chương trình đã biên dịch.
+
+1) Mẫu đề bài
+Input:
+8 1
+6 4 3 4 4 5 4 6
+Tự tính: bỏ 6 để được [4, 3, 4, 4, 5, 4], không có cặp kề nào chênh lệch quá 1; các lựa chọn khác để lại ít nhất một cặp xấu. Kết quả mong đợi: 6.
+Thực tế: 6 — PASS.
+
+2) Một phần tử, giá trị lớn nhất
+Input:
+1 100000
+100000
+Tự tính: chỉ có giá trị 100000 để chọn; sau khi bỏ không còn cặp nào. Kết quả mong đợi: 100000.
+Thực tế: 100000 — PASS.
+
+3) Mọi phần tử bằng nhau
+Input:
+5 0
+7 7 7 7 7
+Tự tính: chỉ có thể chọn 7; bỏ hết các trò chơi này, số cặp xấu còn lại là 0. Kết quả mong đợi: 7.
+Thực tế: 7 — PASS.
+
+4) Hòa điểm ở biên giá trị nhỏ nhất/lớn nhất
+Input:
+4 0
+0 100000 0 100000
+Tự tính: bỏ 0 còn [100000, 100000], hoặc bỏ 100000 còn [0, 0]; cả hai cho 0 cặp xấu. Chọn giá trị nhỏ hơn, 0. Kết quả mong đợi: 0.
+Thực tế: 0 — PASS.
+
+5) Xóa ở giữa và tạo cạnh nối mới
+Input:
+3 4
+1 10 5
+Tự tính: bỏ 10 nối 1 với 5 (chênh lệch 4), cho 0 cặp xấu; bỏ 1 hoặc 5 vẫn còn cặp chênh lệch 9. Kết quả mong đợi: 10.
+Thực tế: 10 — PASS.
+
+Không có kiểm thử nào thất bại.
+
+Bước 4 — nhả overlay
+- 2026-11-27 07:23:57 +07; elapsed 01:16.
+- Đã nhả holder Codex bằng đúng PID 113037. Xác minh sau khi nhả: Codex không còn trong holders, nhưng holder Muse vẫn còn; overlay vẫn visible=true với nhãn `Computer use active`. Không tác động tới holder của tiến trình khác.
+
+Kết thúc: 2026-11-27 07:23:57 +07; tổng elapsed 01:16.
