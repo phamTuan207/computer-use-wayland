@@ -279,6 +279,130 @@ class GateFixSnapshotTests(unittest.TestCase):
         self.assertIn("TreeWalker", js)
         self.assertNotIn("document.body.innerText", js)
 
+    def test_cm1_ancestor_wrapping_editable_no_leak(self):
+        # Clone2 final-review BLOCKING 1: innerText aggregates the
+        # whole subtree, so a walked ancestor (div[role=group])
+        # wrapping a contenteditable leaked typed content into its
+        # name ("label <secret>"). Execute the shipped SNAPSHOT_JS
+        # against a stub DOM with that shape and prove the planted
+        # secret reaches no emitted name and no text preview.
+        import shutil
+        import tempfile
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("node not available for stub-DOM JS test")
+        planted = "PLANTED" + "SECRET"
+        stub = r"""
+const PLANTED = __PLANTED__;
+class TextNode {
+  constructor(v, p) { this.nodeValue = v; this.parentElement = p; }
+}
+class El {
+  constructor(tag, attrs) {
+    this.tagName = tag.toUpperCase();
+    this.attrs = attrs || {};
+    this.children = [];
+    this.parentElement = null;
+    this.placeholder = this.attrs.placeholder || '';
+    this.name = this.attrs.name || '';
+    this.type = this.attrs.type || '';
+    this.value = this.attrs.value || '';
+    this.href = this.attrs.href || '';
+  }
+  append(c) { c.parentElement = this; this.children.push(c); return c; }
+  text(v) { return this.append(new TextNode(v, this)); }
+  getAttribute(n) { return n in this.attrs ? this.attrs[n] : null; }
+  get isContentEditable() {
+    for (let a = this; a; a = a.parentElement) {
+      if ('contenteditable' in a.attrs)
+        return a.attrs.contenteditable !== 'false';
+    }
+    return false;
+  }
+  get innerText() {
+    const parts = [];
+    const walk = (n) => {
+      for (const c of n.children) {
+        if (c instanceof TextNode) parts.push(c.nodeValue);
+        else walk(c);
+      }
+    };
+    walk(this);
+    return parts.join('');
+  }
+  descendants() {
+    const out = [];
+    const walk = (n) => {
+      for (const c of n.children) {
+        if (c instanceof El) { out.push(c); walk(c); }
+      }
+    };
+    walk(this);
+    return out;
+  }
+  querySelector(sel) {
+    const parts = sel.split(',').map(s => s.trim());
+    for (const d of this.descendants()) {
+      for (const p of parts) {
+        if (p === '[contenteditable]' && 'contenteditable' in d.attrs)
+          return d;
+        if (/^[a-z0-9]+$/i.test(p) && d.tagName === p.toUpperCase())
+          return d;
+      }
+    }
+    return null;
+  }
+}
+const body = new El('body');
+const group = body.append(new El('div', {role: 'group'}));
+group.text('label ');
+const editable = group.append(new El('div', {contenteditable: 'true'}));
+editable.text(PLANTED);
+const button = body.append(new El('button'));
+button.text('Submit');
+const input = body.append(new El('input', {type: 'text', name: 'Name'}));
+input.value = 'typed-value';
+const walked = [group, editable, button, input];
+global.document = {
+  body, title: 'Probe', readyState: 'complete',
+  querySelectorAll: (sel) => walked,
+  createTreeWalker: (root, whatToShow) => {
+    const texts = [];
+    const walk = (n) => {
+      for (const c of n.children) {
+        if (c instanceof TextNode) texts.push(c);
+        else walk(c);
+      }
+    };
+    walk(root);
+    let i = 0;
+    return {nextNode: () => (i < texts.length ? texts[i++] : null)};
+  },
+};
+global.location = {href: 'http://localhost/probe.html'};
+global.NodeFilter = {SHOW_TEXT: 4};
+console.log(eval(__SNAPSHOT_JS__));
+"""
+        stub = stub.replace("__PLANTED__", json.dumps(planted))
+        stub = stub.replace("__SNAPSHOT_JS__", json.dumps(rc.SNAPSHOT_JS))
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "probe.js"
+            path.write_text(stub)
+            proc = subprocess.run([node, str(path)], capture_output=True,
+                                  text=True, timeout=30)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        names = [e.get("name", "") for e in payload["elements"]]
+        for name in names:
+            self.assertNotIn(planted, name)
+        self.assertNotIn(planted, payload["textPreview"])
+        self.assertNotIn(planted, json.dumps(payload))
+        # Non-field names still work: the plain button keeps its
+        # innerText name, and page text outside the editable
+        # subtree still reaches the preview.
+        self.assertIn("Submit", names)
+        self.assertIn("label", payload["textPreview"])
+
     def test_m1_bare_secrets_in_preview_and_title_redacted(self):
         planted = "sk-" + "live" + "key" + "1234567890"
         payload = canned_payload()

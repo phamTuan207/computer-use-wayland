@@ -35,7 +35,9 @@ RT-20 additions (enforced IN the tool, not in briefs):
   Written to --drive-report on session end, or on demand via `report`.
 - Ambiguity-refusing act (P2a): the `act` subcommand resolves a target
   descriptor (role/name/text/selector/label, the I3 ref shape) in ONE
-  eval with an exhaustive match count and acts only when count == 1.
+  eval with a match count exhaustive over the TOP DOCUMENT only
+  (iframes and shadow DOM are not scanned; every verdict carries
+  poolScope: "top-document") and acts only when count == 1.
   Refusals carry the true count (or candidatesTruncated=true when the
   scan cap cut the pool) and retry=unsafe in the envelope. No
   first-match fallback anywhere in this path.
@@ -104,7 +106,10 @@ _GUARDED_PACKET_TYPES = ("evaluateJSAsync", "navigateTo")
 # report hasValue (presence only); form-field and contenteditable
 # content is excluded from the name fallback AND from the text
 # preview (the preview walks text nodes and skips form/editable
-# subtrees, so typed content cannot ride out as page text). The
+# subtrees, so typed content cannot ride out as page text; the
+# name fallback also drops innerText for ancestors wrapping a
+# form/editable descendant, since innerText aggregates the whole
+# subtree). The
 # element cap mirrors the historical cap-200 agent walk. The byte
 # cap is enforced in snapshot() (elements truncated from the end,
 # bytesTruncated flag); 25,919 B is the enforced cap, and the
@@ -129,7 +134,13 @@ SNAPSHOT_JS = """(() => {
     const r = {tag: e.tagName.toLowerCase()};
     const isField = e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' ||
       e.tagName === 'SELECT' || e.isContentEditable;
-    const name = (isField
+    // innerText aggregates the whole subtree: an ancestor wrapping
+    // a form/editable descendant would leak typed content into its
+    // name. Drop innerText for such elements (aria-label and the
+    // attribute fallbacks still apply).
+    const wrapsField = !isField && !!e.querySelector(
+      'input, textarea, select, [contenteditable]');
+    const name = (isField || wrapsField
       ? (e.getAttribute('aria-label') || e.placeholder || e.name || '')
       : (e.getAttribute('aria-label') || e.innerText ||
          e.placeholder || e.name || ''))
@@ -427,8 +438,14 @@ def _fail(cmd, code, message, delivery, retry, exit_code, legacy,
 
 
 # --- P2a: ambiguity-refusing act (single-eval verify-and-act) ---
-# One eval script resolves the target descriptor in-page with an
-# EXHAUSTIVE match count and acts only when count == 1. The descriptor
+# One eval script resolves the target descriptor in-page with a
+# match count exhaustive over the TOP DOCUMENT only and acts only
+# when count == 1. The candidate pool is built from
+# document.querySelectorAll on the top document: iframes and
+# shadow DOM are NOT scanned, so a second matching element inside
+# a frame or shadow root is invisible to the count. Every verdict
+# carries poolScope: "top-document" so consumers cannot mistake
+# the count for a whole-tab uniqueness proof. The descriptor
 # (role/name/text/selector/label) is the same shape snapshot refs
 # carry (I3): this is the act-time resolver; the snapshot-time
 # resolver (persistent registry + digest) is P2b, gated, not here.
@@ -444,6 +461,9 @@ _ACT_JS = r"""
   const spec = __SPEC__;
   const SCAN_CAP = 10000;
   const CANDIDATE_CAP = 10;
+  // Pool scope disclosure: document.querySelectorAll on the top
+  // document only; iframes and shadow DOM are never entered.
+  const POOL_SCOPE = 'top-document';
   const norm = s => (s == null ? '' : String(s)).trim().replace(/\s+/g, ' ');
   const eq = (a, b) => norm(a).toLowerCase() === norm(b).toLowerCase();
   function accName(el) {
@@ -540,7 +560,7 @@ _ACT_JS = r"""
           '[contenteditable="true"],[contenteditable=""]');
   } catch (e) {
     return JSON.stringify({acted: false, reason: 'bad_selector', count: 0,
-      candidatesTruncated: false, candidates: [],
+      candidatesTruncated: false, poolScope: POOL_SCOPE, candidates: [],
       error: String(e).slice(0, 200)});
   }
   const truncated = pool.length > SCAN_CAP;
@@ -565,33 +585,37 @@ _ACT_JS = r"""
   // count is exactly 1 (or 0).
   if (truncated) {
     return JSON.stringify({acted: false, reason: 'scan_truncated',
-      count: count, candidatesTruncated: true,
+      count: count, candidatesTruncated: true, poolScope: POOL_SCOPE,
       candidates: matches.slice(0, CANDIDATE_CAP).map(summary)});
   }
   if (count !== 1) {
     return JSON.stringify({acted: false,
       reason: count === 0 ? 'not_found' : 'ambiguous', count: count,
-      candidatesTruncated: false,
+      candidatesTruncated: false, poolScope: POOL_SCOPE,
       candidates: matches.slice(0, CANDIDATE_CAP).map(summary)});
   }
   const el = matches[0];
   if (spec.action === 'click') {
     el.click();
     return JSON.stringify({acted: true, action: 'click', count: 1,
-      candidatesTruncated: false, target: summary(el)});
+      candidatesTruncated: false, poolScope: POOL_SCOPE,
+      target: summary(el)});
   }
   const tag = el.tagName;
   if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
     return JSON.stringify({acted: false, reason: 'not_editable', count: 1,
-      candidatesTruncated: false, candidates: [summary(el)]});
+      candidatesTruncated: false, poolScope: POOL_SCOPE,
+      candidates: [summary(el)]});
   }
   if (isDisabled(el)) {
     return JSON.stringify({acted: false, reason: 'target_disabled',
-      count: 1, candidatesTruncated: false, candidates: [summary(el)]});
+      count: 1, candidatesTruncated: false, poolScope: POOL_SCOPE,
+      candidates: [summary(el)]});
   }
   if (el.readOnly) {
     return JSON.stringify({acted: false, reason: 'target_readonly',
-      count: 1, candidatesTruncated: false, candidates: [summary(el)]});
+      count: 1, candidatesTruncated: false, poolScope: POOL_SCOPE,
+      candidates: [summary(el)]});
   }
   const proto = tag === 'TEXTAREA'
     ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -600,7 +624,8 @@ _ACT_JS = r"""
   el.dispatchEvent(new Event('change', {bubbles: true}));
   // Never echo the typed value: presence + length only.
   return JSON.stringify({acted: true, action: 'type', count: 1,
-    candidatesTruncated: false, target: summary(el),
+    candidatesTruncated: false, poolScope: POOL_SCOPE,
+    target: summary(el),
     hasValue: !!el.value, valueLength: el.value.length});
 })()
 """.strip()
@@ -1530,9 +1555,11 @@ class RDPClient:
     # -- ambiguity-refusing act (P2a) -----------------------------------------
     def act(self, descriptor, action, text=None, timeout=20):
         """Single-eval verify-and-act: resolve `descriptor` in-page with
-        an exhaustive match count and act only when exactly one visible
-        element matches. Returns the verdict dict on success; raises
-        ActRefusal (carrying the verdict: true count or
+        a match count exhaustive over the top document only (iframes
+        and shadow DOM are not scanned; the verdict carries
+        poolScope: "top-document") and act only when exactly one
+        visible element matches. Returns the verdict dict on success;
+        raises ActRefusal (carrying the verdict: true count or
         candidatesTruncated, candidate summaries) when the script
         refuses. Transport failures propagate as RDPError (the click
         may have landed; callers must not replay). Goes through
@@ -1557,6 +1584,10 @@ class RDPClient:
         # Defence in depth: the typed value never rides out in a
         # verdict, even if a future script revision echoes it.
         verdict.pop("value", None)
+        # Pool-scope disclosure: the fixed script scans the top
+        # document only. Default the field so every verdict leaving
+        # act() states its scope even if a script revision omits it.
+        verdict.setdefault("poolScope", "top-document")
         verdict["descriptor"] = _normalize_descriptor(descriptor)
         verdict["action"] = action
         if verdict["acted"] and verdict.get("candidatesTruncated"):
@@ -1574,6 +1605,7 @@ class RDPClient:
             {"descriptor": verdict["descriptor"], "action": action,
              "reason": verdict.get("reason"), "count": verdict.get("count"),
              "candidatesTruncated": verdict.get("candidatesTruncated"),
+             "poolScope": verdict.get("poolScope"),
              "at": _now_iso()})
         raise ActRefusal(verdict)
 

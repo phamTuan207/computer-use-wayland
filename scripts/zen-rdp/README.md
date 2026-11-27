@@ -227,10 +227,17 @@ shim. The library API (RDPClient, RDPError) is unchanged.
 ## Ambiguity-refusing act (P2a)
 
 `act` is the only act path that resolves a target by descriptor.
-One eval script counts ALL visible matches for the descriptor
+One eval script counts all visible matches for the descriptor
 (role/name/text/selector/label, ANDed; exact match after
-whitespace normalization, case-insensitive) and acts only when
-the count is exactly 1. There is no first-match fallback.
+whitespace normalization, case-insensitive) in the TOP DOCUMENT
+and acts only when the count is exactly 1. There is no
+first-match fallback. The candidate pool is built from
+`document.querySelectorAll` on the top document only: iframes
+and shadow DOM are not scanned, so a second matching element
+inside a frame or shadow root is invisible to the count and
+does not block the act. Every verdict carries
+`poolScope: "top-document"` so the count is never mistaken for
+a whole-tab uniqueness proof.
 
 ```
 rdp_client.py --port <rdp-port> --profile-marker <profile-dir> \
@@ -257,8 +264,9 @@ envelope is `ok: false` with code `target_ambiguous` /
 `target_not_found` / `target_not_editable` / `bad_selector` /
 `target_scan_truncated` / `target_disabled` /
 `target_readonly`,
-`result` carries the verdict (count, candidatesTruncated, up to
-10 candidate summaries, the descriptor echo), delivery is
+`result` carries the verdict (count, candidatesTruncated,
+poolScope, up to 10 candidate summaries, the descriptor echo),
+delivery is
 `delivered_verified` (the script ran and its verdict arrived),
 and retry is `unsafe`: act commands are never replayed, because
 a lost response cannot distinguish a refusal from a landed
