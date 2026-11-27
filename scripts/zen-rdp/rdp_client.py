@@ -197,6 +197,16 @@ def median(xs):
     return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
 
 
+def _utf16_len(s):
+    """Length in UTF-16 code units, the unit JS String.length and
+    slice() count in. Python len() counts code points, so astral
+    characters (emoji) measure 1 here but 2 in JS; any comparison
+    against a JS-reported length must use this. surrogatepass keeps
+    a lone surrogate (JS slice can split a pair at a cap boundary)
+    countable as the 1 unit JS counts it as."""
+    return len(s.encode("utf-16-le", "surrogatepass")) // 2
+
+
 def ms(sec):
     return round(sec * 1000, 1)
 
@@ -457,10 +467,14 @@ def _fail(cmd, code, message, delivery, retry, exit_code, legacy,
 # The count is the TRUE count over the examined pool; when the pool
 # exceeds the scan cap the verdict carries candidatesTruncated=true
 # and count is a lower bound (zen-mcp's silent capped count, "6" on a
-# 100-button page, must not be copied). Refusal envelope:
-# delivery=delivered_verified (the script ran and its verdict
-# arrived), retry=unsafe (the act command class is never replayed:
-# a lost response cannot distinguish refusal from a landed click).
+# 100-button page, must not be copied). Refusal envelope (M3):
+# an ARRIVED refusal proves the input did not land, so it is
+# delivery=not_delivered, retry=safe. The one exception is the
+# defence-in-depth breach path (the script acted on a truncated
+# scan): the click may have landed, so that refusal stays
+# delivery_uncertain/unsafe. A LOST response (transport error)
+# cannot distinguish refusal from a landed click and also stays
+# delivery_uncertain/unsafe via _classify_error.
 _ACT_JS = r"""
 (() => {
   const spec = __SPEC__;
@@ -674,8 +688,11 @@ def _act_script(descriptor, action, value=None):
 class ActRefusal(RDPError):
     """The in-page act script ran and refused to act (count != 1, or
     the unique target is not editable, or the selector is invalid).
-    Carries the verdict dict; the CLI emits it as the envelope result
-    with retry=unsafe."""
+    Carries the verdict dict; the CLI emits it as the envelope
+    result. M3 disposition: an arrived refusal proves the input did
+    not land (not_delivered/safe), except the breach path where the
+    script acted on a truncated scan (may_have_acted=True), which
+    stays delivery_uncertain/unsafe."""
 
     _CODES = {"ambiguous": "target_ambiguous",
               "not_found": "target_not_found",
@@ -685,14 +702,24 @@ class ActRefusal(RDPError):
               "target_disabled": "target_disabled",
               "target_readonly": "target_readonly"}
 
-    def __init__(self, refusal):
+    def __init__(self, refusal, may_have_acted=False):
         self.refusal = refusal
+        self.may_have_acted = may_have_acted
         self.code = self._CODES.get(refusal.get("reason"), "act_refused")
         super().__init__(
             f"ACT REFUSED ({self.code}): count={refusal.get('count')} "
             f"candidatesTruncated={refusal.get('candidatesTruncated')} "
             f"descriptor={refusal.get('descriptor')!r} "
             f"action={refusal.get('action')!r}")
+
+    def disposition(self):
+        """(delivery, retry) for the envelope. Arrived refusal: the
+        verdict proves no input landed -> not_delivered/safe. Breach
+        path (acted on a truncated scan): input may have landed ->
+        delivery_uncertain/unsafe."""
+        if self.may_have_acted:
+            return ("delivery_uncertain", "unsafe")
+        return ("not_delivered", "safe")
 
 
 class Scope:
@@ -1529,7 +1556,11 @@ class RDPClient:
         (a short chunk must not skip bytes), an error packet is
         rejected wherever it arrives (never consumed as content),
         an empty chunk fails loud instead of looping, and the
-        assembled length is verified against the declared length."""
+        assembled length is verified against the declared length.
+        All lengths are JS UTF-16 units (grip length and substring
+        indices), so advancement and verification count with
+        _utf16_len, never Python len() (astral chars would drift
+        the position and fail the check; review M-1 2026-11-28)."""
         actor = grip.get("actor")
         length = grip.get("length", 0)
         if not isinstance(length, int) or length < 0:
@@ -1555,12 +1586,12 @@ class RDPClient:
                     f"(declared length {length}); refusing to "
                     "assemble a short longString")
             parts.append(sub)
-            pos += len(sub)
+            pos += _utf16_len(sub)
         text = "".join(parts)
-        if len(text) != length:
+        if _utf16_len(text) != length:
             raise RDPError(
                 f"longString length mismatch: declared {length}, "
-                f"assembled {len(text)}")
+                f"assembled {_utf16_len(text)}")
         return text
 
     def _unwrap_full(self, grip):
@@ -1653,14 +1684,16 @@ class RDPClient:
         verdict.setdefault("poolScope", "top-document")
         verdict["descriptor"] = _normalize_descriptor(descriptor)
         verdict["action"] = action
+        may_have_acted = False
         if verdict["acted"] and verdict.get("candidatesTruncated"):
             # The script acted on a truncated scan (contract breach:
             # uniqueness was never proven). Surface it as the
             # refusal it should have been; the action may have
-            # landed, which the refusal envelope's retry=unsafe
-            # already states.
+            # landed, so this refusal keeps the unsafe disposition
+            # (M3: every other arrived refusal is safe to retry).
             verdict = dict(verdict, acted=False,
                            reason="scan_truncated")
+            may_have_acted = True
         if verdict["acted"]:
             self._actions["act"] += 1
             return verdict
@@ -1670,7 +1703,7 @@ class RDPClient:
              "candidatesTruncated": verdict.get("candidatesTruncated"),
              "poolScope": verdict.get("poolScope"),
              "at": _now_iso()})
-        raise ActRefusal(verdict)
+        raise ActRefusal(verdict, may_have_acted=may_have_acted)
 
     # -- parent-process target (chrome JS, gated) -----------------------------
     def _open_parent(self):
@@ -1799,7 +1832,7 @@ class RDPClient:
         msg = str(exc)
         return any(m in msg for m in cls._REFUSAL_MARKERS)
 
-    def wait_for(self, expr, timeout, poll_interval=0.1):
+    def wait_for(self, expr, timeout, poll_interval=0.1, gone=False):
         """Poll evaluate(expr) until truthy or timeout (I17).
 
         No default timeout at the CLI layer: the caller names the
@@ -1808,7 +1841,19 @@ class RDPClient:
         refusals re-raise immediately (they never become true).
         Returns the truthy value. On expiry raises RDPError
         carrying the last observed value so the caller can report
-        what the page actually showed."""
+        what the page actually showed. F1 contract: expr must be a
+        read-only predicate (it is re-evaluated on every poll tick
+        by design, so it is idempotent-by-contract and keeps the
+        RT-06 replay recovery).
+
+        gone=True inverts the one condition (Mozilla firefox-mcp
+        wait_for semantics, adopted 2026-11-28): poll until expr
+        is falsy and return that falsy value. A transient error is
+        never "gone" (only an observed falsy value counts), and the
+        F11 terminal check runs before a falsy is accepted, so a
+        dead tab raises tab_destroyed instead of falsely reporting
+        the element gone (M8 shape: dead-tab evaluate returns
+        falsy)."""
         deadline = time.monotonic() + timeout
         last = None
         wait_desc = getattr(self, "desc_actor", None)
@@ -1818,21 +1863,47 @@ class RDPClient:
             # the dead tab's console returns falsy, never errors).
             if self._terminal_flag_for(wait_desc) is not None:
                 raise self._tab_destroyed_error(wait_desc, "wait_for")
+            errored = False
             try:
                 last = self.evaluate(expr, timeout=5)
             except Exception as e:
                 if self._is_guard_refusal(e):
                     raise
                 last = None
-            if last:
+                errored = True
+            if not gone and last:
                 return last
             if self._terminal_flag_for(wait_desc) is not None:
                 raise self._tab_destroyed_error(wait_desc, "wait_for")
+            if gone and not errored and not last:
+                return last
             if time.monotonic() >= deadline:
                 raise RDPError(
                     f"wait_for timeout after {timeout}s: {expr!r} "
-                    f"last value {last!r}")
+                    f"gone={gone} last value {last!r}")
             time.sleep(poll_interval)
+
+    def wait_for_selector(self, selector, timeout, gone=False,
+                          poll_interval=0.1):
+        """Wait until elements matching `selector` are present
+        (count > 0), or with gone=True until none remain
+        (count == 0). The count is over the TOP DOCUMENT only
+        (document.querySelectorAll; iframes and shadow DOM are
+        not entered, same pool as act's selector path), and the
+        verdict discloses poolScope so a "gone" here is never
+        mistaken for a whole-tab absence proof. Returns the
+        verdict dict; timeouts raise RDPError via wait_for."""
+        expr = (f"document.querySelectorAll({json.dumps(selector)})"
+                ".length")
+        count = self.wait_for(expr, timeout,
+                              poll_interval=poll_interval, gone=gone)
+        if not isinstance(count, int) or isinstance(count, bool):
+            # Fail loud, never fabricate a 0 (review m-1): a
+            # non-int here means the count contract broke.
+            raise RDPError(
+                f"wait_for_selector: count is not an int ({count!r})")
+        return {"selector": selector, "count": count,
+                "gone": gone, "poolScope": "top-document"}
 
     def wait_load(self, url_substr, timeout=30):
         deadline = time.monotonic() + timeout
@@ -1918,11 +1989,14 @@ class RDPClient:
             raise RDPError(
                 "snapshot: textTruncated inconsistent with "
                 f"textLength={data['textLength']}")
-        if len(data["textPreview"]) != min(data["textLength"],
-                                           SNAPSHOT_TEXT_CAP):
+        # textLength and the cap are JS numbers (UTF-16 units, and
+        # slice() cuts in UTF-16 units); compare in the same unit or
+        # every emoji-bearing page is refused (code points != units).
+        if _utf16_len(data["textPreview"]) != min(data["textLength"],
+                                                  SNAPSHOT_TEXT_CAP):
             raise RDPError(
                 "snapshot: textPreview length "
-                f"{len(data['textPreview'])} inconsistent with "
+                f"{_utf16_len(data['textPreview'])} inconsistent with "
                 f"textLength={data['textLength']}")
         data["returnedElements"] = returned
         return data
@@ -2298,6 +2372,10 @@ def main():
         p.add_argument("--wait-timeout", type=float, default=None,
                        metavar="SECONDS",
                        help="budget for --wait-for (required with it)")
+        p.add_argument("--wait-gone", action="store_true",
+                       help="invert --wait-for: poll until the "
+                            "expression is falsy (element gone). "
+                            "Requires --wait-for")
     sub.add_parser("spaces")
     sub.add_parser("folders")
     sc = sub.add_parser("space-create")
@@ -2319,6 +2397,11 @@ def main():
     legacy = args.legacy_output
     args.wait_for = getattr(args, "wait_for", None)
     args.wait_timeout = getattr(args, "wait_timeout", None)
+    args.wait_gone = getattr(args, "wait_gone", False)
+    if args.wait_gone and not args.wait_for:
+        return _fail(args.cmd, "wait_gone_requires_wait_for",
+                     "--wait-gone inverts --wait-for and requires it",
+                     "not_delivered", "safe", 2, legacy)
     if args.wait_for and args.wait_timeout is None:
         return _fail(args.cmd, "wait_timeout_required",
                      "--wait-for requires --wait-timeout SECONDS "
@@ -2413,7 +2496,14 @@ def main():
             elif args.cmd == "snapshot":
                 _emit(args.cmd, c.snapshot(args.load_timeout), legacy)
             elif args.cmd == "eval":
-                action_result = {"result": c.evaluate(args.expr)}
+                # F1: the caller's expression is arbitrary JS and may
+                # have side effects, so it is non-idempotent by
+                # definition. replay=False: a lost response after
+                # execution must never re-fire it (the RT-06
+                # noSuchActor retry stays on read paths only). The
+                # error classifies delivery_uncertain/unsafe.
+                action_result = {"result": c.evaluate(
+                    args.expr, replay=False)}
                 if not args.wait_for:
                     _emit(args.cmd, action_result, legacy)
             elif args.cmd == "peval":
@@ -2449,10 +2539,14 @@ def main():
                          "label": args.label},
                         args.action, args.value)
                 except ActRefusal as r:
-                    # The script ran and refused: delivery verified,
-                    # retry unsafe (act commands are never replayed).
+                    # M3: an arrived refusal proves the input did not
+                    # land (not_delivered/safe); only the breach path
+                    # (acted on a truncated scan) stays unsafe. A lost
+                    # response never reaches here: it propagates as
+                    # RDPError and classifies delivery_uncertain.
+                    delivery, retry = r.disposition()
                     return _fail(args.cmd, r.code, str(r),
-                                 "delivered_verified", "unsafe", 1,
+                                 delivery, retry, 1,
                                  legacy, result=r.refusal)
                 action_result = {"act": verdict}
                 if not args.wait_for:
@@ -2466,7 +2560,8 @@ def main():
                 c.drive_report_path = None  # already written; avoid rewrite
             if args.wait_for and action_result is not None:
                 try:
-                    waited = c.wait_for(args.wait_for, args.wait_timeout)
+                    waited = c.wait_for(args.wait_for, args.wait_timeout,
+                                        gone=args.wait_gone)
                 except RDPError as e:
                     # Preserve the action's own outcome in result.
                     code, delivery, retry = _classify_error(
@@ -2475,9 +2570,11 @@ def main():
                                  retry, 1, legacy,
                                  result={"action_result": action_result,
                                          "wait": {"status": "timeout",
-                                                  "expr": args.wait_for}})
+                                                  "expr": args.wait_for,
+                                                  "gone": args.wait_gone}})
                 action_result["wait"] = {"status": "satisfied",
                                          "expr": args.wait_for,
+                                         "gone": args.wait_gone,
                                          "value": waited}
                 _emit(args.cmd, action_result, legacy)
             return 0

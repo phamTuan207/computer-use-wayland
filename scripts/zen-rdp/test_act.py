@@ -5,8 +5,9 @@ Covers: descriptor/action usage validation, the single-eval script
 contract (exhaustive count, scan cap, JSON verdict), act() verdict
 handling (success returns, refusal raises ActRefusal with the true
 count / candidatesTruncated passthrough), refusal envelope shape
-(retry=unsafe, result carries the verdict), success disposition,
-and CLI pre-connect validation. No browser needed: evaluate() is
+(M3: arrived refusal = not_delivered/safe, breach path and lost
+responses stay unsafe; result carries the verdict), success
+disposition, and CLI pre-connect validation. No browser needed: evaluate() is
 stubbed with canned verdicts, the same pattern as WaitForTests.
 The live proof (true count 100 on the 300-control fixture) is the
 dedicated-session test recorded in the P2a report.
@@ -218,25 +219,66 @@ class EnvelopeTests(unittest.TestCase):
         self.assertEqual(d, {"delivery": "delivered_unverified",
                              "retry": "not_applicable"})
 
-    def test_refusal_envelope_shape_retry_unsafe(self):
+    def test_refusal_envelope_shape_m3_not_delivered_safe(self):
+        # M3 (2026-11-28): an ARRIVED refusal proves the input did
+        # not land, so the envelope is not_delivered/safe. The old
+        # delivered_verified/unsafe claimed the opposite of what
+        # the verdict proves. Consumer inventory before the change:
+        # only this lane's own tests read refusal disposition.
         refusal = {"acted": False, "reason": "ambiguous", "count": 100,
                    "candidatesTruncated": False, "candidates": [],
                    "descriptor": {"text": "Action"}, "action": "click"}
         exc = rc.ActRefusal(refusal)
+        delivery, retry = exc.disposition()
         out, err = io.StringIO(), io.StringIO()
         with redirect_stdout(out), redirect_stderr(err):
-            rc._fail("act", exc.code, str(exc), "delivered_verified",
-                     "unsafe", 1, False, result=exc.refusal)
+            rc._fail("act", exc.code, str(exc), delivery,
+                     retry, 1, False, result=exc.refusal)
         env = json.loads(out.getvalue())
         self.assertFalse(env["ok"])
         self.assertEqual(env["command"], "act")
         self.assertEqual(env["error"]["code"], "target_ambiguous")
-        self.assertEqual(env["disposition"]["retry"], "unsafe")
+        self.assertEqual(env["disposition"]["retry"], "safe")
         self.assertEqual(env["disposition"]["delivery"],
-                         "delivered_verified")
+                         "not_delivered")
         self.assertEqual(env["result"]["count"], 100)
         self.assertFalse(env["result"]["candidatesTruncated"])
         self.assertIn("ERROR:", err.getvalue())
+
+    def test_breach_refusal_stays_unsafe(self):
+        # The one arrived-refusal exception: the script acted on a
+        # truncated scan (contract breach), so the click may have
+        # landed. act() must flag may_have_acted and the envelope
+        # stays delivery_uncertain/unsafe.
+        client = make_client({"acted": True, "action": "click",
+                              "count": 1, "candidatesTruncated": True,
+                              "poolScope": "top-document"})
+        with self.assertRaises(rc.ActRefusal) as cm:
+            client.act({"text": "Go"}, "click")
+        self.assertTrue(cm.exception.may_have_acted)
+        self.assertEqual(cm.exception.disposition(),
+                         ("delivery_uncertain", "unsafe"))
+
+    def test_pure_refusal_disposition_safe(self):
+        client = make_client({"acted": False, "reason": "not_found",
+                              "count": 0, "candidatesTruncated": False,
+                              "poolScope": "top-document",
+                              "candidates": []})
+        with self.assertRaises(rc.ActRefusal) as cm:
+            client.act({"text": "Go"}, "click")
+        self.assertFalse(cm.exception.may_have_acted)
+        self.assertEqual(cm.exception.disposition(),
+                         ("not_delivered", "safe"))
+
+    def test_lost_act_response_stays_unsafe(self):
+        # A transport failure during act never becomes an
+        # ActRefusal; it propagates as RDPError and the classifier
+        # keeps it delivery_uncertain/unsafe (cannot distinguish a
+        # refusal from a landed click).
+        code, delivery, retry = rc._classify_error(
+            "RDP socket closed by server", "act")
+        self.assertEqual((delivery, retry),
+                         ("delivery_uncertain", "unsafe"))
 
     def test_cli_act_without_target_exit_2(self):
         proc = run_cli("--port", "1", "act", "click")

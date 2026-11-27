@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>act 100-button fixture</title></head>
+<body>
+<h1>act 100-button fixture</h1>
+<p>100 identical "Action" buttons. A correct ambiguity-refusing
+act on text "Action" must refuse with true count 100 and zero
+clicks. Each click bumps the counter in the title and below.</p>
+<p id="counter">clicks: 0</p>
+<div id="pool"></div>
+<script>
+let clicks = 0;
+const pool = document.getElementById('pool');
+for (let i = 0; i < 100; i++) {
+  const b = document.createElement('button');
+  b.textContent = 'Action';
+  b.addEventListener('click', () => {
+    clicks += 1;
+    document.title = 'clicks: ' + clicks;
+    document.getElementById('counter').textContent = 'clicks: ' + clicks;
+  });
+  pool.appendChild(b);
+}
+</script>
+</body>
+</html>
