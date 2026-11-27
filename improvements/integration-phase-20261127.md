@@ -267,6 +267,19 @@ stops at collect with no snapshot created; gate re-run over
 the sealed output passes). No time saving claimed (per M2:
 machine delta 0.35s, agent-minute effect UNPROVEN).
 
+### Item 8: I8 probes/ + probe ledger (2026-11-27)
+
+probes/README.md (naming, ledger rules, advisory-A/B-only
+stance), probes/ledger.jsonl seeded with this phase's five
+probes (M17 shard runs, M16 hermetic pre/post, R17 live,
+Hyprland bind dump, I3 live) plus six historical probes
+indexed by path (f4-*, r10-webdriver-probe.mjs,
+machine-control-discord-ipc-probe.py), and
+probes/validate-ledger.py (rows parse, required fields,
+cited paths exist; LEDGER OK: 11 rows). The mandatory
+merge-base A/B gate half stays rejected per the source
+report; docs/benchmarks/ remains the public aggregate store.
+
 ## Sources cited during this phase
 
 - The three source reports above (repo paths + commits).
