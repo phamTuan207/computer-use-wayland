@@ -39,9 +39,9 @@ computer-use cli run zen -- status
 **Prerequisites:**
 - Zen installed (`zen-browser` on PATH).
 - For tab commands: a dedicated session started by the wrapper
-  (`session start`, below). the owner's own Zen runs WITHOUT a remote
+  (`session start`, below). the user's own Zen runs WITHOUT a remote
   debugging port (verified 2026-11-18: nothing listening on 9222, 2828
-  or 6000), so the wrapper can never attach to his session.
+  or 6000), so the wrapper can never attach to the user's session.
 - For history: a Zen profile dir (default auto-detected from
   `~/.config/zen/profiles.ini`, the Default=1 profile).
 
@@ -64,7 +64,7 @@ computer-use cli run zen -- current
 computer-use cli run zen -- page
 computer-use cli run zen -- close <index>
 
-# Read-only history from his real profile (no session needed)
+# Read-only history from the user's real profile (no session needed)
 computer-use cli run zen -- history --limit 20
 computer-use cli run zen -- history github --limit 10
 
@@ -96,7 +96,7 @@ always loopback; the wrapper never connects anywhere else.
 | `session status` | Dedicated session probe; always exits 0 |
 | `tabs` | List tabs of the dedicated session: index, url, title |
 | `open <url>` | Open an http(s) URL in a NEW tab; records it as current |
-| `open --live <url>` | Open a URL in a new tab of his RUNNING Zen via remoting; opt-in only, PROPOSED-live, see below |
+| `open --live <url>` | Open a URL in a new tab of the user's RUNNING Zen via remoting; opt-in only, PROPOSED-live, see below |
 | `navigate <url> [--tab INDEX]` | Navigate the current (or named) tab |
 | `activate <index>` | Bring a tab to front; records it as current |
 | `close <index>` | Close one tab by index; refuses the last remaining tab |
@@ -117,10 +117,10 @@ computer-use cli run zen -- page
 computer-use cli run zen -- close <index-from-open>
 computer-use cli run zen -- session stop
 
-# What did he visit most recently? (read-only, his real profile)
+# What did the user visit most recently? (read-only, the user's real profile)
 computer-use cli run zen -- history --limit 10
 
-# Search his history for a topic
+# Search the user's history for a topic
 computer-use cli run zen -- history github --limit 10
 ```
 
@@ -141,8 +141,8 @@ first live non-blank tab. Closing the tracked tab clears the
 tracking.
 
 The dedicated profile lives at `~/.cache/cli-anything-zen/profile`
-and belongs to the wrapper; it never sees his data. `session start`
-refuses any `--profile` inside `~/.config/zen` (his real profiles).
+and belongs to the wrapper; it never sees the user's data. `session start`
+refuses any `--profile` inside `~/.config/zen` (the user's real profiles).
 `session stop` refuses to kill a pid whose cmdline does not contain
 the recorded dedicated profile path.
 
@@ -168,7 +168,7 @@ output under `result`.
 
 1. Always run `status` first. If `session_up` is false, run
    `session start` to bring up the dedicated session, then retry.
-   Never point the wrapper at his Zen: it has no debug port, and
+   Never point the wrapper at the user's Zen: it has no debug port, and
    there is no flag that attaches to it.
 2. List tabs before acting on a tab index. Indices come from
    `tabs` or from `open`, never from memory. Never use a BiDi context
@@ -177,16 +177,16 @@ output under `result`.
    command rejects your tab argument, it is probably a context id;
    re-list and use the index.
 3. `open` always opens a NEW tab in the DEDICATED session. It does
-   not touch his Zen. To open a page in his own Zen you must use
-   `open --live`, and only when he asked for it (rule 9).
+   not touch the user's Zen. To open a page in the user's own Zen you must use
+   `open --live`, and only when the user asked for it (rule 9).
 4. `close` closes exactly the index the task names. Never close
    a tab you did not list first, and never close all tabs. The last
    remaining tab of the dedicated session cannot be closed; use
    `session stop` instead.
 5. `current` only knows tabs this wrapper opened or activated. After
    any other agent switches tabs, run `activate` first.
-6. History is read-only and needs no session. It reads his real
-   profile, so treat its contents as his private browsing data: use
+6. History is read-only and needs no session. It reads the user's real
+   profile, so treat its contents as the user's private browsing data: use
    it for the task at hand, never paste it elsewhere.
 7. Check the return code. A non-zero return after `open` or `close`
    may mean a partial change landed: list tabs to see the real state,
@@ -195,9 +195,9 @@ output under `result`.
    (`session stop`). Do not leave headless Zen instances behind.
 9. `open --live` is PROPOSED-live, not verified-live: the
    `--new-tab` remoting flag is documented in `zen-browser --help`,
-   but it was deliberately never run against his session (it would
-   add a tab to his Zen). Use it only when he explicitly asked to
-   open something in his own Zen, and say so in the report.
+   but it was deliberately never run against the user's session (it would
+   add a tab to the user's Zen). Use it only when the user explicitly asked to
+   open something in the user's own Zen, and say so in the report.
 10. Secure field values are never read. The DOM tools redact
     password fields where they control the bytes (snapshot
     values, `field_value`, RDP report URLs), but a raw
@@ -213,7 +213,7 @@ output under `result`.
 
 Verified 2026-11-18 on the laptop (Zen 1.24.2b, `zen-browser-bin
 1.24.2b-1`), against a dedicated headless instance with a fresh
-profile in /tmp, NOT against his session:
+profile in /tmp, NOT against the user's session:
 
 - `zen-browser --headless --no-remote --profile /tmp/zen-bidi-test
   --remote-debugging-port=9222 about:blank` listens on 127.0.0.1:9222
@@ -243,9 +243,9 @@ profile in /tmp, NOT against his session:
   fresh context id inside its own BiDi session. It never prints a
   context id. The draft's context-id design does not work for a
   one-shot CLI; this is the correction.
-- His running Zen (pid 546184) has no debug port: nothing listening
-  on 9222, 2828 or 6000. Tab commands cannot see his tabs; only
-  read-only `history` and opt-in `open --live` touch his session,
+- The user's running Zen (pid 546184) has no debug port: nothing listening
+  on 9222, 2828 or 6000. Tab commands cannot see the user's tabs; only
+  read-only `history` and opt-in `open --live` touch the user's session,
   and the second was never run.
 - Audit that motivated this wrapper (Zen: 50 launches, 1364 visits
   in 14 days, heaviest GUI app, priority 1):

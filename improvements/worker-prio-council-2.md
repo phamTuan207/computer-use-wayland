@@ -1,6 +1,6 @@
 # Council 2 verdict - Owner-attitude fidelity review of PRIO draft queue
 # Council 2, 22:44 +07 Sat 2026-11-21. Lens: does the draft ranking match the
-# owner's OWN words and repeated emphases? Sources: PRIO crawl log
+# user's OWN words and repeated emphases? Sources: PRIO crawl log
 # (improvements/worker-prio-crawl-log.md), todolist
 # (docs/zen-error-fix-todolist-20261121.md), error file section 12 (J1-J6),
 # ~/memory/2026-11-21.md flushes 22:16, 22:19, 22:21, 22:22-22:23, 22:25-22:27,
@@ -38,7 +38,7 @@
 ## Verdicts per draft rank
 
 ### Rank 1. F3 Zen restore + Marionette slot + 15-tab cleanup - CHALLENGE (swap with rank 2)
-- Draft rationale: owner cannot use his browser at all (22:25); every live
+- Draft rationale: owner cannot use the user's browser at all (22:25); every live
   run gates on this. That is TRUE and F3 is the first thing in wall-clock
   time. But rank 1 in a priority queue means "matters most", and the owner
   said the silence weakness, not Zen, is what must be fixed FIRST:

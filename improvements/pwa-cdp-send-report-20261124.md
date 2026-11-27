@@ -1,6 +1,6 @@
 # PWA CDP full checklist: drive the Muse / mimeo PWA without mouse or vision
 
-Date: 2026-11-24, ~20:27-20:40 Asia/Ho_Chi_Minh. Owner: dang (Pham Tuan Huy).
+Date: 2026-11-24, ~20:27-20:40 Asia/Ho_Chi_Minh. Owner: the owner.
 Scope: Muse PWA (clone1, Brave, CDP 9224) and mimeo PWA (clone2, Chromium, CDP 9223),
 on the Omarchy laptop, reached over SSH. CDP only, no computer-use, no ydotool,
 no mouse, no vision for any step below.

@@ -64,7 +64,7 @@ Both were found by running the real pipeline, not by reading code.
 Accuracy of the 2B grounder on fair targets (all present in the frame): 2 of 3.
 Share button correct, Zen new-tab plus correct, PDF page number missed by about
 50 px. Verdict: a local 2B grounder loads and runs, but fits with only 88 MiB to
-spare next to his running services and costs about 2.8 s a call. Pick 3 is
+spare next to the user's running services and costs about 2.8 s a call. Pick 3 is
 therefore built on the model-call path (top 3 from the Luna vision call), not on
 a local grounder. No local grounder is faked. Gate scripts and logs are on the
 laptop at `/tmp/pick3-gate/` (probe scripts, gate logs, screen.png; the 9.2 GB

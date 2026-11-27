@@ -3,7 +3,7 @@
 Coordinator: COORD-CLICK-10. Repo ~/workspace/computer-use-wayland, branch todolist-push.
 Roadmap order, one lane at a time: (1) ZT-B blind run, (2) G-PILL retry, (3) A1 resume prep,
 (4) rung 3 prep. Single lane, quiet machine, owner away from the machine.
-Rule: never close/navigate his tabs; pill must show on any agent control; full time log
+Rule: never close/navigate the user's tabs; pill must show on any agent control; full time log
 (wall-clock Asia/Ho_Chi_Minh + elapsed); small commits, push immediately; report to Muse tong
 only, never to the owner. On any failure (tab closed, pill missing, error): STOP the sequence
 and report to Muse tong. No em dash in this file.

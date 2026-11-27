@@ -183,7 +183,7 @@ written or deleted on the laptop.
   line was changed.
 - What is needed for a full fix: a re-run of arms A-E with logs committed
   (the batch 7 alternative). That needs a live Zen slot while the owner
-  is away from the machine; it was NOT done here (he is using the
+  is away from the machine; it was NOT done here (the user is using the
   machine now, and this task forbids Zen interaction).
 - Status after this work: the arm verdicts still rest on the inline
   summary in the F3B log only. Unchanged, but now with the laptop
@@ -270,7 +270,7 @@ written or deleted on the laptop.
   source contains the owner's personal Gmail address in the commit
   author line. It was replaced in the committed copy with the public
   noreply address already used in git history
-  (232407559+phamTuan207@users.noreply.github.com). `diff` between
+  (phamTuan207). `diff` between
   source and committed copy shows only line 90. The address value is
   not written in this log or in the README.
 - Wrote improvements/v3-judge-evidence-20261117/README.md with full

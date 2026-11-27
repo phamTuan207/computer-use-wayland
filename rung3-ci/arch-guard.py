@@ -19,7 +19,8 @@ Two checks, both mechanical defences of project principles:
 2. Machine values: a small denylist scanned over scripts/,
    skill/, docs/, .github/, tests/, skills/, native/ and the
    repo root files: personal name forms (any case, spaced or
-   separator-joined), real Firefox/Zen profile dir names
+   separator-joined; diacritic forms matched by hash,
+   not by literal), real Firefox/Zen profile dir names
    (8-char hash + .Default), home-dir paths with a real
    username, and Tailscale-range addresses (the CGNAT range
    literal 100.64.0.0/10 in documentation is not a hit).
@@ -35,16 +36,19 @@ Two checks, both mechanical defences of project principles:
 Exit 1 on any violation. Python standard library only.
 """
 import ast
+import hashlib
 import os
 import re
 import sys
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 # Denylist patterns. The personal-name forms live here (rung3-ci/
 # is not itself scanned) so the guard can match them in the
-# scanned trees.
+# scanned trees. Diacritic forms are stored as hashes below,
+# not as literals, so this file does not itself contain the name.
 #
 # Boundary decision (explicit): the public GitHub handle is NOT
 # a denylist hit. It is the repo identity, used intentionally in
@@ -58,8 +62,8 @@ DENY_PATTERNS = [
     ("personal-name", re.compile(
         r"(?<![A-Za-z])pham[\s._-]+tuan(?![A-Za-z])"
         r"|(?<![A-Za-z])phamtuan[\s._-]*huy(?![A-Za-z])"
-        r"|(?<![A-Za-z])tuan[\s._-]*huy(?![A-Za-z])"
-        r"|phạm|tuấn", re.IGNORECASE)),
+        r"|(?<![A-Za-z])tuan[\s._-]*huy(?![A-Za-z])",
+        re.IGNORECASE)),
     ("profile-dir", re.compile(r"\b[a-z0-9]{8}\.Default\b")),
     # user/demo/testuser are placeholders and synthetic fixture
     # homes, not real usernames. Any other username is a hit,
@@ -70,6 +74,35 @@ DENY_PATTERNS = [
     # range literal itself (100.64.0.0/10) in documentation is not.
     ("tailscale-ip", re.compile(r"\b100\.\d{1,3}\.\d{1,3}\.\d{1,3}\b(?!/10\b)")),
 ]
+# Diacritic personal-name tokens, stored as SHA-256 digests (of
+# the NFC, lowercased tokens) so the guard still detects the
+# name without spelling it in this file. The literal was itself
+# the leak.
+_NAME_TOKEN_SHA256 = frozenset({
+    "8ac0e9a490bb1da8b1afed99f7a95d81375ca5ee628112d06351bd4ec3c90809",
+    "8dd48718607f71d250804bd446ebc8439077893b15897adc2fa5225851822d9e",
+})
+
+
+def _name_token_hit(text):
+    """Return the matched 4-character name-token window, or None.
+
+    Hashes every 4-character window of every letter run in the
+    lowercased, NFC-normalized text and compares digests, so the
+    guard detects the diacritic name forms without containing
+    them.
+    """
+    text = unicodedata.normalize("NFC", text.lower())
+    for run in re.findall(r"[^\W\d_]+", text, re.UNICODE):
+        for i in range(len(run) - 3):
+            window = run[i:i + 4]
+            digest = hashlib.sha256(
+                window.encode("utf-8")).hexdigest()
+            if digest in _NAME_TOKEN_SHA256:
+                return window
+    return None
+
+
 SCAN_DIRS = ["scripts", "skill", "docs", ".github", "tests",
              "skills", "native"]
 # Paths (relative, prefix match) exempt from the machine-value
@@ -329,12 +362,25 @@ def scan_machine_values(root=ROOT):
             continue
         seen = set()
         for i, line in enumerate(text.splitlines(), 1):
+            line_personal = False
             for name, pat in DENY_PATTERNS:
                 if pat.search(line):
                     violations.append(
                         f"machine-value: {rel}:{i}: {name}: "
                         f"{line.strip()[:80]}")
                     seen.add(name)
+                    if name == "personal-name":
+                        line_personal = True
+            # The hash check runs on every line, like the regex
+            # patterns above: the per-file `seen` set gates only
+            # the split-form pass below. Skip it on a line the
+            # regex already flagged, so a line still reports at
+            # most one personal-name violation, as before.
+            if not line_personal and _name_token_hit(line):
+                violations.append(
+                    f"machine-value: {rel}:{i}: personal-name: "
+                    f"{line.strip()[:80]}")
+                seen.add("personal-name")
         flat = _normalized(text)
         for name, pat in DENY_PATTERNS:
             if name in seen:
@@ -346,6 +392,19 @@ def scan_machine_values(root=ROOT):
                 violations.append(
                     f"machine-value: {rel}:0: {name} "
                     f"(split form): {snippet}")
+        if "personal-name" not in seen:
+            hit = _name_token_hit(flat)
+            if hit:
+                idx = flat.lower().find(hit)
+                if idx >= 0:
+                    lo = max(0, idx - 20)
+                    snippet = flat[lo:idx + 24].strip()[:80]
+                else:
+                    snippet = flat.strip()[:80]
+                violations.append(
+                    "machine-value: "
+                    f"{rel}:0: personal-name (split form): "
+                    f"{snippet}")
     return violations
 
 

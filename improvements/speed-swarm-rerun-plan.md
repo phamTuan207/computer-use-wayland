@@ -95,14 +95,14 @@ Merge (coordinator, after Phase A): fast-forward or merge speed-swarm-pick1fix i
 ## Standing rules (restate in every worker brief)
 
 - Codex launch form: codex exec --sandbox danger-full-access -m gpt-6-luna -c model_reasoning_effort="max". codex 0.169.0 does NOT accept --model_reasoning_effort as a flag. Launch from the repo dir (or the worker's own worktree for code work).
-- NEVER use ydotool on his machine. Banned.
-- Cleanup after EVERY test run: close every test window/app, verify desktop clean via hyprctl clients, never touch his Zen tabs, Zalo, Teams, Jarvis, music. He is at the machine studying; live tests run even while he uses it (authorized), but keep disruption minimal.
+- NEVER use ydotool on the user's machine. Banned.
+- Cleanup after EVERY test run: close every test window/app, verify desktop clean via hyprctl clients, never touch the user's Zen tabs, Zalo, Teams, Jarvis, music. The user is at the machine studying; live tests run even while the user uses it (authorized), but keep disruption minimal.
 - Push to GitHub as work lands, small atomic commits of real work.
 - Timing always on: every test timed precisely, logged with wall-clock timestamps (Asia/Ho_Chi_Minh) in improvements/live-test-log.md.
 - SSH only via ~/workspace/ssh-laptop.sh. SSH dies about 30s, launch laptop jobs detached (nohup ... > log 2>&1 < /dev/null &) and check with short calls. Never use sudo.
 - Kill a stuck subagent immediately without asking, and report it.
-- In repo/handoff text call him the owner, never "dang".
+- In repo/handoff text call the user the owner, never "dang".
 - Astra 6 is OUT of credit (blocked). Use Luna 6 Max (Codex). Mark verdicts as PROVISIONAL (non-Astra).
 - A dedicated watchdog is already running (polls every 5 min). Do not spawn another.
 - Do NOT message the user directly. Report back to the coordinator.
-- the owner's 5 standing orders apply: (1) keep working, do not stop, push through blockers, find workarounds; (2) continue what is unfinished; (3) keep optimizing to reduce think time; (4) cut whatever step can be cut; (5) learn from predecessors' docs and repos (improvements/speed-prior-art.md), do not reinvent. Safety limits hold: never bypass a rate limit or account lock, never break his machine or touch his personal data.
+- the user's 5 standing orders apply: (1) keep working, do not stop, push through blockers, find workarounds; (2) continue what is unfinished; (3) keep optimizing to reduce think time; (4) cut whatever step can be cut; (5) learn from predecessors' docs and repos (improvements/speed-prior-art.md), do not reinvent. Safety limits hold: never bypass a rate limit or account lock, never break the user's machine or touch the user's personal data.

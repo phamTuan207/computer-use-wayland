@@ -3,7 +3,7 @@
 Status: ADOPTED (interim). Human profile launches flag-free on every audited
 path from the owner's next Zen launch. The owner's currently running session
 predates adoption and is reported LEGACY-FLAGGED by the startup probe until
-he relaunches; it was not restarted, killed, or touched.
+the user relaunches; it was not restarted, killed, or touched.
 
 Decision reference: improvements/r10-stage2-decision-20261127.md (Step 1,
 redteam amendments S2-S8). Stage 1 evidence:
@@ -164,8 +164,8 @@ pill visible. Entry, path, action, resulting state:
 
 Evidence (VM-local): humanleg-relaunch.png (entry), humanleg-search.jpg
 (results), humanleg-site.jpg (site loaded). This verifies the mechanism
-on a throwaway profile. Verification on the owner's own profile is
-pending his next natural relaunch, which the probe will record as CLEAN
+on a throwaway profile. Verification on the user's own profile is
+pending the user's next natural relaunch, which the probe will record as CLEAN
 (the current session is LEGACY-FLAGGED by design; it was not restarted).
 
 ## Follow-ups (not blockers for the interim split)

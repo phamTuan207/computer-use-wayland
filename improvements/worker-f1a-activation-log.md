@@ -18,7 +18,7 @@
   sac current); A/B/C/D alone PASS. Rule: never Marionette-close tabs in
   bulk, never Marionette-close about:blank; BiDi close or UI right-click
   Close Tab only. Owner was active on ws2 at 23:43:43 (clone2 confirming
-  todo): do NOT yank his screen; observe first, wait if he is active.
+  todo): do NOT yank the user's screen; observe first, wait if the user is active.
 - VM repo todolist-push HEAD 7cde3d2 (F3b handover). 2 untracked files
   (multi-agent-deliberation-idea, muse-coordinate-accuracy) are not mine.
 

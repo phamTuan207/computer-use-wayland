@@ -4,7 +4,7 @@ Coordinator: COORD-CLICK-11. Repo ~/workspace/computer-use-wayland, branch todol
 Roadmap order, one lane at a time: (2) G-PILL retry, (3) A1 resume prep, (4) rung 3 prep.
 ZT-B run 3 FAILed under COORD-CLICK-10 (sequence stopped at step 1); this coordinator runs
 steps 2-4 independently of the ZT-B error, per Muse tong. Single lane, quiet machine, owner away.
-Rule: never close/navigate his tabs; pill must show on any agent control; full time log
+Rule: never close/navigate the user's tabs; pill must show on any agent control; full time log
 (wall-clock Asia/Ho_Chi_Minh + elapsed); small commits, push immediately; report to Muse tong
 only, never to the owner. On any failure: STOP and report to Muse tong. No em dash in this file.
 

@@ -55,7 +55,7 @@ could have invalidated.
 
 ## R2. What a spurious live run costs (why gates exist)
 - A live run before G-RESTORE fails spuriously, burns tokens, and risks
-  corrupting the owner's real tabs for zero signal (PRIO council 3,
+  corrupting the user's real tabs for zero signal (PRIO council 3,
   G-RESTORE). The 13 real tabs (YouTube, Todoist, Gmail, Calendar, Muse
   chat, PCCV CF26 Sheets, Free Claude Code Admin 8082, Welcome, Polygon,
   codeforces, chunkbase, duck.ai, BytePlus) are the owner's working set; a

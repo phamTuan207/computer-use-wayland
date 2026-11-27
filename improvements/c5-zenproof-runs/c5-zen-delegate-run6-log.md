@@ -8,7 +8,7 @@ Report goes to COORD-CLICK-14, not directly to the owner.
 ## 0. Task receipt and sources read (before any live touch)
 
 - Task received 01:52:22 +07, 23/11/2026. T+0m. Single lane,
-  quiet machine, owner confirmed at 23:58 he is not touching
+  quiet machine, owner confirmed at 23:58 the user is not touching
   the machine and every machine-activity alarm is a false alarm,
   live work authorized.
 - Sources read before running:
@@ -33,7 +33,7 @@ Report goes to COORD-CLICK-14, not directly to the owner.
     sent correctly; cleanup clean).
 - Hard rules restated: never close or navigate any tab of the
   owner; do NOT reopen the Muse chat tab (the owner reopened
-  it himself, it is the current tab and the run restores to
+  it, it is the current tab and the run restores to
   it); pill must show on any agent control (gate 4.29); on a
   'not made current' refusal, STOP at once, no retry open in
   a loop, no DELETE via Marionette, report to the

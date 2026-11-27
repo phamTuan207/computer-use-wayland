@@ -23,7 +23,7 @@ Owner: the owner. Worker: Luna 6 Max (DOM-replicate 118a9122 + continuation). St
 
 ## Zen probe
 
-- YES, definite, live-verified in 2s (17:52:45-17:52:47 +07). WebDriver BiDi via repo-owned scripts/zen_cli.py on Zen 1.24.2b, dedicated headless fresh profile, rects + in-page click + assert on the fixture (INPUT #name at 50.2,78.87,180x22; BUTTON #show at 234.2,78.87,81.65x22; click returned "clicked"; #result read back "pick4-ok hello stranger"). His running Zen has nothing on 9222, 2828, or 6000, so BiDi can never attach to his session. Ladder framing: the Zen CLI already exists at the top rung, no new CLI to build. Full write-up: run dir zen-probe/summary-zen-probe.md (copy to repo on final report).
+- YES, definite, live-verified in 2s (17:52:45-17:52:47 +07). WebDriver BiDi via repo-owned scripts/zen_cli.py on Zen 1.24.2b, dedicated headless fresh profile, rects + in-page click + assert on the fixture (INPUT #name at 50.2,78.87,180x22; BUTTON #show at 234.2,78.87,81.65x22; click returned "clicked"; #result read back "pick4-ok hello stranger"). The user's running Zen has nothing on 9222, 2828, or 6000, so BiDi can never attach to the user's session. Ladder framing: the Zen CLI already exists at the top rung, no new CLI to build. Full write-up: run dir zen-probe/summary-zen-probe.md (copy to repo on final report).
 
 ## Owner rule (proven from source)
 

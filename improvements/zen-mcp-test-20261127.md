@@ -15,7 +15,7 @@ report.
 - zen-mcp ran with its own dedicated agent profile under /tmp, its own
   config and data directories under /tmp, `ZEN_MCP_NO_UPDATE_CHECK=1`,
   and `ZEN_MCP_ZEN_PATH` pointing at the installed Zen binary. The
-  owner's real Zen profile was never attached, read, or written; the
+  user's real Zen profile was never attached, read, or written; the
   owner Zen process (same PID before and after, startup probe CLEAN,
   RDP port 6021 listening) was verified untouched at the end.
 - `--use-default-profile` was never used. Test pages were three local
@@ -259,7 +259,7 @@ and history access without allowlist filtering.
 Bottom line: zen-mcp is a credible, disciplined piece of work whose
 semantic layer, event feed, and Spaces/Folders surface are ahead of
 our RDP channel, while our channel is ahead where it matters most for
-this project: driving the owner's real live session, delivery/retry
+this project: driving the user's real live session, delivery/retry
 semantics, attach-time defence in depth, and zero supply chain. The
 fastest path is to port their five ideas (snapshot, refs+digest,
 events, Spaces/Folders surface, ask contract) into zen-rdp, not to

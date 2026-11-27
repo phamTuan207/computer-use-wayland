@@ -8,7 +8,7 @@ Report goes to Muse tong, not directly to the owner.
 ## 0. Task
 
 Run ZT-B run 5: live verify the F1+F2+F3 fixes for Zen
-tab-handling. Machine quiet (owner confirmed 23:58 he is not
+tab-handling. Machine quiet (owner confirmed 23:58 the user is not
 touching the machine, false alarm). Single lane. Run 5 is a NEW
 run number with a NEW intent and message, copied from the run 4
 runner (run3.py lineage, grim-env fix cff51d0 + pill gate).

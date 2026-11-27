@@ -472,16 +472,16 @@ Nothing here was run.
   live right now.
 - What it fixes: cause 3.1 in its workspace form.
 - Cost: the highest of the cheap fixes. It changes the user's
-  screen on every send, serializes sends with his own use of the
+  screen on every send, serializes sends with the user's own use of the
   machine, and breaks the "background send" promise for this
   class. It also needs a restore step with as-found state recorded
   (active workspace, active window) and a failure path that still
-  restores. While he is asleep the screen change is free; while
-  he is awake it is a visible yank on every send.
+  restores. While the user is asleep the screen change is free; while
+  the user is awake it is a visible yank on every send.
 - What could go wrong: a focus switch mid-program races with
   observe (rects read on workspace 2, acted on after a switch
   back); a crashed run leaves the machine on workspace 2; a send
-  while he is typing on workspace 1 steals his window. The
+  while the user is typing on workspace 1 steals the user's window. The
   precondition must be hold-focus-for-the-whole-program, not
   switch-focus-then-send.
 - Failing-first diagnostic D-A2: exactly the C5-VISIBILITY test

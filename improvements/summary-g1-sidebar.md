@@ -60,4 +60,4 @@ NEGATIVE, with exact evidence. Sidebar-item precision is NOT achievable through 
 
 ## Cleanup
 
-- Nautilus closed, test kitty closed, no test processes remain. Final hyprctl clients: Jarvis only. Broker idle, next_sequence 1. Relay restored to clean env (drop-in removed, MainPID 118290). No artifacts outside the run dir. No changes to his Zen, Jarvis, or music.
+- Nautilus closed, test kitty closed, no test processes remain. Final hyprctl clients: Jarvis only. Broker idle, next_sequence 1. Relay restored to clean env (drop-in removed, MainPID 118290). No artifacts outside the run dir. No changes to the user's Zen, Jarvis, or music.

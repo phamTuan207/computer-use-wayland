@@ -158,7 +158,7 @@ repo. This log is a coordinator log, not machine config.
   "Target not found". The plugin id is NOT directly addressable
   as an IPC target; the only known interaction is `shell toggle
   xyzlab.omafile '{}'`, which opens/closes the panel UI, not a
-  list/open CLI API. No toggle was sent (would open UI on his
+  list/open CLI API. No toggle was sent (would open UI on the user's
   screen mid-batch).
 - Verdict: NO CLI/list API for Omafile. Item CLOSED. Shell file ops
   stay the path. Login risk: NONE (read-only).
@@ -202,7 +202,7 @@ repo. This log is a coordinator log, not machine config.
   row now reads "Open terminal (kitty)", plus a new "(unbound)" row
   for the floating toggle with the hl.dsp command form.
 - `n`: does NOT exist. `command -v n` empty; no alias or function
-  in .bashrc or .zshrc (his login shell is bash, /usr/bin/bash);
+  in .bashrc or .zshrc (the user's login shell is bash, /usr/bin/bash);
   .bashrc carries only oc/oc-tui aliases. Fix: fastest-paths.md
   line 42 now reads `nvim <file>` (nvim verified on PATH).
 - `zd`: does NOT exist (no alias, no function, not on PATH).

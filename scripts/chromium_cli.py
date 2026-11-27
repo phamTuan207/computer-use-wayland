@@ -12,9 +12,9 @@ Reading a page's DOM still goes through
 full WebSocket side; this file's client does one call only.
 
 Endpoint rule (same as `computer-use browser start`): the default
-endpoint is http://127.0.0.1:9223, the agent-managed Chromium. the owner's own Chromium runs WITHOUT a remote debugging port (verified
+endpoint is http://127.0.0.1:9223, the agent-managed Chromium. the user's own Chromium runs WITHOUT a remote debugging port (verified
 2026-11-18: no DevToolsActivePort file, nothing listening on 9222), so
-this wrapper can never attach to his session. If no endpoint answers,
+this wrapper can never attach to the user's session. If no endpoint answers,
 tab commands fail with a clear error telling the agent to run
 `computer-use browser start` first; the wrapper never launches, kills
 or restarts any Chromium itself. For tests, point --endpoint at a

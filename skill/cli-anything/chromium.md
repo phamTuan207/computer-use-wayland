@@ -37,10 +37,10 @@ computer-use cli run chromium -- <command>
 - Chromium installed (`chromium` on PATH).
 - For tab commands: a Chromium with a loopback CDP endpoint, normally
   started by `computer-use browser start` (endpoint
-  `http://127.0.0.1:9222`, dedicated agent profile). the owner's own
+  `http://127.0.0.1:9222`, dedicated agent profile). the user's own
   Chromium runs WITHOUT a remote debugging port (verified 2026-11-18:
   no DevToolsActivePort file, nothing listening on 9222), so the
-  wrapper can never attach to his session.
+  wrapper can never attach to the user's session.
 - For history, bookmarks and downloads: a Chromium profile dir
   (default `~/.config/chromium/Default`).
 
@@ -52,7 +52,7 @@ computer-use cli run chromium -- <command>
 # Probe first: is the endpoint up, does the profile exist?
 computer-use cli run chromium -- status
 
-# List tabs (read-only, never disturbs his session)
+# List tabs (read-only, never disturbs the user's session)
 computer-use cli run chromium -- tabs
 
 # Open a URL in a NEW tab, read its title, close it
@@ -106,7 +106,7 @@ computer-use cli run chromium -- open https://example.com
 computer-use cli run chromium -- current
 computer-use cli run chromium -- close <tab-id-from-open>
 
-# What did he visit most recently? (read-only, his Default profile)
+# What did the user visit most recently? (read-only, the user's Default profile)
 computer-use cli run chromium -- history --limit 10
 
 # Downloads, newest first, with state (complete, in_progress, cancelled)
@@ -128,7 +128,7 @@ History reads copy the live History sqlite file to a temp file first
 (the live DB is locked while Chromium runs) and open the copy
 read-only. Nothing is ever written to the profile. Bookmarks are
 parsed from the profile `Bookmarks` JSON file; when the file is
-absent (his Default profile has none, verified 2026-11-18),
+absent (the user's Default profile has none, verified 2026-11-18),
 `bookmarks` returns an empty list with a note, not an error.
 
 ## Output Formats
@@ -148,7 +148,7 @@ usual envelope (`app`, `args`, `returncode`, `stdout_truncated`,
 
 1. Always run `status` first. If `reachable` is false, run
    `computer-use browser start` to bring up the agent-managed
-   Chromium, then retry. Never point the wrapper at his Chromium:
+   Chromium, then retry. Never point the wrapper at the user's Chromium:
    it has no debug port, and there is no flag that attaches to it.
 2. List tabs before acting on a tab id. Tab ids come from `tabs` or
    from `open`, never from memory.

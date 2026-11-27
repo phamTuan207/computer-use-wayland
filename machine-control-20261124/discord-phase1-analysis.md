@@ -189,7 +189,7 @@ The REST API at `api.discord.com` with a user token WOULD give full read/send, b
 - It needs the owner's user token. NO token was extracted in this phase, from local
   storage or anywhere else. Credential extraction is forbidden and was not attempted.
 - Recommendation: CDP (section 6) is the primary path. The token route is a fallback
-  ONLY if CDP proves unworkable AND the owner supplies the token himself. The CLI
+  ONLY if CDP proves unworkable AND the owner supplies the token. The CLI
   must never read Discord's local storage for a token.
 
 ## 9. Phase 2 proposal: command groups for `cli-anything-discord`
@@ -218,7 +218,7 @@ Following HARNESS.md Phase 2 (subcommand CLI + REPL, `--json` on every command,
 
 ## 10. Risks and open questions for Phase 2
 
-- ToS risk: CDP drives the owner's own logged-in client the same way he would by
+- ToS risk: CDP drives the user's own logged-in client the same way the user would by
   hand; lower risk than a self-bot token, but still automation of the client. The
   owner approved building this path. Keep all test traffic in the Violet Joestar DM.
 - Selector drift: hashed classes change per Discord build; Phase 3 must centralize

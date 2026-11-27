@@ -1,7 +1,7 @@
 # CLICK3-R3C1 review log: round-3 council review of the AMEND4 fix pass
 
 Worker CLICK3-R3C1, round-3 council reviewer 1 for the AMEND4 fix pass.
-Owner: the owner (call him the owner in repo-facing text, never "dang").
+Owner: the owner (call the user the owner in repo-facing text, never "dang").
 Work in `~/workspace/computer-use-wayland`, branch `todolist-push`.
 Independent review: no coordination with the other round-3 reviewers.
 Review start: 07:00 22/11/2026 Asia/Ho_Chi_Minh.

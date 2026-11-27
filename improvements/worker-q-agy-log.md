@@ -32,7 +32,7 @@ Strict requirements enforced:
 
 - Inspected git status on branch todolist-push.
 - Synchronized branch with origin/todolist-push (pulled commit b2c9645 fast-forward).
-- Verified git author identity: phamTuan207 <232407559+phamTuan207@users.noreply.github.com>.
+- Verified git author identity: phamTuan207.
 - Confirmed chromium headless binary and node puppeteer-core execution environment.
 - Created test suite directories: `tests/realistic/agy-q/` and `tests/realistic/agy-q/fixtures/`.
 
@@ -81,4 +81,4 @@ Strict requirements enforced:
   All strictly satisfy the 15-40 step complexity threshold.
 - Verified absence of em dashes and en dashes across all test documents, fixtures, runner, and log.
 - Verified zero external requests: all fixtures run completely offline from local file URLs.
-- Git identity verified as phamTuan207.
+- Git identity verified as the owner.

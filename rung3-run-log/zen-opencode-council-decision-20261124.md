@@ -1,7 +1,7 @@
 # Opencode proposals council decision (Zen 1.24.3b, R3-L3)
 
 - Date: 2026-11-24, evening. Run starts 25/11.
-- Ordered by: the owner. He ordered the whole team to meet, read everything, and decide together whether to apply the opencode P0/P1 proposals. He will not decide himself; the council decides.
+- Ordered by: the owner. The user ordered the whole team to meet, read everything, and decide together whether to apply the opencode P0/P1 proposals. The user will not decide; the council decides.
 - Coordinator: opencode-proposals council coordinator.
 - Council members (3, independent verdicts in ~/workspace/zen-opencode-council/):
   - Stability/risk: stability-risk-verdict.md (11 APPLY, 6 DEFER, 0 REJECT, plus additive app.update.disabledForTesting=true as APPLY).
@@ -21,23 +21,23 @@
 
 ## Design principle: machine-specific vs repo-common (owner, 2026-11-24)
 
-The owner reminded the council of a design principle that governs this whole decision. Apps on his machine are deliberately optimized for AI (CDP port, CLI, Marionette, custom setup), but the computer-use repo is for outsiders to use together, and their apps are usually NOT optimized for AI (no CDP, no CLI, no setup). So the council must distinguish two types, and this record does:
+The owner reminded the council of a design principle that governs this whole decision. Apps on the user's machine are deliberately optimized for AI (CDP port, CLI, Marionette, custom setup), but the computer-use repo is for outsiders to use together, and their apps are usually NOT optimized for AI (no CDP, no CLI, no setup). So the council must distinguish two types, and this record does:
 
-- **Type 1, machine-specific optimization:** applies only on his laptop, never goes to the repo. A Zen pref, a profile change, a system threshold, a wrapper flag, anything that assumes his setup.
+- **Type 1, machine-specific optimization:** applies only on the user's laptop, never goes to the repo. A Zen pref, a profile change, a system threshold, a wrapper flag, anything that assumes the user's setup.
 - **Type 2, repo-common improvement:** goes into the computer-use repo and must work on a stock app that is NOT optimized for AI. That means the vision, mouse, and accessibility path must be strong, because there is no CDP, no CLI, and no setup to lean on.
 
 Classification of everything in this decision:
 
-- **All 10 APPLY proposals are Type 1 (machine-specific).** P0-1, P0-2, P0-3, P0-4, P0-5, P0-6, P0-8, P1-A, P1-D, P1-H are Zen profile prefs set in his run profile on his laptop only. On his machine they are always on. They must never be forced on repo users.
-- **All 6 DEFER proposals are Type 1.** P0-7, P0-9, P1-B, P1-C, P1-E, P1-F, P1-G are also machine prefs, deferred for his laptop. Same rule: never forced on repo users.
+- **All 10 APPLY proposals are Type 1 (machine-specific).** P0-1, P0-2, P0-3, P0-4, P0-5, P0-6, P0-8, P1-A, P1-D, P1-H are Zen profile prefs set in the user's run profile on the user's laptop only. On the user's machine they are always on. They must never be forced on repo users.
+- **All 6 DEFER proposals are Type 1.** P0-7, P0-9, P1-B, P1-C, P1-E, P1-F, P1-G are also machine prefs, deferred for the user's laptop. Same rule: never forced on repo users.
 - **All 4 P2 items are Type 1.** Same reason.
 - **The additive app.update.disabledForTesting (REJECT) is Type 1.** A pref, rejected.
 - **The report's 11 rejected items are Type 1.** Prefs, rejected.
 - **Nothing in this council decision is Type 2 (repo-common code).** The council evaluated machine prefs, not repo code. No repo code change is proposed, approved, or implied by this decision.
 
-Refinement from the owner (20:49): machine-specific optimization CAN still go to the repo, but only as OPTIONAL (opt-in), never forced like the local version on his machine (where it is always on). So for the repo, every machine-specific optimization is optional, default OFF. A repo user may turn it on if they set up their app for AI, but the repo must run even when it is off. Per-proposal optional/mandatory and default:
+Refinement from the owner (20:49): machine-specific optimization CAN still go to the repo, but only as OPTIONAL (opt-in), never forced like the local version on the user's machine (where it is always on). So for the repo, every machine-specific optimization is optional, default OFF. A repo user may turn it on if they set up their app for AI, but the repo must run even when it is off. Per-proposal optional/mandatory and default:
 
-| Proposal | Council | His laptop | Repo form | Repo default |
+| Proposal | Council | The user's laptop | Repo form | Repo default |
 |---|---|---|---|---|
 | P0-1 max_resumed_crashes -1 | APPLY | ON (always) | OPTIONAL | OFF |
 | P0-2 sessionstore.max_resumed_crashes 10 | APPLY | ON (always) | OPTIONAL | OFF |
@@ -62,7 +62,7 @@ Refinement from the owner (20:49): machine-specific optimization CAN still go to
 
 What "OPTIONAL, default OFF" means in practice: if any of these ever goes to the repo, it goes as a documented opt-in (a doc or an optional setup step), never as a default and never as a requirement. The repo's core (vision, mouse, accessibility) must work with all of them off. No repo test may depend on them being on. Nothing in this decision is mandatory for the repo.
 
-- **Type 2 implication recorded for the repo (not a change, a standing principle):** the repo must not assume CDP, BiDi, Marionette, a CLI, or any setup exists on a user's machine. The vision, mouse, and accessibility path must be strong enough to drive a stock app. The machine-specific wins in this record (BiDi responsiveness from P1-A, no dialogs from P0-3/P0-4, no portal hijack from P1-H) are his-laptop-only advantages. They must not leak into repo assumptions or repo tests. A repo test that passes only because the app was pre-optimized for AI proves nothing about the repo.
+- **Type 2 implication recorded for the repo (not a change, a standing principle):** the repo must not assume CDP, BiDi, Marionette, a CLI, or any setup exists on a user's machine. The vision, mouse, and accessibility path must be strong enough to drive a stock app. The machine-specific wins in this record (BiDi responsiveness from P1-A, no dialogs from P0-3/P0-4, no portal hijack from P1-H) are the user's-laptop-only advantages. They must not leak into repo assumptions or repo tests. A repo test that passes only because the app was pre-optimized for AI proves nothing about the repo.
 
 ## Vote matrix
 

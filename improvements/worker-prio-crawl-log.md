@@ -108,7 +108,7 @@
   chat 8fb75ccd, NOT this chat's queue. Muse to kill/reassign there.
 - ZT-A DONE 22:37 (commits a5a5553 + 138919b): 10 composite blind scenarios
   ZT-01..ZT-10 + ZT-00 health gate, 658 lines, on real Zen; council AMEND +
-  redteam BLOCK (6 blockers incl. R-01 blind Ctrl+W could close owner's real
+  redteam BLOCK (6 blockers incl. R-01 blind Ctrl+W could close user's real
   tab) all fixed in v2. ZT-B not yet spawned (waits for F3 restore).
 - F1 has uncommitted edits to scripts/cursor_session.py + cursor_theme.py.
   F3 has no log file yet. Y14b fix-pass-3 redteam AMEND (bd3c6c9 22:22).
@@ -117,7 +117,7 @@
   2.1.7 I7 video (reopens only if owner re-sends the original file),
   pending user decisions (pill final choice, H1-BASE, Step 3, save-dialog B,
   ~/backups ~99 GiB, Omarchy restore steps - need owner), last30days-skill
-  idea (not scoped, owner: design for him + Muses, no start ordered).
+  idea (not scoped, owner: design for the user + Muses, no start ordered).
 - Final test (independent Codeforces contest, 5 problems, Muse uploads via
   Polygon itself): planned, runs LAST (owner 16:30 21/11, confirmed twice).
   Not on todolist. Add as todolist 4.21.
@@ -136,7 +136,7 @@
   saved-log marker counts as parse evidence. Not on todolist. Add 4.13.
 
 ## DRAFT RANKED QUEUE (for council + redteam debate)
-# Lens: owner's own words. "fix dau tien va fix toi uu tot nhat" (silence
+# Lens: user's own words. "fix dau tien va fix toi uu tot nhat" (silence
 # weakness, 22:16); "NHANH + thao tac LIEN TUC + overlay PHAI HIEN" (22:21);
 # "ca team het cong suat fix cac loi to to bo" (22:18); Zen unusable (22:25);
 # "doc source crawl tim goc re roi fix" (22:22); composite + blind tests
@@ -145,7 +145,7 @@
 # final test LAST (16:30); Track 2 / speed loop PAUSED (council gate).
 
 1. F3 Zen restore (4.7/4.8, J1/J2) + Marionette slot (4.10, J3) + finish the
-   15-tab cleanup. Rationale: owner cannot use his browser at all (22:25);
+   15-tab cleanup. Rationale: owner cannot use the user's browser at all (22:25);
    every live run gates on this. [RUNNING]
 2. F2 silence fix (4.12, J5). Rationale: owner said fix this FIRST and
    optimally (22:16); <30s first visible action, continuous ops, overlay

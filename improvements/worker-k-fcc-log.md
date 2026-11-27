@@ -20,7 +20,7 @@ testing, small commits, push often to todolist-push.
   `tests/bidi_click_retest.mjs` etc. I did not delete them; merge was deferred
   because the pull would overwrite an untracked file I did not author.
 - Confirmed local git identity: user.name phamTuan207,
-  email 232407559+phamTuan207@users.noreply.github.com (matches requirement).
+  email the owner's GitHub noreply address (matches requirement).
 - Confirmed Chrome binaries exist for offline checkers:
   ~/.cache/puppeteer/chrome/linux-157.0.8103.78/chrome-linux64/chrome
   and system /usr/bin/chromium.

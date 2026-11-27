@@ -1,4 +1,4 @@
-# PWA identity reference - Muse / mimeo (Omarchy laptop, user james)
+# PWA identity reference - Muse / mimeo (the owner's Omarchy laptop)
 
 Verified live 2026-11-24 ~20:03-20:05 Asia/Ho_Chi_Minh by worker P (PWA optimization).
 Do NOT edit Brave/Chromium flags or reinstall any PWA without the owner; this file is reference only.
@@ -37,7 +37,7 @@ Do NOT edit Brave/Chromium flags or reinstall any PWA without the owner; this fi
 
 - Port: `127.0.0.1:9223` NOT listening (`ss` shows only 9224); `curl http://127.0.0.1:9223/json/list` fails (connection refused).
 - No `/usr/bin/chromium` process running (`pgrep -f chromium` matches only Brave binaries). Chromium was already down as of ~19:46 and still down at 20:05.
-- mimeo was NOT relaunched (task forbids it; relaunching would also need the owner - it would open his mimeo session). To restore: run the mimeo launch command above, or click the mimeo desktop entry, then re-run `pwa-find.sh`.
+- mimeo was NOT relaunched (task forbids it; relaunching would also need the owner - it would open the user's mimeo session). To restore: run the mimeo launch command above, or click the mimeo desktop entry, then re-run `pwa-find.sh`.
 - Note: mimeo's tab (Mochi's tab) lives in this Chromium instance, so Mochi's tab is unreachable until Chromium is back.
 
 ## Stable window identity (hyprctl, verified 2026-11-24 20:04 +07)

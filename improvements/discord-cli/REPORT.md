@@ -1,7 +1,7 @@
 # Discord message-control CLI: final report (Phases 1-6.5)
 
 - Date: 2026-11-24, work window 20:26-20:56 Asia/Ho_Chi_Minh
-- Owner: dang (Pham Tuan Huy). Machine: Omarchy laptop (user james).
+- Owner: the owner. Machine: Omarchy laptop (user the owner).
 - Pipeline: CLI-Anything 7-phase (HARNESS.md). Phase 7 (PyPI) NOT done,
   deliberately: this CLI is machine-private (see section 6), not a
   public package.
@@ -157,7 +157,7 @@ CDP cannot do it) before it is added.
 ## 6. Machine-private vs repo-shared (owner design principle, 2026-11-24 20:48/20:49)
 
 Apps on the owner's machine are deliberately optimized for AI (CDP port,
-CLI, setup of his own). The computer-use repo is for outsiders, whose
+CLI, setup of the user's own). The computer-use repo is for outsiders, whose
 apps are usually NOT optimized for AI (no CDP, no CLI, no setup). So the
 repo must work on stock, unoptimized apps: the vision/mouse/accessibility
 path must stay strong there. Machine-private optimization MAY still be

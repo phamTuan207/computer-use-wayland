@@ -39,9 +39,9 @@ not say "in my tabs/logins", the measured workload shows zero
 same-session demand, and Ponytail (smallest complete change first)
 favours the split. Council B read it as same live session: the
 standing acceptance test says "agent drive on the same Zen
-session", the owner's lived pattern is agents driving his live
+session", the user's lived pattern is agents driving the user's live
 tabs and logins (R3-056 tab restore, Gmail confirmations by the
-agent as a standing rule, Codeforces under his manager nick), and
+agent as a standing rule, Codeforces under the user's manager nick), and
 the "build a dedicated tool if needed" addendum only makes sense
 if the bar includes something the split cannot deliver. The
 redteam attacked "same install" as a lawyerly redefinition (S1)
@@ -109,7 +109,7 @@ interim in every report; it is not criterion satisfaction.
   with no human touching the agent profile and record whether it
   attaches clean (S8).
 - Human-leg verification (normal-user path): owner opens Zen
-  normally, searches and browses his real Cloudflare-fronted sites
+  normally, searches and browses the user's real Cloudflare-fronted sites
   via search/homepage click-through; pass = no interstitial and
   webdriver false on probe read. Repeat after every Zen update.
 

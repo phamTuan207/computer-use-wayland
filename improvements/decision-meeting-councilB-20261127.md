@@ -140,7 +140,7 @@ as navigator.webdriver leaking to pages), while agent computer-use
 control of the same Zen stays available at any time and the AI
 optimization of Zen stays. Owner addendum 06:21 27/11: "Can thi build
 cong cu rieng" (if needed, build a dedicated tool). Standing design
-principle: his machine is AI-optimized but the repo must work on stock
+principle: the user's machine is AI-optimized but the repo must work on stock
 apps; machine optimizations go in the repo only as OPTIONAL (opt-in,
 default off).
 
@@ -181,7 +181,7 @@ page-visible signals that the unified probe proves are leaking (the
 probe defines the list; the tool fixes exactly what the probe
 measures, nothing speculative). It ships with the probe itself as a
 command: clean or dirty, fail-loud. For agents, dirty still means
-stop. For human browsing, the layer is simply present in his Zen
+stop. For human browsing, the layer is simply present in the user's Zen
 profile so normal browsing presents clean without the human doing
 anything.
 
@@ -194,8 +194,8 @@ removes the automation signals we control and proves it with the
 probe. Anything beyond that is out of scope and would need a new
 decision.
 
-Where it lives: the active configuration lives on his machine layer
-(his AI-optimized Zen on the laptop), because that is where the
+Where it lives: the active configuration lives on the user's machine layer
+(the user's AI-optimized Zen on the laptop), because that is where the
 criterion must hold. The repo carries the tool only as OPTIONAL
 opt-in, default off: a script plus README under scripts/ (or the
 existing holder's home), clearly marked machine-optimization, with
@@ -287,11 +287,11 @@ a tool that a one-line flag change might make unnecessary.
   Mitigation: the does-not-do list is part of the decision; anything
   beyond signal normalization needs a new team decision.
 - Build cost if triggered: a preload or profile-level layer plus
-  probe plus tests is days of work, not hours, and touches his daily
+  probe plus tests is days of work, not hours, and touches the user's daily
   browser. Mitigation: Stage 1 gate exists precisely to avoid
   building if a flag fix suffices; the live test (below) must pass
-  on a throwaway profile before his real profile is touched.
-- Human-path test disturbance: live tests on his Zen risk focus
+  on a throwaway profile before the user's real profile is touched.
+- Human-path test disturbance: live tests on the user's Zen risk focus
   theft. Mitigation: throwaway profile first, per standing rules;
   real-profile verification only at a task boundary with the pill
   visible.
@@ -310,7 +310,7 @@ block, then call an agent computer-use drive on the same Zen session
 and confirm control works with the pill visible. Evidence shows
 entry, path, action, and resulting state. Repo side, if anything
 lands, is opt-in default off with the probe test; machine side is
-his laptop Zen configuration. Log every step via log-event.sh.
+the user's laptop Zen configuration. Log every step via log-event.sh.
 
 ---
 
@@ -371,7 +371,7 @@ procedure plus alert before any new power.
   R20). A restart procedure cannot assume restore tooling works; it
   must verify.
 - ASSUMED: a threshold around 8 GB RSS gives enough lead time before
-  exhaustion on his machine. Verify by: recording RSS at task
+  exhaustion on the user's machine. Verify by: recording RSS at task
   boundaries for the next run and checking headroom. The exact
   number is tunable; the decision is alert plus procedure, not the
   number.

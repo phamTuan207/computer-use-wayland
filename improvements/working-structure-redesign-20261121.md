@@ -4,7 +4,7 @@
 - Team: Worker W (coordinator), crawlers W-Crawl-1/2/3, council A/B/C, redteam
 - Repo: computer-use-wayland, branch todolist-push
 - Status: PROPOSAL ONLY. No structural change is implemented here. Muse decides what to apply.
-- Owner priority: PERFORMANCE WHEN MUSES CONTROL HIS MACHINE comes first. The single most valuable first step is a concrete performance lever, not an org-chart change. Super I input work is NOT important and is left out of this proposal.
+- Owner priority: PERFORMANCE WHEN MUSES CONTROL THE USER'S MACHINE comes first. The single most valuable first step is a concrete performance lever, not an org-chart change. Super I input work is NOT important and is left out of this proposal.
 - Standing rules applied: no fabrication, every claim carries a source plus access date, unknown is UNVERIFIED. No em dash or en dash anywhere in this file. Never ydotool. Never push personal info to GitHub.
 
 ## 1. What the clip teaches

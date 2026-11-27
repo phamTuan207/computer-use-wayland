@@ -885,10 +885,10 @@ council 3 (5 steps, stdout and stderr recorded separately).
   needs a guardian that dies mid-session, which the FAKE does not do); it is
   covered by the 34-test no-regression run and by code review. The live
   positive proof will exercise the session lifecycle end to end.
-- 23:01: owner note (fleet, applies all night): he is going to sleep, but
-  any error or anything that really needs him should still be reported at
+- 23:01: owner note (fleet, applies all night): the user is going to sleep, but
+  any error or anything that really needs the user should still be reported at
   once, not held until morning. Big errors, blockers, and things needing
-  his decision get reported immediately; routine work runs silently and is
+  the user's decision get reported immediately; routine work runs silently and is
   reported in the morning. F1 has no blocker right now; if the live
   activation hits one, it goes to the parent at once.
 
@@ -924,7 +924,7 @@ council 3 (5 steps, stdout and stderr recorded separately).
   LAST. OPT said Y13g had 0 output (WRONG in part: the log
   worker-y13g-fix-log.md EXISTS, just no commit yet; Y13g still active).
   Clone2-watch MISS 23:16: the owner did not see Muse switch workspace to
-  approve, so he switched himself. Cause: the cron run 23:11:56 was STILL
+  approve, so the user switched. Cause: the cron run 23:11:56 was STILL
   RUNNING (5+ minutes, no log, no result), so no workspace switch happened.
   Fix: stop the stuck run, check ws2 at once per the owner's order. Not F1.
 

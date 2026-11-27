@@ -11,7 +11,7 @@ reasoning summaries: none
 session id: 01a218de-4e67-7ba3-9d41-9f8e39278f29
 --------
 user
-You are the runner for task R3-085 of the R3-L3 acceptance run (Codex lane, position 43, Class S, Tier C) on this laptop (user james). Work from /home/james. Time limit: 30 minutes. Timing/logging ALWAYS ON: every log line carries wall-clock Asia/Ho_Chi_Minh (+07:00) plus elapsed since start. For every anomaly, log the full chain: failure -> reasoning -> attempts -> decision -> fix -> outcome.
+You are the runner for task R3-085 of the R3-L3 acceptance run (Codex lane, position 43, Class S, Tier C) on this laptop (the owner). Work from /home/james. Time limit: 30 minutes. Timing/logging ALWAYS ON: every log line carries wall-clock Asia/Ho_Chi_Minh (+07:00) plus elapsed since start. For every anomaly, log the full chain: failure -> reasoning -> attempts -> decision -> fix -> outcome.
 
 FIRST ACTIONS (before anything else):
 1. Write your start time (ISO 8601 with +07:00, e.g. from `TZ=Asia/Ho_Chi_Minh date -Iseconds`) to ~/rung3-chung-cu/R3-085/start_time.txt.

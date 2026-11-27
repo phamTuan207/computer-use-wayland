@@ -7,7 +7,7 @@ Scope: MACHINE SETUP ONLY. Do not touch the paused campaign track
 (steps 0-11, rung 3, todolist, error file). Do not message the owner.
 Owner is USING the machine right now (logging into new Muse accounts
 in Brave). No relaunch of Brave/Zen/Chromium, no focus steal, no tab
-moves in his Zen, no keystrokes, no clicks.
+moves in the user's Zen, no keystrokes, no clicks.
 
 Standing rules: wall-clock Asia/Ho_Chi_Minh plus elapsed time. No em
 dash (U+2014) or en dash (U+2013) anywhere. No ydotool. No personal
@@ -40,7 +40,7 @@ Stall over 15 min with no progress: report to Muse tong at once.
   brave-origin-intel.bak-20261122-9224, syntax checked OK. CDP 9224
   answering, Brave PID 17673/17681. Cold-launch NOT verified:
   owner is using Brave to log in new accounts, relaunch FORBIDDEN
-  until he permits.
+  until the user permits.
 - Zen from menu/Super Z via wrapper ~/.local/bin/zen-ai, already
   carries --remote-debugging-port=9222 --marionette. Zen PID 14625
   running.
@@ -244,7 +244,7 @@ changes, zero launches/relaunches/tab moves/keystrokes/clicks.
 - FAIL 1 (minor, explained): INV-SYSTEM counted 4 windows at
   17:47:03, VERIFY-1 counted 5 entries at 17:55:56, Chromium PID
   18451 appearing on ws1 and ws2. The owner opened another
-  Chromium window between the two probes (he is using the
+  Chromium window between the two probes (the user is using the
   machine). The count is time-varying, not a report defect.
   Lesson recorded: never reuse window/tab counts or ids, always
   look them up live.

@@ -121,7 +121,7 @@
   ZT-B should observe the current pill, not a mid-change one (PRIO council 1,
   direct answer). Voice 2 AGREES.
 - ZT-00 health gate must pass first; R-01 (blind Ctrl+W could close the
-  owner's real tab) was fixed in v2 but the fix must be verified in the ZT-B
+  user's real tab) was fixed in v2 but the fix must be verified in the ZT-B
   brief itself, not assumed from the v2 commit message (PRIO council 3,
   rank 4). Voice 2 AGREES: a blind runner on real Zen with real tabs is the
   highest collateral risk in the queue.

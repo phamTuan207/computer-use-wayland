@@ -1,6 +1,6 @@
 # Council decision: Vietnamese typing fixes (Worker V)
 # Date: 21/11/2026. Decided by council, not by the owner (owner order 17:23:
-# decide yourselves, do not wait for him). All times Asia/Ho_Chi_Minh.
+# decide yourselves, do not wait for the user). All times Asia/Ho_Chi_Minh.
 # Repo: computer-use-wayland, branch todolist-push.
 
 ## The council

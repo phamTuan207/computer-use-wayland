@@ -543,10 +543,10 @@ the fill path fails 2 in 5 live sends on the same threads where
 
 No live Zen proof was attempted. Reason: no clean venue. The
 clone chats live in Brave/Chrome; a Zen live proof needs a
-scratch target in the owner's Zen, which is his primary live
+scratch target in the user's Zen, which is the user's primary live
 browser on ws1 (window 0x557052b62dd0, untouched throughout this
 step). Opening a fixture tab there and driving desktop clicks
-at screen points through the delegate would disturb his
+at screen points through the delegate would disturb the user's
 workspace, and the owner is asleep. The delegate is unit-proven
 (section 7: 15 tests, 175 OK with p2_element_ref and
 code_exec, including backend integration tests that drive the

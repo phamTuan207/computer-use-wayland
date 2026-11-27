@@ -62,7 +62,7 @@ GitHub API metadata for the top 10 (5 of 10 failed, see Limits).
    (red-team, bug hunting), not a tool. The owner's computer-use error file
    is the same shape: a methodology others could run.
 3. Make existing software agent-native. CLI-Anything's whole thesis is
-   wrapping CLIs so agents can drive them. The owner's own work (zen-mcp,
+   wrapping CLIs so agents can drive them. The user's own work (zen-mcp,
    overlay CLI) is this pattern.
 4. Tiny and local wins attention. minimind (64M model in 2h) and Inkling 2
    Mini running on a Ryzen prove small and local is a story, not a compromise.

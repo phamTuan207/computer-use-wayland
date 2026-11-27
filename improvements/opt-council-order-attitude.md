@@ -1,6 +1,6 @@
 # OPT-ORDER Voice 1: OWNER-ATTITUDE ranking
 # Council OPT-ORDER, voice 1 of 3. Time: 22:52 +07, Sat 2026-11-21.
-# Lens: rank the fix classes by the owner's OWN words and repeated
+# Lens: rank the fix classes by the user's OWN words and repeated
 # emphases, with a quote for each rank. Sources: PRIO crawl log
 # (improvements/worker-prio-crawl-log.md), PRIO council 2
 # (improvements/worker-prio-council-2.md), PRIO redteam
@@ -9,7 +9,7 @@
 # owner quotes as cited by PRIO council 2 and redteam.
 # No em/en dashes in this file. Every claim carries a citation.
 
-## The yardstick: the owner's words, in his order of emphasis
+## The yardstick: the user's words, in the user's order of emphasis
 
 The owner spoke 8 times tonight that set a ranking. Voice 1 ranks by
 those words, not by engineering convenience. Where a word and a
@@ -52,15 +52,15 @@ paper decides.
   holds both. Council 2's swap would trade a true statement for a
   false one.
 
-## Rank A2. Zen unusable: the owner cannot use his own browser
+## Rank A2. Zen unusable: the owner cannot use the user's own browser
 - Owner quote, 22:25: "Zen bi loi, khong the dung binh thuong; khong the
   click hay mo bat ky web nao; doi workspace cung nhieu loi rat ki"
   (council 2; todolist serial rank 1 rationale).
 - What this rank covers: F3 (todolist 4.7/4.8/4.10, J1/J2/J3): restore
   Zen, fix the Marionette slot, finish the 15-tab cleanup.
-- Why A2 and not A1: the owner said Zen is unusable at 22:25, but he
-  also said at 22:27 he was going to sleep (redteam A1 cites memory,
-  section "dang chi dao 22:29-22:32 (sau khi noi di ngu 22:27)"). He is
+- Why A2 and not A1: the owner said Zen is unusable at 22:25, but the user
+  also said at 22:27 the user was going to sleep (redteam A1 cites memory,
+  section "dang chi dao 22:29-22:32 (sau khi noi di ngu 22:27)"). The user is
   not using the browser right now. The urgency that justifies F3 first
   in wall time is real (every live run gates on it), but the personal
   pain is paused overnight, while the "DAU TIEN" order has no expiry.

@@ -344,7 +344,7 @@ machine over again, and the 17:59 AGENTS.md rule forbids live tab driving while
 the user is at the keyboard. Y8's design restates condition (1) but drops
 condition (2). UPDATE 18:24, after this attack was drafted: MEMORY.md now
 records dang's standing order that from now on the machine is handed over,
-he is out of the house and not touching the laptop, any signal saying he is
+the user is out of the house and not touching the laptop, any signal saying the user is
 using it is a false signal, and work runs continuously with no idle check;
 Y4d runs the agy-q2 rerun and Y8 runs E1 right after, one runner at a time.
 That order closes the owner-away gap in substance, but it lives in MEMORY.md,

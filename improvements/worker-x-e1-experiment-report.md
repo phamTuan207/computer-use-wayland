@@ -53,7 +53,7 @@ Coordinator merged the three drafts into improvements/worker-x-e1-plan-test-05.m
 ## Hold status (why there is no verdict yet)
 
 - Worker Y4 was running agy-q2 10 tests live on the same Zen. Its scripted run aborted 0/2 at 17:52 (q01/q02 failed on the first type step: body visible=False, the hidden-body incident Worker R saw 16:36-16:44). No Y4 report on origin/todolist-push as of the last check.
-- 17:59 AGENTS.md standing rule: Y4 probes navigated fixture tabs while the user was at the keyboard and his physical keyboard + mouse stopped responding for about 1 min (self-recovered 18:00). A live runner must NEVER open/navigate/switch tabs in his Zen while he is at the keyboard; do only non-driving work until told to resume.
+- 17:59 AGENTS.md standing rule: Y4 probes navigated fixture tabs while the user was at the keyboard and the user's physical keyboard + mouse stopped responding for about 1 min (self-recovered 18:00). A live runner must NEVER open/navigate/switch tabs in the user's Zen while the user is at the keyboard; do only non-driving work until told to resume.
 - 18:04 parent order: E1 executor runs are ON HOLD until the user hands the machine over again and Muse tells E1 to resume.
 - E1 compliance: E1 has never opened, navigated, or switched any Zen tab, and has never started a Marionette session. No executor was mid-run, so there was nothing to stop cleanly. The infra scripts (driver port 4451, HTTP server port 8767, chosen to avoid Y4 ports 4448/8768) are written and transferred but NEVER started. No geckodriver was launched by E1.
 

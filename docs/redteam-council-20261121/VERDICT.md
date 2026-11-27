@@ -47,7 +47,7 @@ DOM-first is the right direction but oversold, the todo list is already stale, a
 - The misses happened on the VM Muse driver, whose code is not in this repo. That explains I7 (on-laptop agents accurate, VM Muses miss): same screen, same buttons, different drivers. Driver B's screenshot frame could not be audited here. Open item for the parent.
 
 ### 2.2 DOM-first is directionally right but oversold (Worker 2)
-- The click-miss evidence is a systematic rightward offset, which is the signature of a coordinate-transform error, and the user himself named calibration as the root cause (I6, 19:27). DOM routes around it; calibration fixes it directly, including for every non-DOM surface.
+- The click-miss evidence is a systematic rightward offset, which is the signature of a coordinate-transform error, and the user named calibration as the root cause (I6, 19:27). DOM routes around it; calibration fixes it directly, including for every non-DOM surface.
 - DOM cannot fix the overlay flicker (cause explicitly unknown), fabrication, blocker reporting, or think time.
 - The 10x claim contradicts the project's own Pick 4 measurement: think time is about 94% of wall time, and the fast path moved the clean task pair only 43.7s to 41.7s (about 5%).
 

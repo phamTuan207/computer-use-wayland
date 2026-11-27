@@ -2,10 +2,10 @@
 
 ## Question
 
-Why does `agy` work when the user types it in his terminal, but fail with
-"authentication required" when Muse runs it over SSH, even though he is
+Why does `agy` work when the user types it in the user's terminal, but fail with
+"authentication required" when Muse runs it over SSH, even though the user is
 already logged in? Find the root cause for both situations and a way to
-reproduce his working login via SSH.
+reproduce the user's working login via SSH.
 
 ## Answer in one paragraph
 
@@ -115,7 +115,7 @@ Run it detached (setsid nohup ... & disown) for long tasks, like fcc.
   works while the refresh token is alive. If a future run fails with
   "authentication required" again, the refresh token may have died
   (Google test-mode refresh tokens can expire after 7 days) and the user
-  must do one fresh interactive OAuth login in his terminal.
+  must do one fresh interactive OAuth login in the user's terminal.
 - The helper launches agy as a Hyprland child: it is visible in `ps`
   as a child of Hyprland, not of the SSH session. It does not touch the
   user's terminal, tabs, or windows.

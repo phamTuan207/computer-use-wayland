@@ -107,7 +107,7 @@ repointed all 5 Exec lines to the wrapper with sed. Result:
 
 A live Super Z fresh-launch test needs Zen closed first (with Zen
 already running, Super Z only focuses the existing window and the flags
-are irrelevant). I did NOT close his Zen. The chain is verified by code
+are irrelevant). I did NOT close the user's Zen. The chain is verified by code
 reading, the exact sed extraction, the --help probe, and the headless
 end-to-end run. The user can confirm live by closing Zen and pressing
 Super Z, then checking ps shows the flags.

@@ -105,7 +105,7 @@ Execution shape:
   2026-11-20.md.
 - VERIFIED: the Polygon final test is a separate, later task (5
   problems uploaded by Muse alone to an independent contest on the
-  owner's own nick, run LAST). Source: ~/workspace/cf26-upload/FINAL-
+  user's own nick, run LAST). Source: ~/workspace/cf26-upload/FINAL-
   TEST-PLAN-20261121.md. This confirms contest 735368 solving must not
   be conflated with uploading, and must finish first.
 - VERIFIED: coordinator state file shows RUN CLOSED, all positions

@@ -271,7 +271,7 @@ File: tests/test_zen_pointer.py (only test file changed).
 - Live verification is still owed by design: this fix is unit
   proven only. The next proof run (R5, new number, fresh
   intent/message) must run only when the owner hands the
-  machine over again; he is at the keyboard now, so no live
+  machine over again; the user is at the keyboard now, so no live
   run was attempted.
 
 ## 7. Evidence appendix (Lauren Tan: command, output, commit hash, time)

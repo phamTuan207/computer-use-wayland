@@ -2,7 +2,7 @@
 
 - Owner: the owner. Repo: phamTuan207/computer-use-wayland, branch speed-swarm.
 - Implementer: Luna 6 Max. Date: Wed 2026-11-18, evening.
-- Status: IMPLEMENTED, COMMITTED, PUSHED. MEASUREMENT PAUSED MID-RUN by user order 23:50 (he is cleaning disk space on the laptop; fleet quiet until resume). No before/after numbers exist yet; the partial run is reported plainly below. Do not claim a saving until the measurement finishes.
+- Status: IMPLEMENTED, COMMITTED, PUSHED. MEASUREMENT PAUSED MID-RUN by user order 23:50 (the user is cleaning disk space on the laptop; fleet quiet until resume). No before/after numbers exist yet; the partial run is reported plainly below. Do not claim a saving until the measurement finishes.
 - No em dash or en dash in this file, per standing rule.
 
 ## What was built
@@ -64,8 +64,8 @@ Isolation: the pick is behind an explicit opt-in flag, default OFF. Enabled only
 ## Pause state (23:50 user order, verified 23:51 to 23:52 +07)
 
 - Measurement agent killed (codex exec pid 613054 and wrapper 613053, confirmed gone). Live broker session speed-base-p1 finished cleanly by hand (ok true, driver stopped, guardian clean). Broker state finished, owner speed-base-p1, driver stopped, cancelled false. No codex exec process remains.
-- Desktop verified clean with hyprctl clients: only Jarvis (herdrdrop), his foot terminal, his ncdu kitty (his disk cleanup, untouched), and Zen. No test windows, no VS Code, no speed-profile-term, no speed-pick1-term. Zen tabs, Zalo, Teams, Jarvis, and music were not touched.
-- Laptop repo left on branch speed-swarm at 2ef80dd for resume (NOT restored yet, so the measurement setup survives). His rust-rewrite-eval work is stashed (stash named "pick1-measure: save rust-rewrite-eval worktree before speed-swarm checkout": M scripts/cu.py, M skill/cli-anything/registry.json) and 5 untracked files are backed up at /tmp/pick1-untracked-backup/ (improvements/speed-prior-art.md, improvements/speed-swarm-prototype-plan.md, scripts/vscode_cli.py, skill/cli-anything/vscode.md, tests/test_vscode_cli.py). The relay is running speed-swarm code (head 2ef80dd) with NO drop-in yet (the flag switch was never reached). Run dir /tmp/speed-profile-20261118/pick1/ holds records.jsonl, decisions.log, sleeps.log, codex2.log, measure-brief.md, timed.py, analyze.py.
+- Desktop verified clean with hyprctl clients: only Jarvis (herdrdrop), the user's foot terminal, the user's ncdu kitty (the user's disk cleanup, untouched), and Zen. No test windows, no VS Code, no speed-profile-term, no speed-pick1-term. Zen tabs, Zalo, Teams, Jarvis, and music were not touched.
+- Laptop repo left on branch speed-swarm at 2ef80dd for resume (NOT restored yet, so the measurement setup survives). The user's rust-rewrite-eval work is stashed (stash named "pick1-measure: save rust-rewrite-eval worktree before speed-swarm checkout": M scripts/cu.py, M skill/cli-anything/registry.json) and 5 untracked files are backed up at /tmp/pick1-untracked-backup/ (improvements/speed-prior-art.md, improvements/speed-swarm-prototype-plan.md, scripts/vscode_cli.py, skill/cli-anything/vscode.md, tests/test_vscode_cli.py). The relay is running speed-swarm code (head 2ef80dd) with NO drop-in yet (the flag switch was never reached). Run dir /tmp/speed-profile-20261118/pick1/ holds records.jsonl, decisions.log, sleeps.log, codex2.log, measure-brief.md, timed.py, analyze.py.
 
 ## Resume checklist (for the parent agent, when the resume order comes)
 

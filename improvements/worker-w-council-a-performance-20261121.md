@@ -4,7 +4,7 @@
 - Date: 2026-11-21
 - Repo: computer-use-wayland, branch todolist-push
 - Sources accessed: 2026-11-21. Every external claim below carries its source and access date. Unknown = UNVERIFIED.
-- Owner priority applied: performance when Muses control his machine comes first. Super I input work is out of scope and ignored here.
+- Owner priority applied: performance when Muses control the user's machine comes first. Super I input work is out of scope and ignored here.
 
 ## Work log (Asia/Ho_Chi_Minh, wall clock plus elapsed)
 

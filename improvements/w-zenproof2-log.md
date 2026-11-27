@@ -321,7 +321,7 @@ Report goes to COORD-CLICK-9, not directly to the owner.
 - Recovery NOT attempted by me: reopening the exact thread URL
   in a new tab would use the same Marionette open/navigate path
   that just misfired, and a second misfire could navigate or
-  close another of his tabs. The thread itself lives
+  close another of the user's tabs. The thread itself lives
   server-side at muse.ai (URL preserved in run-2.json and in
   this log), so nothing is lost beyond the open tab. The
   coordinator decides the recovery path. This is reported here

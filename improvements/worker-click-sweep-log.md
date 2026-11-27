@@ -218,7 +218,7 @@
   biggest error, fix first.
 - Root-cause status: ADMITTED by Muse in chat 19:25-19:27 20/11 (I6): coords
   read from the image do not match the real screen, drift to the right,
-  screen ratio and spacing differ from assumed, never calibrated for his
+  screen ratio and spacing differ from assumed, never calibrated for the user's
   machine. No live real-task hit-rate measurement exists (I8: tests only
   measured task done + time, misses buried in retry; no hit-rate metric).
 - Partial mitigation (done, todolist 2.1.1-2.1.6, 2.1.8): DOM rects exact,
@@ -328,7 +328,7 @@
 - What fails: pill "Computer use active" flickered continuously, about 10
   times a second by owner estimate, while Muse drove directly 18:53-19:02
   20/11; Codex driving looked normal. Owner ordered computer-use off at
-  19:13 because it hurt his eyes. Overlay also vanished entirely once (I12,
+  19:13 because it hurt the user's eyes. Overlay also vanished entirely once (I12,
   15:28, session dropped without the worker noticing).
 - Fix status: PARTIAL. Indicator proven NOT to repaint at idle (0 idle paints
   in 122 one-second windows, 32/32 frames pixel-identical, 60s idle 0 events,
@@ -396,9 +396,9 @@
 - Fix status: copy-exactly direction set (Kyant0 FluidGlass, shayxo, Haze,
   MacShell, only less blur); candidate 2 (cylindrical bottle) is the temp
   default, candidate 1 kept. Blur 0.0 to 0.15 code DONE (Worker E, todolist
-  4.1). Deploy PENDING reboot (installed binary on his machine does not have
+  4.1). Deploy PENDING reboot (installed binary on the user's machine does not have
   it yet; relay was off, sync-installed reported broker_unavailable).
-- Needs: DEPLOY after reboot + live verify, then owner taste-judges (he is the
+- Needs: DEPLOY after reboot + live verify, then owner taste-judges (the user is the
   judge; send candidate photos). Interior refraction still to verify after
   deploy.
 - Evidence: LOI G10, G11; todolist 4.1, 4.5; docs/pending-user-decisions.md.

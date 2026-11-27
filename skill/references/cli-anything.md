@@ -31,7 +31,7 @@ the Chromium DOM backend. Zen is the second exception: it has a
 repo-owned wrapper (`computer-use cli run zen -- ...`, skill
 `skill/cli-anything/zen.md`) that covers tabs and page reads over
 loopback WebDriver BiDi on a dedicated session, plus read-only
-history from the real profile; it can never attach to his running
+history from the real profile; it can never attach to the user's running
 Zen, which has no debug port. VS Code is the third exception: it has
 a repo-owned wrapper (`computer-use cli run vscode -- ...`, skill
 `skill/cli-anything/vscode.md`) that covers open, goto, diff,

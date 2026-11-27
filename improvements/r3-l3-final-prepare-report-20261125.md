@@ -1,6 +1,6 @@
 # R3-L3 Final Prepare Report, Wed 2026-11-25
 
-Final prepare review, ordered by the owner at 10:35 25/11 after he found the plan was not fully updated for the current situation, even though he had been told prepare was ready. He also ordered R3-047 (the Gutenberg task) DROPPED from the run entirely (10:34). This report is the final review's deliverable. The run has NOT started. No run task has run.
+Final prepare review, ordered by the owner at 10:35 25/11 after the user found the plan was not fully updated for the current situation, even though the user had been told prepare was ready. The user also ordered R3-047 (the Gutenberg task) DROPPED from the run entirely (10:34). This report is the final review's deliverable. The run has NOT started. No run task has run.
 
 ## Verdict: prepare is PERFECT. The run can start on the owner's word.
 
@@ -108,7 +108,7 @@ Report: improvements/r3-l3-lane-brief-acks-20261125.md.
 
 - Message deputy 8397cff5 to re-confirm it read the FINAL committed re-plan (the worktree copy, improvements/r3-l3-replan-final-20261124.md) before task 1 (G-24).
 - The independent verification of the final redteam mitigations (section 11 confirmation step) is running separately; its result confirms the mitigations in the committed files.
-- The B-F4 decision (drop = 0 invalids; 4-task scenario = 53 valid, bar 51/53, notify not stop) was made by the team under full autonomy with council unanimity plus the pre-declared table. If the owner wants to decide it himself instead, he can; the decision is recorded here in writing.
+- The B-F4 decision (drop = 0 invalids; 4-task scenario = 53 valid, bar 51/53, notify not stop) was made by the team under full autonomy with council unanimity plus the pre-declared table. If the owner wants to decide it instead, the user can; the decision is recorded here in writing.
 
 ## Open items and caveats
 

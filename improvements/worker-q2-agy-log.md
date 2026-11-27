@@ -43,7 +43,7 @@ Initial run completed 4 tests and scaffolding before reaching the 10-minute sess
 
 ### 2026-11-21 17:00:38 (T+00:00:46) - Branch synchronization
 - Synchronized branch with `origin/todolist-push` (fast-forward to `aa302f7`).
-- Verified committer identity: `phamTuan207 <232407559+phamTuan207@users.noreply.github.com>`.
+- Verified committer identity: `phamTuan207`.
 
 ### 2026-11-21 17:02:25 (T+00:02:33) - Completed Test 05 (Contact Book)
 - Updated fixture `fixtures/test-05-contact-book.html` with full modal form, search, department filtering, favorite starring, and deletion.

@@ -192,14 +192,14 @@ When using this wrapper programmatically:
    even when the app fails to start. If `process_running` is false, the
    window did not open; re-run with the desktop session env exported
    (the wrapper normally discovers it itself) and do not claim success.
-4. **Writes go to scratch only.** Never write into his real workspaces
+4. **Writes go to scratch only.** Never write into the user's real workspaces
    (iac-eval, Reasearch-IaC, Legacy-link, LTHDT) for a test; use a
    scratch folder under `/tmp` and open that.
-5. **Never close his VS Code windows or touch his open files.** `open`
+5. **Never close the user's VS Code windows or touch the user's open files.** `open`
    only adds a tab or window; there is no close command in this wrapper.
    Close only a scratch window you opened yourself, and only to leave
    the desktop clean after a test.
-6. **Extension install/uninstall is NOT wrapped.** It mutates his
+6. **Extension install/uninstall is NOT wrapped.** It mutates the user's
    profile and was not verified live. Run raw
    `code --install-extension <publisher.name>` from the shell only when
    explicitly requested, never as a discovery step.

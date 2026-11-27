@@ -181,8 +181,8 @@ Rules that matter:
   (default `http://127.0.0.1:9222`, the agent-managed Chromium from
   `browser start`) and whether the profile and its History file exist.
   If `reachable` is false, run `browser start` first.
-- His own Chromium has no debug port (verified 2026-11-18), so the
-  wrapper can never attach to his session. Tab commands only ever
+- The user's own Chromium has no debug port (verified 2026-11-18), so the
+  wrapper can never attach to the user's session. Tab commands only ever
   touch the agent-managed endpoint, or a test Chromium passed with
   `--endpoint` after the `--` separator.
 - `open` always opens a NEW tab. There is no navigate command; to
@@ -192,9 +192,9 @@ Rules that matter:
 - `current` returns the tab this wrapper last opened or activated
   (CDP HTTP does not report the active tab). After anyone else
   switches tabs, run `activate` first.
-- `history`, `bookmarks` and `downloads` read his Default profile
+- `history`, `bookmarks` and `downloads` read the user's Default profile
   read-only (History is copied to a temp file first) and need no
-  endpoint. His profile has no Bookmarks file, so `bookmarks` returns
+  endpoint. The user's profile has no Bookmarks file, so `bookmarks` returns
   an empty list with a note.
 - For DOM work on a tab, take its id from `tabs` and use
   `browser observe/act` as above. The wrapper does not do DOM.

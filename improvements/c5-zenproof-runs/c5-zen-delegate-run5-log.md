@@ -8,7 +8,7 @@ Report goes to COORD-CLICK-13, not directly to the owner.
 ## 0. Task receipt and sources read (before any live touch)
 
 - Task received 23:59:14 +07, 22/11/2026. T+0m. Single lane,
-  quiet machine, owner confirmed at 23:58 he is not touching
+  quiet machine, owner confirmed at 23:58 the user is not touching
   the machine (false alarm), live work authorized.
 - Sources read before running:
   - improvements/w-zen-delegate-liveproof-prep.md (procedure

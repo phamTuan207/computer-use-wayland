@@ -21,11 +21,11 @@ and it drops two of its own findings (J12, PR #1) out of the queue entirely.
   PRIO's own lens line quotes this exact phrase, then ranks the item second.
   A lens that quotes the order and then disobeys it is not a lens, it is a
   contradiction.
-- PRIO's defence for F3 first is "owner cannot use his browser at all
-  (22:25)". But the owner said at 22:27 he was going to sleep
+- PRIO's defence for F3 first is "owner cannot use the user's browser at all
+  (22:25)". But the owner said at 22:27 the user was going to sleep
   (memory, section "dang chi dao 22:29-22:32 (sau khi noi di ngu 22:27)").
-  He is not using the browser right now. The urgency that justifies F3
-  first is blunted by the owner's own sleep, while the FIRST order has no
+  The user is not using the browser right now. The urgency that justifies F3
+  first is blunted by the user's own sleep, while the FIRST order has no
   such expiry.
 - F2's fix is mostly code and hard rules (first-visible-action under 30s,
   session-start watchdog, fallback Pointer, overlay always on). It does not

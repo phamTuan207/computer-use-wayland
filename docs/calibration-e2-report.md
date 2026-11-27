@@ -130,6 +130,6 @@ why direct, not session). Every click verified with hyprctl cursorpos.
   scripts/calibration_e2.py, tests/calibration-e2-hits.jsonl
 - /tmp/e2/report-vision-actual.json (final numbers),
   /tmp/e2/after-1200.jpg (after-state screenshot, Hits 17/29)
-- 3 "Calibration Grid E2" tabs remain open on his Zen (clean grid,
+- 3 "Calibration Grid E2" tabs remain open on the user's Zen (clean grid,
   broken-JS truth grid, fixed-JS truth grid). Close them at the end of
-  the experiment; his other tabs were not touched.
+  the experiment; the user's other tabs were not touched.

@@ -3,7 +3,7 @@
 - Date: 2026-11-24 (times Asia/Ho_Chi_Minh)
 - Work started ~20:43, finished ~21:07 (elapsed ~24 min)
 - Operator: council-decision applier (subagent)
-- Machine: Omarchy laptop (user james), Zen run profile `/home/james/.config/zen/ae59l0ak.Default (release)/`
+- Machine: Omarchy laptop (user the owner), Zen run profile `/home/james/.config/zen/ae59l0ak.Default (release)/`
 - No crash test was run (no kill -9). No commit made (coordinator handles git).
 - Nothing else was applied: only the 13 council-approved prefs. ZCode untouched. No OpenRouter.
 

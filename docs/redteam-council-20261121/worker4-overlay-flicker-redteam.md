@@ -17,7 +17,7 @@ Two corrections to the record, already noted by the fix run, confirmed here. Fir
 
 - I9 (18:53-19:02 20/11): pill "Computer use active" flickers continuously while Muse drives directly. User asks why Codex driving is normal but Muse driving flickers. Muse first blames screenshots, then retracts that explanation at 19:02 and acknowledges the true cause is unverified. The source report gives an observe cadence of 10-30 seconds, but this audit has no live request or frame trace.
 - I10 (18:56-18:58 20/11): user reports the flicker continues while Muse visibly does nothing, about 10 times per second. This is the most important constraint. The source report says no mouse moves or screenshots occurred during the flicker window. If accurate, that makes ordinary capture activity insufficient to explain that interval; this was not independently measured here.
-- I11 (19:13 20/11): user orders computer-use off because the flicker hurts his eyes. Muse turns it off.
+- I11 (19:13 20/11): user orders computer-use off because the flicker hurts the user's eyes. Muse turns it off.
 - I12 (15:28 20/11): overlay vanished entirely while the worker was still alive and screenshotting. A second, distinct failure mode of the same pill, disappearance rather than flicker.
 - True cause unverified as of 02:30 21/11.
 

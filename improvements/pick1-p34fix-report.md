@@ -71,4 +71,4 @@ No windows or broker sessions were opened, the relay was not restarted, and the 
 - Address `55fafcba8080`, class `org.omarchy.herdrdrop`, title `omarchy: Jarvis`, PID `148305`.
 - Address `55faff012300`, class `zen`, title `Giảng lại AD AS (2) \u2014 Zen Browser`, PID `600148`. The title's separator is written as the escaped code point U+2014 to keep this report free of dash punctuation outside ASCII hyphens.
 
-No `code-exec-test-*` paths remained in `/tmp`. The worktree is intended to be clean after the report and log commit. All changes are on branch `speed-swarm-pick1p34fix` and pushed to origin. the owner's existing Jarvis and Zen clients were left untouched.
+No `code-exec-test-*` paths remained in `/tmp`. The worktree is intended to be clean after the report and log commit. All changes are on branch `speed-swarm-pick1p34fix` and pushed to origin. the user's existing Jarvis and Zen clients were left untouched.

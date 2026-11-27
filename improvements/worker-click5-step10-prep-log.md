@@ -534,7 +534,7 @@ fight over the screen.
   review). Deleting the server before the driver-owned pill
   is proven means live runs happen with no visible
   indicator. The owner cannot tell a run is active, cannot
-  tell it apart from his own input, and cannot see when it
+  tell it apart from the user's own input, and cannot see when it
   ends.
 - Act-now refuses every batch: the D1 overlay gate in
   first_action.py refuses loudly (exit 2) when the overlay

@@ -8,7 +8,7 @@
 
 ## 0. The question this paper answers
 
-The owner priority is performance when Muses control his machine. The single most valuable first step must be a concrete performance lever, not an org chart change. The crawls agree on the lever but do not prove it on our stack:
+The owner priority is performance when Muses control the user's machine. The single most valuable first step must be a concrete performance lever, not an org chart change. The crawls agree on the lever but do not prove it on our stack:
 
 - Structures crawl (improvements/worker-w-crawl-structures-20261121.md, accessed 2026-11-21): "No source found in this crawl that measures 'one observation yields many actions' as a standalone intervention with an A/B wall-time number on a desktop GUI task. HCU and Qwen-UI-Agent are the closest published evidence, via batching and step counts. This is a gap worth a direct experiment on our own test cases."
 - Bottlenecks crawl (improvements/worker-w-crawl-bottlenecks-20261121.md, accessed 2026-11-21): "No crawled source today gives a measured think-vs-observe-vs-act split of wall time for a computer-use loop. Our 87.8% figure is INTERNAL and stands alone."

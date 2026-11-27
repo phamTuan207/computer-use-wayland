@@ -178,7 +178,7 @@ Verdict: AMEND.
 
 ### The question
 
-Is Chromium/CDP (not Zen) the right isolation for this pilot, or does it make the result irrelevant to the owner's goal (Muses driving HIS Zen)?
+Is Chromium/CDP (not Zen) the right isolation for this pilot, or does it make the result irrelevant to the user's goal (Muses driving THE USER'S Zen)?
 
 ### Evidence for Chromium
 
@@ -189,7 +189,7 @@ Is Chromium/CDP (not Zen) the right isolation for this pilot, or does it make th
 
 ### Evidence against Chromium
 
-- The owner's goal is Muses driving HIS Zen: his sessions, his Gmail, his daily browser live there. A Chromium win does not transfer by itself. Transfer of desktop results to Zen is assumed, not shown, in the crawl (MobiBench transfer to desktop Zen is assumed, not shown, per the redesign proposal section 2).
+- The user's goal is Muses driving THE USER'S Zen: the user's sessions, the user's Gmail, the user's daily browser live there. A Chromium win does not transfer by itself. Transfer of desktop results to Zen is assumed, not shown, in the crawl (MobiBench transfer to desktop Zen is assumed, not shown, per the redesign proposal section 2).
 - The costs that batching saves may differ by browser: DOM read cost, click reliability (BiDi false-ok forces extra verification on Zen), snapshot expiry behaviour, and finish overhead are all browser-specific. A CODE program that passes on Chromium could fail on Zen for reasons that have nothing to do with batching, or a wall win on Chromium could vanish on Zen if Zen verification costs more.
 - The redesign proposal section 6 chains a pilot GO directly to Council C Exp1 as the confirmatory run, with no transfer step in between. A Chromium GO read that way licenses scale-up on a result that section 10 admits does not prove the Zen case.
 

@@ -307,7 +307,7 @@ surfaces is about the other zen-mcp.
 Our channel, as landed on todolist-push at a831e250 (lane 4's
 inventory): a hand-rolled, stdlib-only Python client for the
 Firefox Remote Debugging Protocol, length-prefixed JSON over one
-TCP socket to 127.0.0.1, attaching to the owner's real Zen
+TCP socket to 127.0.0.1, attaching to the user's real Zen
 launched with --start-debugger-server. Two evaluation contexts
 (content, and parent or chrome behind a gate and audit), one
 pinned tab per client, one request in flight, 7 CLI subcommands
@@ -359,7 +359,7 @@ Where zen-mcp is ahead of our channel:
 
 Where our channel is ahead:
 
-- It drives the owner's real, live Zen: the actual session,
+- It drives the user's real, live Zen: the actual session,
   logins, and restored tabs. zen-mcp refuses to attach to a
   running browser at all, and its default mode is a dedicated
   no-login profile; driving the real profile is an opt-in it

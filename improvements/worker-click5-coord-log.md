@@ -1275,10 +1275,10 @@ workspaces at the same time.
 
 ## 28. NEW PARALLEL WORKSTREAM: agent-native laptop (owner directive 14:00); inventory worker spawned, steps 8-11 NOT stalled (14:01-14:05 +07)
 
-- Directive from the owner via Muse, 14:00 +07, his own words:
+- Directive from the owner via Muse, 14:00 +07, the user's own words:
   "Bien may toi thanh cai may native nhat cho agent nhe,
   chrominum, brave roi cac app khac cu toi uu het cho agent di."
-  Make his laptop the most agent-native machine possible.
+  Make the user's laptop the most agent-native machine possible.
   Optimize Chromium, Brave, and every other app for agent use.
 - SCOPING (coordinator decision): a PARALLEL workstream. It does
   NOT stall steps 8-11 of the final direction. C5-STEP8 keeps
@@ -1444,7 +1444,7 @@ workspaces at the same time.
   activity 3s ago at check). Clone2 capped until Nov 25 02:38,
   no new work. FLAG (from another chat's Zalo 14:00 check, not
   this workstream): the owner sent messages 13:27-13:43 +07, so
-  he may be awake already; the wake-up report may be due sooner
+  the user may be awake already; the wake-up report may be due sooner
   than the sleep premise assumes. Muse to judge; no action taken
   here on that flag.
 
@@ -1832,7 +1832,7 @@ workspaces at the same time.
 - Direct order from the owner via Muse, 16:00 +07: run the
   rung 2 live acceptance test NOW, do not wait for steps 9-10
   to finish. The owner asked why the acceptance test still has
-  not run after about 14 hours, and he is right to ask: the
+  not run after about 14 hours, and the user is right to ask: the
   machinery it needs is ready (S2 flip reopen 5/5, 10/10
   sends, median 28.6s, EXPAND approved; step 7 P2 done and
   verified; step 8 broker transport done and live-proven).
@@ -2091,11 +2091,11 @@ Lanes live now: 5 (STEP10-PREP, ERRFILE-G31, STALL-INV, RUNG2, Y6-PAPER, Y1B-PRO
 
 ## 44. PAUSE ORDER, owner via Muse 16:32 +07, Sun 2026-11-22, campaign paused briefly, no kills, no new spawns
 
-Owner is logging in two other Muse accounts himself right now to replace the two capped clones. Orders: do NOT kill anything; stop spawning any new workers or lanes; let the in-flight workers finish their current item cleanly and report, then HOLD with no new items until Muse sends the resume signal; keep the state as is so work resumes cleanly. The watchdog may flag coordinator silence during this pause; that is expected and owner-ordered, not a stall.
+Owner is logging in two other Muse accounts right now to replace the two capped clones. Orders: do NOT kill anything; stop spawning any new workers or lanes; let the in-flight workers finish their current item cleanly and report, then HOLD with no new items until Muse sends the resume signal; keep the state as is so work resumes cleanly. The watchdog may flag coordinator silence during this pause; that is expected and owner-ordered, not a stall.
 
 State at pause: 5 lanes live (STEP9, Y13G-R3-FIX, BATCH3-CHECK, Y1B-PHASEB, Y6-A8-INVEST). Queued-next items all on HOLD, including the laptop tree sync (after STEP9), Y13G round-3 independent re-verification (after the fix), step 10 deletions (after step 9), A1 pilot (after the blocker check), final test (last), scrub (quiet window). The browser-relaunch decision from the 16:31 task is DEFERRED to resume, no relaunch spawned.
 
-Browser state observed by me 16:31-16:32, just before the pause order: Chrome is BACK on its own. Main process PID 1262765 started Sun Nov 22 16:31:08 2026, command line `--app-id=hichoggbhebpgpgcbcgfpkjmohpcflhh --remote-debugging-port=9223`, window 0x5570538ed160 ws2 "Muse" present again, CDP 9223 answering Chrome/157.0.8103.38, /json/list shows "Chat - clone2" (muse.ai) plus the two-vision benchmark fixture tab. Relauncher unattributed (candidates: STEP9, which needs the browsers for its live proof, or the owner himself; not established). Brave is STILL DOWN: brave_count=0, no Brave window in hyprctl clients, 127.0.0.1:9224 refused. Relay PID 1196429 alive (elapsed 01:23:46). No OOM/crash/kill lines in dmesg or journalctl 16:25-16:31 for chrome/brave; the ~16:28:30 double-vanish cause remains undetermined. Zen up (0x557052b62dd0 ws1), herdrdrop present.
+Browser state observed by me 16:31-16:32, just before the pause order: Chrome is BACK on its own. Main process PID 1262765 started Sun Nov 22 16:31:08 2026, command line `--app-id=hichoggbhebpgpgcbcgfpkjmohpcflhh --remote-debugging-port=9223`, window 0x5570538ed160 ws2 "Muse" present again, CDP 9223 answering Chrome/157.0.8103.38, /json/list shows "Chat - clone2" (muse.ai) plus the two-vision benchmark fixture tab. Relauncher unattributed (candidates: STEP9, which needs the browsers for its live proof, or the owner; not established). Brave is STILL DOWN: brave_count=0, no Brave window in hyprctl clients, 127.0.0.1:9224 refused. Relay PID 1196429 alive (elapsed 01:23:46). No OOM/crash/kill lines in dmesg or journalctl 16:25-16:31 for chrome/brave; the ~16:28:30 double-vanish cause remains undetermined. Zen up (0x557052b62dd0 ws1), herdrdrop present.
 
 Also recorded from the MEMORY.md update at 16:31: owner order, clone2 out of tokens, drop it, no more checks; clone2-watch-15m cron DELETED (verified via cron.list); only the clone2 chat watch is deleted, watchdog-zen-20m (stuck-agent check) still runs. RUNG2 PASS (10/10, 100%, 240.1s) reported to the owner by Muse. MAXIMIZE PARALLELISM (16:01) stands as the last parallelism order, suspended by this pause, not revoked.
 

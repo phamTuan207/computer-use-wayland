@@ -19,13 +19,13 @@ browsingContext.createContext is "unknown command" in this build, so a
 new tab is opened with window.open from an existing tab, then found in
 getTree by its opener. Headless mode starts with two about:blank tabs.
 
-Session rule (the safety core): the owner's own Zen runs WITHOUT a
+Session rule (the safety core): the user's own Zen runs WITHOUT a
 remote debugging port (verified 2026-11-18: nothing listening on 9222,
-2828 or 6000), so this wrapper can never attach to his session. Tab
+2828 or 6000), so this wrapper can never attach to the user's session. Tab
 commands only ever talk to a dedicated session this wrapper started
 (`session start`), on a dedicated profile under
 ~/.cache/cli-anything-zen/profile, headless by default. The wrapper
-never launches, kills or restarts his Zen, never closes his tabs, and
+never launches, kills or restarts the user's Zen, never closes the user's tabs, and
 refuses any --profile inside ~/.config/zen. `session stop` only kills
 a process whose cmdline contains the dedicated profile path recorded
 in the state file.
@@ -33,10 +33,10 @@ in the state file.
 Live-session opening is the one exception, and it is opt-in only:
 `open --live <url>` runs `zen-browser --new-tab <url>`, which the
 running Zen handles through its own remoting. The flag is documented
-in `zen-browser --help`; it was deliberately NEVER run against his
-session by this worker (it would add a tab to his Zen while he sleeps),
-so it is marked PROPOSED-live in the skill. Use it only when he asked
-for a page in his own Zen.
+in `zen-browser --help`; it was deliberately NEVER run against the user's
+session by this worker (it would add a tab to the user's Zen while the user sleeps),
+so it is marked PROPOSED-live in the skill. Use it only when the user asked
+for a page in the user's own Zen.
 
 Pill gate (R3): control commands (open, navigate, activate, close)
 acquire the central overlay pill before their BiDi session starts and
@@ -46,7 +46,7 @@ preflights overlay availability before spawning and holds the pill
 shown the drive is refused ('BiDi pill unavailable'). CU_ZEN_PILL=0
 disables the gate for fixture tests only, never for live work.
 
-History reads his real profile read-only: places.sqlite is copied to a
+History reads the user's real profile read-only: places.sqlite is copied to a
 temp file first (the live DB is locked while Zen runs) and opened
 read-only. Nothing is ever written to the profile. Default profile is
 auto-detected from ~/.config/zen/profiles.ini (the Default=1 profile).
@@ -68,7 +68,7 @@ Commands (each prints exactly one JSON object on stdout):
                         while the tab order and URLs stay the same.
   open <url>            Open url in a NEW tab (window.open) in the
                         dedicated session; records it as current.
-  open --live <url>     Open url in a new tab of his RUNNING Zen
+  open --live <url>     Open url in a new tab of the user's RUNNING Zen
                         (remoting). Opt-in only, see above.
   navigate <url> [--tab INDEX]
                         Navigate the current (or named) tab.
@@ -304,7 +304,7 @@ def ws_url(port):
 
 
 def detect_real_profile():
-    """the owner's real Zen profile dir, or None.
+    """the user's real Zen profile dir, or None.
 
     Reads ~/.config/zen/profiles.ini. The Install sections name the
     default profile path; a Profile section may also carry Default=1.
@@ -871,7 +871,7 @@ def cmd_session_start(args):
     real_home = REAL_PROFILE_HOME.expanduser().resolve()
     if resolved == real_home or real_home in resolved.parents:
         raise RuntimeError(
-            "refusing profile inside ~/.config/zen (his real profiles): "
+            "refusing profile inside ~/.config/zen (the user's real profiles): "
             + str(profile))
     if _pill_enabled():
         _pill_preflight()
@@ -1044,9 +1044,9 @@ def cmd_open(args):
             raise RuntimeError("zen-browser --new-tab failed: %s" %
                                result.stderr.strip())
         return {"ok": True, "command": "open", "live": True, "url": url,
-                "note": "opened in a new tab of his RUNNING Zen via "
+                "note": "opened in a new tab of the user's RUNNING Zen via "
                         "remoting; the tab was not read back (no debug "
-                        "port on his session)"}
+                        "port on the user's session)"}
     port = resolve_port(args)
     session = open_session(port, pill=True)
     try:
@@ -1304,7 +1304,7 @@ def build_parser():
     open_parser = sub.add_parser("open", help=COMMANDS["open"][1])
     open_parser.add_argument("url")
     open_parser.add_argument("--live", action="store_true",
-                             help="open in his RUNNING Zen via remoting "
+                             help="open in the user's RUNNING Zen via remoting "
                                   "(opt-in only)")
     open_parser.add_argument("--tab", default=None,
                              help="opener tab index from `tabs` (default: "

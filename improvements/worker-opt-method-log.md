@@ -112,7 +112,7 @@ Owner 22:48: continue under the Lauren Tan structure, stick to it tightly, NO sk
 - Caveats for the redteam (named in M2's sign-off): the D-2 veto rests on an unverified signature story; the E split rests on zero wedge captures; the F no-reload ruling rests on parse-2 determinism; the G V1 burden rests on two concordant "no class" records whose output was never saved; CM-4 rests on the main-only graph rule verified once at 22:52.
 
 ## 23:01 +07 - OWNER ORDER (via MEMORY): REPORT ERRORS OVERNIGHT, DO NOT WAIT FOR MORNING
-- Owner asleep but instructed 23:01: if there is any error or anything that truly needs him, report it at once (do not wait until morning). Applies all night: big errors, blockers, things needing his decision get reported immediately; routine work stays silent, results reported in the morning.
+- Owner asleep but instructed 23:01: if there is any error or anything that truly needs the user, report it at once (do not wait until morning). Applies all night: big errors, blockers, things needing the user's decision get reported immediately; routine work stays silent, results reported in the morning.
 - Impact on my work: if REDTEAM-M kills a method outright or finds a major blocker, I escalate that to parent Muse immediately in my next turn (not held for the morning synthesis). Routine wave-2 progress stays in the log only.
 
 ## 23:01 +07 - WAVE 2 SPAWNED: REDTEAM-M

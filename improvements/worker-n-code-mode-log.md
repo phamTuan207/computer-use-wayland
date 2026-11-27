@@ -44,4 +44,4 @@ All times Asia/Ho_Chi_Minh (UTC+7), wall-clock + elapsed per step.
 - Verdict: do NOT build a full Cloudflare-style Code Mode server (no MCP server with thousands of tools exists here, and code_exec.py already is the client-side equivalent). DO adopt the two missing pieces: search/describe progressive discovery over the 56-script catalog, and a snippets registry for reusable programs. Test further: measure wall time code_exec vs baseline on the realistic test set.
 
 ## 16:05 +07: commit and push
-- Commits on todolist-push (mail phamTuan207). Report back to Muse.
+- Commits on todolist-push (owner's mail). Report back to Muse.

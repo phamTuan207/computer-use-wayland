@@ -5,7 +5,7 @@
 - Access date for every crawled source below: 2026-11-21
 - Status: PROPOSAL ONLY. No structural change is implemented in this file. Nothing here touches live runs, the pill shader, the main merge, or the final-test plan.
 - Scope: roles, handoffs, verification, spawn/kill rules, clone management, and which repeated mistakes become deterministic rules.
-- Owner priority, hard: PERFORMANCE WHEN MUSES CONTROL HIS MACHINE comes first. Every proposal below is judged against that, not against org-chart neatness. Super I input work is NOT important and is ignored here.
+- Owner priority, hard: PERFORMANCE WHEN MUSES CONTROL THE USER'S MACHINE comes first. Every proposal below is judged against that, not against org-chart neatness. Super I input work is NOT important and is ignored here.
 - Method: this paper applies the Lauren Tan clip rules and the two crawls to OUR setup. Clip source: improvements/worker-w-crawl-clip-20261121.md. Structures source: improvements/worker-w-crawl-structures-20261121.md. Bottlenecks source: improvements/worker-w-crawl-bottlenecks-20261121.md.
 
 ## Work log (Asia/Ho_Chi_Minh, elapsed from task start 17:51)

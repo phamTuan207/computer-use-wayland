@@ -263,7 +263,7 @@ as navigator.webdriver leaking to pages), while agent computer-use
 control of the same Zen stays available at any time and the AI
 optimization of Zen stays. Owner addendum 06:21 27/11: "Can thi build
 cong cu rieng" (if needed, build a dedicated tool). Standing design
-principle: his machine is AI-optimized but the repo must work on
+principle: the user's machine is AI-optimized but the repo must work on
 stock apps; machine optimizations go in the repo only as OPTIONAL
 (opt-in, default off).
 
@@ -309,7 +309,7 @@ list. Explicitly out of scope: solving CAPTCHAs, rotating or spoofing
 IP addresses, spoofing TLS or network fingerprints, imitating human
 behavior, promising that Cloudflare passes any given visit. The tool
 ships with its probe as a fail-loud command; for agents dirty still
-means stop. Placement: active configuration on his machine layer
+means stop. Placement: active configuration on the user's machine layer
 (laptop Zen); repo carries it only as OPTIONAL opt-in, default off,
 with the probe test included. Acceptance (either branch): probe-clean
 is necessary, not sufficient - repeated human-path visits (open Zen

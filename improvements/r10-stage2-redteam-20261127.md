@@ -25,18 +25,18 @@ session.
 ### S1. "Same install" is a lawyerly redefinition of the owner's words
 - Severity: CRITICAL
 - Attack: In ordinary language, "Zen" for the owner is the
-  browser he lives in: his window, his tabs, his logins. Stage 1
+  browser the user lives in: the user's window, the user's tabs, the user's logins. Stage 1
   redefines it to "same install" and then declares legs 1-3
   satisfied. That is semantic drift by the team, not a decision
   by the owner. If the owner meant same live session (the natural
   reading of "agents callable to computer-use Zen at any time"
-  while he browses in it), the split fails leg 2 by definition:
-  agents can never act in the session he is looking at.
+  while the user browses in it), the split fails leg 2 by definition:
+  agents can never act in the session the user is looking at.
   VERIFIED: Stage 1 itself flags this as the open question.
   ASSUMED: that the owner would accept the install reading.
 - Evidence that would answer it: the owner's explicit, recorded
   confirmation that same-install (separate agent profile, no
-  access to his live tabs/logins) satisfies his criterion. Not a
+  access to the user's live tabs/logins) satisfies the user's criterion. Not a
   team inference, not silence. Without that sentence, the split
   is built on an unapproved reinterpretation.
 
@@ -47,10 +47,10 @@ session.
   (owner-added tab restore). But the frozen list was designed
   around fresh pages (Stage 1 caveat, VERIFIED). Using it to
   price future loss is selection bias. Real standing work needs
-  his session: Gmail confirmation by the agent itself (standing
-  hard rule), Codeforces under his nick (the CF735368 lane hit a
-  Cloudflare interstitial in his live Zen at 06:33 on 27/11,
-  VERIFIED per Stage 1), Drive, Notion, GitHub as himself.
+  the user's session: Gmail confirmation by the agent itself (standing
+  hard rule), Codeforces under the user's nick (the CF735368 lane hit a
+  Cloudflare interstitial in the user's live Zen at 06:33 on 27/11,
+  VERIFIED per Stage 1), Drive, Notion, GitHub as the user.
   The first such task forces a trilemma, all bad:
   (a) refuse / ask the owner to do it manually - violates
       "agents callable at any time" and the DO IT YOURSELF rule;
@@ -58,12 +58,12 @@ session.
       2FA friction, session divergence (agent sees a different
       account state than the owner);
   (c) quietly drive the human profile flagged - leg 1 fails
-      exactly where it matters (his real accounts).
+      exactly where it matters (the user's real accounts).
   Option (c) is what will actually happen under time pressure,
   silently reintroducing the flagged profile and defeating the
   split where it counts.
 - Evidence that would answer it: an inventory of non-R3 agent
-  tasks from the last 30 days that needed his logged-in session,
+  tasks from the last 30 days that needed the user's logged-in session,
   counted honestly. If that count is non-trivial, the split needs
   an explicit continuity escape hatch (see Verdict), not a claim
   of "0 loss".
@@ -114,14 +114,14 @@ session.
   the automation blast radius. True only while the agent profile
   stays login-free. To be useful it will accumulate logins:
   task test accounts, then real ones (standing login rule uses
-  his Gmail account; GitHub as himself for repo work). Result:
+  the user's Gmail account; GitHub as the user for repo work). Result:
   credentials in TWO profiles, one of them less watched and
   driven by full-access agents. Worse, history VERIFIED: agent
   automation once closed 24 owner tabs including 5 essentials
   and 3 pinned (26/11). In the split that blast radius moves to
-  the agent profile - good - until the owner, finding his
+  the agent profile - good - until the owner, finding the user's
   accounts already logged in there, starts using the agent
-  profile as his daily browser. Then he is back on a flagged
+  profile as the user's daily browser. Then the user is back on a flagged
   browser and leg 1 is dead by migration, not by decision.
 - Evidence that would answer it: a credential policy for the
   agent profile (which logins allowed, enforced how, audited
@@ -252,7 +252,7 @@ session.
 - Attack: Chrome-privileged autoconfig JS runs at startup
   with full privileges. Failure modes after a Zen update:
   (a) startup breakage - browser will not start, owner loses
-      his browser entirely, recovery needs manual file surgery;
+      the user's browser entirely, recovery needs manual file surgery;
   (b) silent disable - layer stops applying, webdriver=true,
       owner blocked again, and nothing alarms unless someone
       runs the probe (probe runs in drive reports, not on
@@ -307,7 +307,7 @@ session.
 - Attack: VERIFIED: agent automation once closed 24 owner tabs
   (26/11); VERIFIED: Remote Agent allows ONE WebDriver session
   at a time (T8). The build changes neither. Agents still drive
-  the owner's live session, still can close his tabs, still
+  the user's live session, still can close the user's tabs, still
   serialize behind one session. The build spends the most
   money to preserve the exact configuration that caused the
   worst incident, while the split removes that blast radius
@@ -377,10 +377,10 @@ session.
   robotic timing, no mouse entropy, instant navigation.
   Cloudflare behavioural signals may therefore block agent
   visits a human would pass, or pass agent visits (holder
-  shim active) that the owner's own later browsing would fail
+  shim active) that the user's own later browsing would fail
   (no holder session, VERIFIED shim lifetime = holder session).
   The test confounds driver, shim state, and browser config.
-- Evidence that would answer it: separated arms: owner himself
+- Evidence that would answer it: separated arms: owner
   browsing (true human, no agent) vs agent-driven, reported
   separately. Only the owner-browsing arm proves leg 1.
 
@@ -489,7 +489,7 @@ against. No further attack needed.
 
 1. Owner decision on the fork, recorded verbatim: same-install
    accepted, with the continuity loss stated plainly (agents
-   cannot act in his live tabs/logins by default). If he says
+   cannot act in the user's live tabs/logins by default). If the user says
    same-session, the split is dead and Stage 2 must say so.
 2. Run A5 BEFORE migration. If flag-free still blocks, stop:
    neither branch delivers leg 1.
@@ -533,7 +533,7 @@ and should not be commissioned on hope.
 ### Bottom line
 
 Do not choose between split and build today. Run A5 (hours),
-get the owner's fork decision in his own words (S1), and run
+get the user's fork decision in the user's own words (S1), and run
 the S3 concurrency gate. Those three cheap facts collapse most
 of this uncertainty. On current evidence the split survives;
 the build is an expensive bet on an unmeasured assumption with

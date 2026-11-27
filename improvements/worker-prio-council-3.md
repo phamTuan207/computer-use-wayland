@@ -30,7 +30,7 @@
   a session (no "browserElement is null"), session restore shows the 13 real
   tabs, and the 15-tab cleanup ends with the driver focused on a LIVE tab.
   Reason: every live run before this point fails spuriously, burns tokens,
-  and risks corrupting the owner's real tabs for zero signal.
+  and risks corrupting the user's real tabs for zero signal.
 - G-TAB: During any tab cleanup or live run, a sacrificial live tab must be
   opened BEFORE closing tabs, and the session must end while focused on a
   live tab. Never DELETE a session while the current tab is a closed tab.
@@ -85,11 +85,11 @@
 ## Rank by rank verdict
 
 ### Rank 1. F3 Zen restore (4.7/4.8, J1/J2) + Marionette slot (4.10, J3) + finish 15-tab cleanup. AGREE.
-- Why this must be first: the owner cannot use his browser at all (22:25,
+- Why this must be first: the owner cannot use the user's browser at all (22:25,
   J1). Zen PID 27958 alive but no web clickable or openable, sidebar
   collapsed to icons, workspace switching also broken (J2). Every later
   rank gates on this. Running anything live before it is guaranteed noise.
-- Failure if too late: owner stays locked out of his own browser while the
+- Failure if too late: owner stays locked out of the user's own browser while the
   fleet works on lower items; every live result after that is suspect
   because the base machine was never proven healthy.
 - Failure if rushed: a Zen restart without verified session restore loses
@@ -154,7 +154,7 @@
   the difference. The ZT-00 health gate exists for exactly this reason
   and must pass first.
 - Failure if too early in another way: R-01 (blind Ctrl+W could close the
-  owner's real tab) was fixed in v2, but the fix must be verified in the
+  user's real tab) was fixed in v2, but the fix must be verified in the
   ZT-B brief itself, not assumed from the v2 commit message. A blind
   runner on real Zen with real tabs is the highest collateral risk in
   the whole queue. ZT-B must run only on the restored machine, only one
@@ -379,7 +379,7 @@
 - The owner ordered it LAST at 16:30, confirmed twice. Rank 14 honors
   that order. No council argument for moving it earlier exists.
 - Failure if run early: the test uploads 5 problems through Polygon on
-  the owner's own Codeforces account, with no Hieu permissions and no
+  the user's own Codeforces account, with no Hieu permissions and no
   effect on anyone else only if it is done cleanly. Run early, on a
   machine whose Zen, session, overlay, and Marionette slot are still
   broken, it produces errors that cannot be attributed: is the failure

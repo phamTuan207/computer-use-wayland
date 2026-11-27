@@ -108,10 +108,10 @@ Each trigger is judged separately as an ON trigger and as an OFF trigger, agains
 
 ### User sitting down at 17:59
 
-- Incident 2 OFF: CORRELATED at best, mechanism UNKNOWN. The owner freeze (keyboard and mouse unresponsive 17:59:13 to 18:00:08) overlaps the OFF window (17:59 to 18:00). If the owner sat down, moved the mouse, or changed focus in that minute, that activity could in principle have triggered a repaint (V2) or woken a stalled compositor. But no log records what the owner did, or when he sat down. The only timed fact is the freeze, and the freeze is an input failure, not an action. Its onset at 17:59:13 predates y4c's navigations at 17:59:27 and 17:59:33, so the freeze is not an effect of y4c. Whether it is an effect of y4b (17:57) is also weak, with a two minute gap.
+- Incident 2 OFF: CORRELATED at best, mechanism UNKNOWN. The owner freeze (keyboard and mouse unresponsive 17:59:13 to 18:00:08) overlaps the OFF window (17:59 to 18:00). If the owner sat down, moved the mouse, or changed focus in that minute, that activity could in principle have triggered a repaint (V2) or woken a stalled compositor. But no log records what the owner did, or when the user sat down. The only timed fact is the freeze, and the freeze is an input failure, not an action. Its onset at 17:59:13 predates y4c's navigations at 17:59:27 and 17:59:33, so the freeze is not an effect of y4c. Whether it is an effect of y4b (17:57) is also weak, with a two minute gap.
 - Incident 1 OFF: UNKNOWN. No owner activity is recorded around 16:44 to 16:45, so there is no cross-check.
 - ON side: no evidence in either incident that owner presence or absence turned the state on. The owner was presumably away or inactive during both ON windows, but that is not logged, and U's clean run at 16:58 happened under presumably similar conditions.
-- Verdict: the freeze is a real timed event overlapping the OFF flip, but it is not evidence of a sit-down action, and it cannot be credited as the OFF cause. It is also a safety signal: tab driving while the owner is at the keyboard caused a one minute input freeze, which is why the decisive experiment must run only when he is away.
+- Verdict: the freeze is a real timed event overlapping the OFF flip, but it is not evidence of a sit-down action, and it cannot be credited as the OFF cause. It is also a safety signal: tab driving while the owner is at the keyboard caused a one minute input freeze, which is why the decisive experiment must run only when the user is away.
 
 ### Extension background recovery
 
@@ -152,11 +152,11 @@ That three step comparison splits the theories cleanly. Old tabs stay hidden whi
 
 ## Part 4: the decisive experiment (design only, do NOT run now)
 
-Do not run this while the owner is at the keyboard. Run it later, when he is away, under the Zen lock, with every probe output saved to disk with timestamps. The experiment is a capture loop, not a fix attempt. It does not apply overrides, it does not kill anything until Phase 3, and it never navigates, types into, or clicks a user tab. The tab with the open alert (tab [4] in incident 2) is never touched.
+Do not run this while the owner is at the keyboard. Run it later, when the user is away, under the Zen lock, with every probe output saved to disk with timestamps. The experiment is a capture loop, not a fix attempt. It does not apply overrides, it does not kill anything until Phase 3, and it never navigates, types into, or clicks a user tab. The tab with the open alert (tab [4] in incident 2) is never touched.
 
 ### Preconditions
 
-- Owner confirmed away from the keyboard. Abort at once if he returns.
+- Owner confirmed away from the keyboard. Abort at once if the user returns.
 - Lock held (flock on ~/.cache/agent-computer-use/zen_dom.lock). No other runner active.
 - Fixture server up (reuse the persistent server pattern; record port and root).
 - Zen PID recorded; Marionette port 2828 confirmed; `hyprctl` attempted with a 10 s timeout and its result (success or hang) logged at each phase.

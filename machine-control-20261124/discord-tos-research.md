@@ -11,7 +11,7 @@ Research log (Asia/Ho_Chi_Minh): started 2026-11-24 20:27, sources read
 
 ## Verdict in short
 
-- Driving the owner's own user account with a script is prohibited by
+- Driving the user's own user account with a script is prohibited by
   Discord, whichever mechanism does the driving. The rule turns on the
   account being automated, not on the tool used.
 - The user-token REST route is the clearest violation: Discord calls it
@@ -320,8 +320,8 @@ Notes:
   or unsolicited messages; never store a user token in a file, log, or
   repo; enable 2FA; keep the CLI local-only.
 - Never ask any user for their password or token (Developer Policy
-  rule 4). The CLI must only ever use the owner's own account, with the
-  owner's own consent, on the owner's own machine.
+  rule 4). The CLI must only ever use the user's own account, with the
+  user's own consent, on the user's own machine.
 - Re-check discord.com/terms, discord.com/guidelines, and the self-bot
   support article before any release, and record the new access date.
   The Terms version read here takes effect December 15, 2026, so the

@@ -3,7 +3,7 @@
 Worker: W-SYNC. Date: 2026-11-22. All times Asia/Ho_Chi_Minh, wall clock.
 Repo: computer-use-wayland, branch todolist-push.
 Rule followed: only sync code. No restart of Zen, Brave, Chromium, or any
-session of the owner. No tab opened or switched in his Zen.
+session of the owner. No tab opened or switched in the user's Zen.
 
 ## 1. Repo baseline (VM and laptop at the same commit)
 

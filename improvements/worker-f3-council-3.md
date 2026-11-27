@@ -9,7 +9,7 @@ Owner: referred to here as the owner, per repo-facing rule. No personal info in 
 
 ## Summary
 
-F3's next step, report the recurrence to Muse and await direction for a restart, is the right step. The evidence is sufficient for Muse to authorize the second restart now, with conditions. The AMEND corrections below are required before or with that authorization: a pre-restart baseline check, a post-restart verification list, a ban on repeating the cleanup method that likely re-wedged the slot, a downgrade of the zombie-cause claim from proven to hypothesis, and a report to the owner now framed as FYI only, with no decision asked of him.
+F3's next step, report the recurrence to Muse and await direction for a restart, is the right step. The evidence is sufficient for Muse to authorize the second restart now, with conditions. The AMEND corrections below are required before or with that authorization: a pre-restart baseline check, a post-restart verification list, a ban on repeating the cleanup method that likely re-wedged the slot, a downgrade of the zombie-cause claim from proven to hypothesis, and a report to the owner now framed as FYI only, with no decision asked of the user.
 
 ## 1. Next step judgment
 
@@ -55,11 +55,11 @@ Two other ideas have no chance and are recorded so they are not re-proposed: BiD
 
 ## 3. Escalation judgment
 
-Muse should report this recurrence to the owner now, in main chat, as FYI only, with no decision asked of him. Do not wait until morning.
+Muse should report this recurrence to the owner now, in main chat, as FYI only, with no decision asked of the user. Do not wait until morning.
 
-- For reporting now: the 23:01 instruction in the log says big errors, blockers, and things needing his decision get reported at once, not next morning, even though he is asleep since about 22:27. This recurrence is a big blocker: it gates the Y13 and Y14 live runs, which need the Marionette slot. Waiting until morning would hide an overnight stall and violate the standing report-blockers-early rule (error file A5).
-- For FYI only, no decision asked: no owner decision is needed tonight. Restart authorization is Muse's call under the brief, and the procedure change is internal. A message that asks him to decide would wake him for a decision he delegated. The message must state plainly: slot re-wedged at 22:56:12, restart authorized by Muse, outcome to follow in the morning report, no action needed from him.
-- If the restart fails or Zen does not relaunch, that becomes a new fact for the morning report, and still needs no owner action overnight unless Muse finds a step only he can do.
+- For reporting now: the 23:01 instruction in the log says big errors, blockers, and things needing the user's decision get reported at once, not next morning, even though the user is asleep since about 22:27. This recurrence is a big blocker: it gates the Y13 and Y14 live runs, which need the Marionette slot. Waiting until morning would hide an overnight stall and violate the standing report-blockers-early rule (error file A5).
+- For FYI only, no decision asked: no owner decision is needed tonight. Restart authorization is Muse's call under the brief, and the procedure change is internal. A message that asks the user to decide would wake the user for a decision the user delegated. The message must state plainly: slot re-wedged at 22:56:12, restart authorized by Muse, outcome to follow in the morning report, no action needed from the user.
+- If the restart fails or Zen does not relaunch, that becomes a new fact for the morning report, and still needs no owner action overnight unless Muse finds a step only the user can do.
 
 ## 4. Post-restart verification steps (exact, in order)
 
@@ -79,7 +79,7 @@ Run these before any cleanup or live run. Log each with wall-clock time.
 - C3. After the restart, run V1 to V6 in order before any cleanup or live run.
 - C4. If fixture tabs resurrect, do NOT re-run cleanup_full or close3 with Marionette DELETE. Close resurrected tabs via the UI or via BiDi close only, per log open item 4. Never close a BiDi-navigated tab with Marionette DELETE. Accept 1 leftover sacrificial blank, per J24.
 - C5. Downgrade the zombie-cause claim in J3 and J22 from proven to hypothesis, with the supporting evidence listed (only BiDi-navigated tab among close3's 3; Bug 1342723; driver.sys.mjs lines 4616, 4640, 2707). Keep the procedure change in C4 as a precaution, not as a proven root cause, until the DELETE-to-removeTab path is source-proven.
-- C6. Report the recurrence to the owner now in main chat as FYI only, per section 3. No decision asked, no action needed from him.
+- C6. Report the recurrence to the owner now in main chat as FYI only, per section 3. No decision asked, no action needed from the user.
 - C7. Do not retry the X-close on the zombie row. Ruled out in section 2 with reasons.
 
 ## 6. Findings list

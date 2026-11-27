@@ -124,7 +124,7 @@ Credit where due: the failure mode is honest (explicit driver-state error, never
 
 ### D4. The recovery itself violates the standing no-tab-driving rule
 
-The hole: `ensure_visible` switches to the first non-test handle as its "away" tab (run_agyq2.py, ensure_visible). In a live Zen with 22 pre-existing tabs, that is a user tab by definition. That is a focus steal, and the 17:59 input freeze followed probe tab navigation in the same window; the pause order forbids tab-driving while the owner is at the keyboard. Any recovery that switches tabs by design cannot run while he is present. The fix paper notes this too and proposes removing the switch-away step, which is correct, but the currently landed code still contains it.
+The hole: `ensure_visible` switches to the first non-test handle as its "away" tab (run_agyq2.py, ensure_visible). In a live Zen with 22 pre-existing tabs, that is a user tab by definition. That is a focus steal, and the 17:59 input freeze followed probe tab navigation in the same window; the pause order forbids tab-driving while the owner is at the keyboard. Any recovery that switches tabs by design cannot run while the user is present. The fix paper notes this too and proposes removing the switch-away step, which is correct, but the currently landed code still contains it.
 
 ### D5. The fix paper's preflight Hyprland gate and blacklist trial overreach the evidence
 

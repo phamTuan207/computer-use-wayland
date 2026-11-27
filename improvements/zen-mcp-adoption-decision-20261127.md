@@ -280,7 +280,7 @@ path (click 138.8 ms, type 154.6 ms vs our 51-52 ms), their nine
 read formats (we take one), their 3,561-line read script as a blob,
 their MCP surface itself, and every item on the 13-item not-adopt
 list. The combined version keeps our channel's core: driving the
-owner's real live session, delivery/retry semantics, attach-time
+user's real live session, delivery/retry semantics, attach-time
 defence in depth, stdlib-only zero supply chain. The ported ideas are
 patterns reimplemented in our shape, measured on our fixtures, gated
 by our tests.

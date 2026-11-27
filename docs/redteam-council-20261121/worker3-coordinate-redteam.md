@@ -23,7 +23,7 @@
 - I2 (19:20-19:24): clicked Discard instead of Continue, opened the delete-working-copy dialog, Cancel took several tries to dismiss.
 - I3 (19:28-19:29): mouse stood still, could not click Add to Contest. This is a stall, not a coordinate error. No coordinate was ever issued, or none landed. Do not count it as a miss.
 - I4 (19:10-19:11): missed the General info link several times, fell back to the homepage.
-- I6 (19:25-19:27): Muse admitted "I read the button position from the image, but the screen ratio differs, so my coordinates skew right. I never calibrated for his screen." The owner ordered this recorded as top priority.
+- I6 (19:25-19:27): Muse admitted "I read the button position from the image, but the screen ratio differs, so my coordinates skew right. I never calibrated for the user's screen." The owner ordered this recorded as top priority.
 - H3: same, listed as the biggest error. Suspected causes given: (1) unknown screen ratio/scale, (2) observation coordinates do not match real screen coordinates, (3) visual grounding measures pixels wrong, (4) observation crop/resize shifts coordinates.
 - I8 (19:11-19:12): tests never measured hit rate. A task passes after retries, so misses hide inside retry loops. No first-try hit rate exists anywhere.
 - Coordinate-accuracy file (20/11): observation image 1200x757, window 1863x1176, scale 0.644. Cancel clicks on the native dialog at (725, 388) and (668, 388) returned ok:true but the dialog stayed open for several attempts. The owner's bar (19:13): not 100 percent, occasional misses normal, missing every time unacceptable. The bar is speed with a low miss rate.

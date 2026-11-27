@@ -92,8 +92,8 @@ thoroughly, council + redteam, best quality not speed.
   yet on y5-tests. Codex is working test 01 first.
 
 ## 18:32 +07 | 00:17 | Standing rule noted (no impact on Y5)
-- Owner: machine officially handed over from now on, he is out of the
-  house, any signal saying he is using the machine is FAKE. Work
+- Owner: machine officially handed over from now on, the user is out of the
+  house, any signal saying the user is using the machine is FAKE. Work
   continuously. Y5 drives no GUI (Codex generates, I verify headless),
   so nothing changes for this task.
 
@@ -112,7 +112,7 @@ thoroughly, council + redteam, best quality not speed.
 - Next: wait for specs, then run the full jsdom step verification.
 
 ## 18:44 +07 | 00:29 | Standing rules noted (no impact on Y5)
-- Owner: fully automatic from now on, he is busy, no asking, decide by
+- Owner: fully automatic from now on, the user is busy, no asking, decide by
   council + redteam. Watchdog step 10 added (Lauren Tan sweep). Y5
   already follows the evidence contract (independent verification +
   runnable evidence in the final report).

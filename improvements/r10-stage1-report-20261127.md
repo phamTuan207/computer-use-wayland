@@ -29,7 +29,7 @@ AI-optimized.
 4. **Continuity count: 0 of the 55 frozen R3-L3 tasks needed
    owner-session continuity.** The only continuity-dependent task
    was R3-056, an owner-added incident-repair task (restore the
-   owner's own tabs). R3-029 used a task-scoped test account, not
+   user's own tabs). R3-029 used a task-scoped test account, not
    the owner's session.
 
 ## (a) Launcher flag inventory
@@ -150,8 +150,8 @@ Labelled ASSUMED, not load-bearing for the recommendation.
 Method: classified all 55 frozen tasks from the frozen answer keys
 (docs/rung3-answer-keys.md) plus runner briefs. A task "needed
 owner-session continuity" if it operated on the owner's existing
-session state: his logged-in accounts as himself, his existing
-tabs or session restore, or his profile data. Standing
+session state: the user's logged-in accounts as the user, the user's existing
+tabs or session restore, or the user's profile data. Standing
 "never close owner tabs" boilerplate in briefs is tab-safety, not a
 continuity requirement.
 
@@ -184,7 +184,7 @@ and refuses profiles inside ~/.config/zen).
   live session? This alternative satisfies same-install, not
   same-session.
 - Losses: agents cannot act inside the owner's live tabs/logins
-  (e.g. his Gmail as himself) without a separate login in the agent
+  (e.g. the user's Gmail as the user) without a separate login in the agent
   profile; two profiles to maintain; agent profile is also a
   safety win (no owner credentials in the automation blast radius).
 - Continuity evidence: 0/55 frozen tasks lose anything.
@@ -244,7 +244,7 @@ a genuine fork, and the fork turns on one phrase in the criterion:
   (two profiles). Cheapest, components proven, human leg verified
   clean, 0/55 continuity loss. Do not build.
 - If "the same Zen" means **same live session** (agents must be
-  able to act in the owner's own tabs/logins at any time while his
+  able to act in the user's own tabs/logins at any time while the user's
   browsing stays clean): only Alternative 3 (build) satisfies the
   criterion as written. Commission it with the frozen coverage,
   named owner, cost estimate, and kill criteria the decision

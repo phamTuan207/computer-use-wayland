@@ -143,7 +143,7 @@ what Scrapling can actually fetch:
   YouTube Data API route. Do NOT hammer it; use the API or RSS feeds first.
 - X / Twitter (x.com): login-walled, aggressive anti-bot. Fetcher cannot do it,
   StealthyFetcher will likely be challenged. Do NOT attempt; use Nitter mirrors
-  only if they exist and allow it, or the X API with the owner's key if he ever
+  only if they exist and allow it, or the X API with the user's key if the user ever
   provides one. Lowest priority.
 - The last30days skill (github.com/mvanhorn/last30days-skill, 68k stars) already
   covers Reddit + X + YouTube + Hacker News + Polymarket ranking by upvotes and

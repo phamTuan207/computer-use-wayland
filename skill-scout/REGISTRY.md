@@ -406,7 +406,7 @@ Scout lane files (full evidence, same directory):
 
 - **Anchor Browser** (anchorbrowser): cloud-only paid Chromium fleet,
   API key in CDP URL, credentials leave the machine. Cannot drive the
-  owner's real Zen. Rejected.
+  user's real Zen. Rejected.
 - **browser-use as a driver** (browser-use/browser-use, MIT): heavier
   duplicate of agent-browser (Pydantic AI stack, fast-breaking API,
   cloud upsell, Chromium-only). Not installed anywhere (brief's "may

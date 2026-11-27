@@ -19,7 +19,7 @@ This answers the owner's 23:22 question precisely. `muse.skill_search 'omarchy'`
 ~/.claude/skills/omarchy, diagnose-crash, omarchy-app, omacal, computer-use (symlinked/installed for Claude Code)
 ~/.codex/skills/ (many, including chromium-cdp, claude-handoff, chief-of-staff)
 
-So KB and my catalog search were right in letter (no skill in Muse's catalog) and the owner was right in substance (the skill exists on his machine). The gap is that Muse never had it in its catalog. Adoption item 1 below closes it.
+So KB and my catalog search were right in letter (no skill in Muse's catalog) and the owner was right in substance (the skill exists on the user's machine). The gap is that Muse never had it in its catalog. Adoption item 1 below closes it.
 
 What the skill says (read in full): REQUIRED for end-user customization; NEVER modify /usr/share/omarchy/ (read freely, it is overwritten on update); edit in ~/.config/; Hyprland auto-reloads on save, validate with `hyprctl reload` plus `hyprctl configerrors`; shell.json and menus hot-reload; command discovery via `omarchy commands` and `omarchy commands --json`; read any command's source with `cat $(which omarchy-<name>)`; hooks via `omarchy hook install <type> <file>`; plugins via `omarchy plugin clone`; reminders via `omarchy reminder <minutes> [message]`; debug always with `omarchy debug --no-sudo --print`.
 

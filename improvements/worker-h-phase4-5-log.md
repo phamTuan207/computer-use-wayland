@@ -1,6 +1,6 @@
 # Worker H work log - Phase 4 + Phase 5 (non-reboot items)
 # Start: 2026-11-21 07:24 +07 (Asia/Ho_Chi_Minh). All times +07.
-# Repo: computer-use-wayland, branch todolist-push. Mail phamTuan207.
+# Repo: computer-use-wayland, branch todolist-push. Mail: the owner.
 # Rule: small commits, push often. No em/en dashes. Log wall-clock + elapsed.
 
 ## 07:24-07:30 +07 (elapsed 00:06) - Read state

@@ -11,7 +11,7 @@ chay cua ong). Moi so lieu trong bao cao nay la so do that, khong uoc luong, kho
   E1-E3 (E1 chua thu nghiem, E2 da tra loi, E3 PAUSED).
 - Branch `todolist-push` se merge vao main sau bao cao nay (muc 6).
 - Khong co thong tin ca nhan nao cua ong duoc push len GitHub. Tat ca commit dung mail
-  phamTuan207 (GitHub noreply).
+  the owner (GitHub noreply).
 
 ## Phase 1: Zen dieu khien toi da
 

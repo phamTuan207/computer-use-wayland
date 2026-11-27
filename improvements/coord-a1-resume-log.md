@@ -124,7 +124,7 @@
 - Verdict: desktop clean. Zen untouched on ws1. Chromium only
   mochi's chat. Brave mei live. No owner tab closed or navigated.
   The Chat - Muse tab was NOT reopened by me (it was already open
-  on ws1; the owner reopened it himself before run 5).
+  on ws1; the owner reopened it before run 5).
 
 ## 6. Fixture md5s (all three copies)
 

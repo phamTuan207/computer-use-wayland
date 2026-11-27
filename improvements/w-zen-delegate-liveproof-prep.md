@@ -437,7 +437,7 @@ Evidence, read from the code:
 Run condition (updated 17:55 +07): the owner handed the machine
 over at 17:55 and is not touching it. The original brief's ban on
 live runs is lifted by COORD-CLICK-6 for this run only. If the owner returns to the machine mid-run, STOP at once (cancel latch
-or Ctrl-C the driver), restore his tab, close the scratch tab,
+or Ctrl-C the driver), restore the user's tab, close the scratch tab,
 record the aborted run, and do not resume without a new go-ahead.
 All laptop work goes over SSH via ~/workspace/ssh-laptop.sh,
 short commands only; any long job runs detached (setsid nohup ...
@@ -801,32 +801,32 @@ Record (phase 7):
 The run condition for this proof is the handover: the owner
 handed the machine over at 17:55 +07 and is not touching it.
 The risks below are written for the case where that condition
-breaks (he returns mid-run) and for the disturbances the run
+breaks (the user returns mid-run) and for the disturbances the run
 causes even under a handover. The procedure aborts on any of
 them rather than pushing through.
 
 - R1 Focus steal. begin_batch focuses the Zen window through
   hyprctl. If the owner is on another workspace or another
-  window when the program runs, the focus call yanks him to
+  window when the program runs, the focus call yanks the user to
   ws1 Zen. Mitigation: P1.1 and the P3.2/P4.1 same-call
   activewindow checks; abort unless Zen is already active.
-  If he returns mid-run, stop at once (section 5 header).
+  If the user returns mid-run, stop at once (section 5 header).
 - R2 Real pointer clicks at screen points. The delegate moves
   the real pointer and clicks at the field center, and types
   real keystrokes. If the owner moves the mouse, clicks, or
-  types during the batch, input can land in his UI instead of
+  types during the batch, input can land in the user's UI instead of
   the scratch field. The batch is short (program elapsed
   123-161ms on the CDP path; Zen is unmeasured), but the race
   is real between the fresh observation and the act. Mitigation:
   handover window only; one batch only; the cancel latch
   (Escape or `computer-use cancel`) stops the driver; the
-  typed text is a marked test string, never his content.
-  Residual: a click that lands on his tab while he is
+  typed text is a marked test string, never the user's content.
+  Residual: a click that lands on the user's tab while the user is
   interacting is the worst case, which is why the handover
   condition is load bearing, not decorative.
 - R3 Visible tab switch. Opening the scratch tab and switching
   the Marionette current tab to it changes what Zen shows;
-  during the run his Zen displays the fixture, not his tab.
+  during the run the user's Zen displays the fixture, not the user's tab.
   Mitigation: restore immediately in phase 6 and verify the
   current URL; keep the visible disturbance to the run
   duration (about 10 minutes wall, most of it checks, the
@@ -859,7 +859,7 @@ them rather than pushing through.
   status, 30s ZenDom timeout, 45s wall-seconds, 90s SSH
   timeout), abort on the first hang, never retry a hung session
   in a loop.
-- R8 Screenshot observation captures his screen. begin_batch
+- R8 Screenshot observation captures the user's screen. begin_batch
   screenshots the Zen window through observe. Mitigation: the
   observation runs only after the scratch tab is current, so
   the capture shows the fixture; observation files stay in
@@ -879,12 +879,12 @@ them rather than pushing through.
   exception while the bubble exists). Mitigation: phase 0 gates
   require both fixed and re-verified on the VM first. Never
   debug live.
-- R12 His work loss. None is expected by design: no navigation
-  of his tabs, no typing into his tabs, no closing of his tabs,
+- R12 The user's work loss. None is expected by design: no navigation
+  of the user's tabs, no typing into the user's tabs, no closing of the user's tabs,
   no browser restart, no profile change. The only tab opened
-  and closed is the scratch tab. If any step touches one of his
+  and closed is the scratch tab. If any step touches one of the user's
   tabs by mistake, STOP, record exactly what happened, restore
-  his tab, and report it before doing anything else.
+  the user's tab, and report it before doing anything else.
 
 ## 9. Evidence appendix (Lauren Tan standard: command, output, commit hash, time)
 

@@ -12,7 +12,7 @@
 - 17:43 +07, T+1m: last30days preflight OK. Available sources: reddit, hackernews, polymarket, github, grounding. X, YouTube, Reddit search unreachable in this run (doctor: web unreachable, Reddit no path served, ddg/startpage throttled). Ran engine query "agent efficiency bottleneck": 10 items, HN 9 stories, 2,193 points, 1,392 comments. Top hit: Claude Code sending each background agent transcript to its model (HN 2026-10-29, 591 points, 236 comments).
 - 17:43 +07, T+1m: browser.search verification overhead + multi-agent handoff. Strong hits: AWS HITL theater, METR RCT, handoff-loss paper, Attention Tax arXiv.
 - 17:44 +07, T+2m: browser.search METR replication + token burn. Strong hits: METR re-analysis arXiv Oct 2026, Claude Code token stats.
-- 17:44 +07, T+2m: priority update received from owner: weight toward think-observe-think loop performance when Muses control his machine. Ran engine query "computer use agent latency grounding": only 4 HN items, thin.
+- 17:44 +07, T+2m: priority update received from owner: weight toward think-observe-think loop performance when Muses control the user's machine. Ran engine query "computer use agent latency grounding": only 4 HN items, thin.
 - 17:45 +07, T+3m: browser.search screenshot vs DOM grounding + parallel tool calling. Strong hits: MobiBench, PureTensor bake-off, SyndiPath Playwright MCP, Zylos parallel concurrency.
 - 17:44 +07, T+2m: browser.search stall detection + context rot. Strong hits: walking-dead detection, heartbeat watchdog, ContextRot arXiv 2026-10-27, long-horizon degradation.
 - 17:45 +07, T+3m: findings file written, committed, pushed.

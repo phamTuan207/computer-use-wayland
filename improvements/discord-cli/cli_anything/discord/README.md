@@ -34,7 +34,7 @@ so later `messages read/send` can omit the id.
 
 This CLI was built for ONE machine (the owner's Omarchy laptop) and is
 machine-private setup, not a generic tool. The owner-design principle
-(2026-11-24): apps on his machine are deliberately optimized for AI, but
+(2026-11-24): apps on the user's machine are deliberately optimized for AI, but
 a repo for outsiders must work on stock, unoptimized apps, so any
 machine-private optimization that goes into a shared repo must be
 OPTIONAL (opt-in), default off.
@@ -117,7 +117,7 @@ there). It is not legal advice. Discord can change its terms at any time.
   lose for anything beyond personal test traffic.
 - This CLI never asks for, reads, or stores a Discord user token or
   password. It only drives the already-logged-in official client on the
-  owner's own machine.
+  user's own machine.
 
 ## Design notes
 

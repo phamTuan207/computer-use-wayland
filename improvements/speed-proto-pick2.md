@@ -74,7 +74,7 @@ Before/after tables: PENDING. The columns the resume run must fill per task are 
 ## Cleanup verification at pause (23:51, hyprctl clients)
 
 - My waiter killed (`pkill -f pick2-wait-launch-base2.sh`), no Pick 2 codex processes remain, no broker session of mine is live (broker owner at 23:51 was speed-base-p1, Pick 1's executor, left alone for its owner and the parent to pause).
-- Desktop: only his own windows (Jarvis herdrdrop, foot terminal, kitty ncdu running his disk cleanup, Zen Muse chat). My pick2-term terminal was closed at 23:32 and verified gone. Zero Pick 2 test windows. Zen tabs, Zalo, Teams, Jarvis, music untouched.
+- Desktop: only the user's own windows (Jarvis herdrdrop, foot terminal, kitty ncdu running the user's disk cleanup, Zen Muse chat). My pick2-term terminal was closed at 23:32 and verified gone. Zero Pick 2 test windows. Zen tabs, Zalo, Teams, Jarvis, music untouched.
 - Note: the old v3 `speed-profile-term` kitty seen at 23:32 was gone by 23:51 (closed by someone else, not by me). The VS Code tc09 window seen at 23:32 was also gone by 23:51.
 
 ## Resume plan (for the parent)

@@ -12,7 +12,7 @@ Pre-cleanup session store: Zen profile sessionstore-backups/recovery.baklz4 (wri
 
 Counts: pre-cleanup (02:15) 78 tabs, 49 pinned, 12 essentials. Post-cleanup (02:16) 54 tabs, 41 pinned, 7 essentials. Closed: 24 tabs = 5 essentials + 3 pinned + 16 normal.
 
-Essentials BEFORE (in order): YouTube, YouTube (2nd copy), Reddit, Todoist Today, Gmail (phamtuanhuy1109), Google Calendar, GitHub phamTuan207, LeetCode 75, Qwen-Image-2.1-GGUF (HuggingFace), NEU LMS Chapter 5, tinchi.neu.edu.vn, nguoihoc.neu.edu.vn.
+Essentials BEFORE (in order): YouTube, YouTube (2nd copy), Reddit, Todoist Today, Gmail, Google Calendar, GitHub phamTuan207, LeetCode 75, Qwen-Image-2.1-GGUF (HuggingFace), NEU LMS Chapter 5, tinchi.neu.edu.vn, nguoihoc.neu.edu.vn.
 Essentials NOW: YouTube, GitHub, LeetCode, Qwen-Image, NEU LMS, tinchi, nguoihoc.
 
 ## Tab set to restore (exact)

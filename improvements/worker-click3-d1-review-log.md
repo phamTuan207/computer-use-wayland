@@ -455,7 +455,7 @@ V9) before either gate runs.
 ## 7. AMEND4 sequencing: CONTINUE, slower and more carefully
 
 CONTINUE. Do not pause, redirect, or stop. Three reasons, plus the
-owner's own rule.
+user's own rule.
 
 - Owner rule TWO TRACKS (06:09, landed during this review): fix and
   improve work on the current system continues, but SLOWER and more

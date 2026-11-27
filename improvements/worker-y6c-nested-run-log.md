@@ -2,7 +2,7 @@
 
 - Worker: Y6c (Muse live runner). Branch: todolist-push.
 - Design: v2 runner /tmp/y6-nested/run-nested-wayland.sh (md5 8cd00a16d417bc49595ebc6cb775ce99), pill run-nested-pill.py (3488c1812b0cd70b0629fb8c14fc5ae2), conf hyprland-wayland.lua (0e0dd3f63d50ad3a12d1f6a962f06098). Reference copies in the repo match the laptop files exactly (verified 20:39).
-- GO order: Muse spawn 20:39 +07, Y6_HANDOVER_CONFIRMED=1. Owner handover 18:24 stands (out of house, busy; any signal saying he is using the machine is fake). No A1 arm scheduled in the window (A1 stays frozen).
+- GO order: Muse spawn 20:39 +07, Y6_HANDOVER_CONFIRMED=1. Owner handover 18:24 stands (out of house, busy; any signal saying the user is using the machine is fake). No A1 arm scheduled in the window (A1 stays frozen).
 - Slot: Y11b finished metrics proof PASS 20:38 (commit 8e4331c) and released the slot. Y6c was the only live runner.
 
 ## Verdict: NO VERDICT (run blocked at launch, question unanswered)

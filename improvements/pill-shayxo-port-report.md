@@ -101,7 +101,7 @@ Nó tạo snapshot ~/.local/share/agent-computer-use/backups/sync-20261118-14270
 
 ## Các commit trên origin/main
 
-Các commit port có author/committer phamTuan207. Bảy commit đầu đã nằm trên remote khi bắt đầu bước push; commit cuối là ghi chú bổ sung được đẩy sau fetch/kiểm tra diff.
+Các commit port có author/committer của the owner. Bảy commit đầu đã nằm trên remote khi bắt đầu bước push; commit cuối là ghi chú bổ sung được đẩy sau fetch/kiểm tra diff.
 
 1. c2b52d2aeb64aa2a440266d7b74190be634d7999 — feat: add shayxo Legacy glass shader patch
 2. 09a8df75b0e0b65b6abfb5d17187d03dcada277a — fix: set pill optics to shayxo Legacy Chrome params (blur 0, depth 9, band 14)

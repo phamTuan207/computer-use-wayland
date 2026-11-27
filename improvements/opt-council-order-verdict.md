@@ -201,7 +201,7 @@ hidden. A pre-flight that does not capture htmlClass is not a pre-flight.
   equal the pre-scenario set; count alone is never enough (M2 section G).
   Pre-close check before EVERY Ctrl+W: the DOM active title must equal the
   expected test-tab identity, or STOP (M2 section G). R-01 (blind Ctrl+W
-  could close the owner's real tab) is the failure this rule prevents.
+  could close the user's real tab) is the failure this rule prevents.
 
 ### 2.2 Blind executor, independent setter
 - The test-taker must NOT know the exercise in advance; a separate

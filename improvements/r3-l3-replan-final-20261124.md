@@ -240,7 +240,7 @@ Prevention (fencing, per Council 1 M-01, Council 3 A5, redteam B-02, Clone1 sect
 
 ## 8. Reporting chain (live-but-silent detection)
 
-Owner's failure mode 2: nobody died, but subagent messages never reported up to the owner, so he had to ask before anyone went looking. The reporting chain silently broke even though everyone was alive.
+Owner's failure mode 2: nobody died, but subagent messages never reported up to the owner, so the user had to ask before anyone went looking. The reporting chain silently broke even though everyone was alive.
 
 Prevention (per Council 2 A1/A2, Council 3 A8, redteam M-01/M-02, Council 1 M-07):
 - Heartbeat medium: a shared append-only JSONL log file (not individual daemon messages). Each worker with an outstanding task writes one heartbeat line every 10 minutes (task ID, status, elapsed, next milestone). Standby/research/Mei write on state change or once per hour. The file is checked for a trailing newline before appending, and parse-verified after (F-08).

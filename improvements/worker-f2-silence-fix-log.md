@@ -19,7 +19,7 @@ Owner status 22:27: the owner went to sleep. Work overnight, do not disturb.
 ## 1. Tonight, measured (2026-11-21, Asia/Ho_Chi_Minh)
 
 - 22:11:30: owner orders a tab click via computer-use (as a test, "Do dac di").
-- 22:16:07: owner: waited 3+ minutes, nothing seen on his computer.
+- 22:16:07: owner: waited 3+ minutes, nothing seen on the user's computer.
 - 22:16:13: owner: computer-use not seen turning on.
 - 22:16:18: owner: the weakness shows immediately.
 - 22:17: direct Pointer click SUCCEEDS in 0.31 s, cursor 2598,1174, no miss,
@@ -583,8 +583,8 @@ omitted; append as it happens, never batch at the end)
   step-7 set check therefore cannot be verified tonight; recorded
   honestly.
 - 23:01 (T+1260s) owner (MEMORY.md): going to sleep, but if there
-  is an error or something that really needs him, report it (do not
-  wait until morning). Big errors, blockers, things needing his
+  is an error or something that really needs the user, report it (do not
+  wait until morning). Big errors, blockers, things needing the user's
   decision: report immediately. Routine work: do quietly, report
   results in the morning. The Marionette slot re-break is a
   blocker; flag it to the parent in the final report.
@@ -672,7 +672,7 @@ omitted; append as it happens, never batch at the end)
   numbers). Committed 82539bf, pushed, ls-remote verified. 9th F2
   commit.
 - 23:03 (T+1380s) owner (MEMORY.md): DEFERRED, LOW: Zen keybinds.
-  Sometime go into Settings, Shortcuts of Zen on his machine, record
+  Sometime go into Settings, Shortcuts of Zen on the user's machine, record
   the Zen keybinds into the computer-use copy ON THE MACHINE
   (machine-specific layer, local-only), do NOT push to the repo. Not
   important, do later. Not done; saved for later. Noted as a

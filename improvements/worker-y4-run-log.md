@@ -19,7 +19,7 @@
   - Reusing a pre-existing about:blank tab + goto: body VISIBLE, click OK, type OK.
   - Switch-away-and-back did not un-hide (probe d's fresh tab was visible from the start; the hidden state had cleared by itself ~17:59, right after a real click in the reused tab).
   - Side findings: Hyprland IPC socket unresponsive the whole time (hyprctl version/monitors/clients all hang until timeout; socat to .socket.sock also hangs). Zen PID 27958 alive, Marionette fine. One user tab has an open alert (tab [4], "unexpected alert open" on eval) - never touched.
-- 18:01: PAUSE ORDER from parent. Owner's physical keyboard + mouse stopped responding ~1 min during probes y4b/y4c/y4d (17:57-18:00), self-recovered 18:00. Likely cause: tab navigation stole window focus mid-use. Rule going forward: NEVER open/navigate/switch tabs in his Zen while he is at the keyboard. The rerun is prepared but NOT launched; it waits for a resume order.
+- 18:01: PAUSE ORDER from parent. Owner's physical keyboard + mouse stopped responding ~1 min during probes y4b/y4c/y4d (17:57-18:00), self-recovered 18:00. Likely cause: tab navigation stole window focus mid-use. Rule going forward: NEVER open/navigate/switch tabs in the user's Zen while the user is at the keyboard. The rerun is prepared but NOT launched; it waits for a resume order.
 - 18:01-18:05 (non-driving work only): runner fixes below, static fixture review, rerun prepared.
 
 ## Runner changes to survive the hidden-body incident (run_agyq2.py)

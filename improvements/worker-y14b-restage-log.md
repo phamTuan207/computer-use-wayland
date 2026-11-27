@@ -1487,7 +1487,7 @@ instead of forcing a fix pass 7.
   output (WRONG in part: the log worker-y13g-fix-log.md EXISTS,
   just no commit yet; Y13g still active). J21 confirmed =
   F3's click. CLONE2-WATCH MISS (23:16): the owner did not see
-  Muse switch workspace to approve, he switched himself; cause:
+  Muse switch workspace to approve, the user switched; cause:
   the cron run at 23:11:56 was STILL RUNNING (5+ minutes, no
   log, no result) so no workspace switch happened. Fix: Muse
   stop the stuck run, check ws2 immediately per the owner's

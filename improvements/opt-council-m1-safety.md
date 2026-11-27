@@ -50,10 +50,10 @@ prevents and the source that proves the failure is real.
 ### V3. Never drive while the owner is at the keyboard
 - Failure prevented: focus steal, input freeze, lost work. Source: todolist
   4.25 and MEMORY.md (2026-11-21 17:59 live-runner focus steal: worker Y4
-  probes navigated fixture tabs in the owner Zen while he was using the machine;
-  his physical keyboard + mouse stopped responding for about 1 minute). Owner
-  rule 17:59: a live runner must NEVER open/navigate/switch tabs in his Zen
-  while he is at the keyboard.
+  probes navigated fixture tabs in the owner Zen while the user was using the machine;
+  the user's physical keyboard + mouse stopped responding for about 1 minute). Owner
+  rule 17:59: a live runner must NEVER open/navigate/switch tabs in the user's Zen
+  while the user is at the keyboard.
 - Tonight the owner is asleep, so this veto binds differently: no live driving
   at all until the morning handover, except the single-operator, F3-signed-off
   activation and rehearsal windows defined in the verdict, and even then only
@@ -99,7 +99,7 @@ prevents and the source that proves the failure is real.
   all 13 real tabs present, one LMS login tab lost because it was never
   flushed to sessionstore); G-TAB (open a sacrificial tab BEFORE closing a
   tab; end the session on a live tab); MEMORY.md shutdown rule (never touch
-  his Jarvis Codex, Zen tabs, music, cancel latch, or the Omarchy
+  the user's Jarvis Codex, Zen tabs, music, cancel latch, or the Omarchy
   input-method indicator.py).
 - Rule: the rehearsal opens its own tab and closes only its own tab. The
   activation proof clicks only the already-active tab, and skips the click if

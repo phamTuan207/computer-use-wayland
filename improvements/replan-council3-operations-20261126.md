@@ -35,7 +35,7 @@ How each integration works:
 
 ## 1.1 Read-only verification of current laptop state (2026-11-26, SSH, no changes)
 
-All commands below ran over ~/workspace/ssh-laptop.sh as user james on the Omarchy laptop. Long SSH sessions die at about 30 seconds with a broken pipe error, so verification used short calls only. Findings:
+All commands below ran over ~/workspace/ssh-laptop.sh as the owner on the Omarchy laptop. Long SSH sessions die at about 30 seconds with a broken pipe error, so verification used short calls only. Findings:
 
 Codex:
 - codex-cli 0.172.0 at /home/james/.local/share/mise/shims/codex. The plugin command tree exists: codex plugin add, list, marketplace, remove. Marketplace syntax verified live: codex plugin marketplace add takes a local path, owner/repo, HTTPS Git URL, or SSH Git URL. Plugin add syntax verified live: PLUGIN@MARKETPLACE or PLUGIN with --marketplace.

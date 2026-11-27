@@ -8,7 +8,7 @@ contest 735368 for real Codeforces verdicts.
 
 Logged into Codeforces with the owner's saved account via profile
 autofill in the owner's Zen (logged escape hatch, dedicated holder
-tab; the owner's own tabs were not touched). The header confirmed
+tab; the user's own tabs were not touched). The header confirmed
 the account handle + Logout. The earlier blocker from the driver
 lane (stored session invalid server-side, no password entry per
 that lane's brief) is resolved: the saved-password autofill works.

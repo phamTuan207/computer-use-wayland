@@ -23,7 +23,7 @@ Boundary-restart (Alternative 2) is rejected as dominated. See Section 2.5.
 
 ### 2.2 Continuity evidence does not justify same-live-session control
 
-- VERIFIED: 0 of 55 frozen R3-L3 tasks needed owner-session continuity (his logged-in accounts as himself, his existing tabs/session). The only continuity-dependent task was R3-056, an owner-added incident-repair task to restore his own tabs. R3-029 used a task-scoped test account.
+- VERIFIED: 0 of 55 frozen R3-L3 tasks needed owner-session continuity (the user's logged-in accounts as the user, the user's existing tabs/session). The only continuity-dependent task was R3-056, an owner-added incident-repair task to restore the user's own tabs. R3-029 used a task-scoped test account.
 - VERIFIED caveat: The frozen list was designed around fresh pages; tasks of the form "do X in my account / my tabs" are not represented.
 - ASSUMED: Future owner requests will include some account-bound work (for example, act in a logged-in service as the owner). The caveat means 0/55 cannot be read as "continuity will never be needed." It can be read as "continuity was not needed for the measured workload, and no measured workload currently requires paying the build cost."
 - Cost reading: A requirement with zero observed instances in the only measured workload does not justify a 2-5 day build plus per-update verification. Ponytail principle applies: smallest complete change first, reuse before writing, no unrequested abstraction. The build is an abstraction for a hypothetical task class. The split serves the observed task class today and leaves the build available if the hypothetical becomes real.
@@ -59,7 +59,7 @@ Boundary-restart (Alternative 2) is rejected as dominated. See Section 2.5.
 
 - VERIFIED: The owner addendum is "build a dedicated tool if needed."
 - Reading: "If needed" is conditional. Need would be proven by either (a) an owner ruling that same-live-session control is mandatory, or (b) observed tasks that cannot be served by the split. Neither is in evidence today. The measured workload (0/55) points the other way.
-- ASSUMED: If the owner intended same-live-session as mandatory, he would have said so when fixing the criterion at 06:20-06:21 on 27/11. The criterion as fixed says "agents callable to computer-use Zen at any time; Zen stays AI-optimized." It does not say "in my tabs" or "in my logins." The same-install reading satisfies the criterion as written.
+- ASSUMED: If the owner intended same-live-session as mandatory, the user would have said so when fixing the criterion at 06:20-06:21 on 27/11. The criterion as fixed says "agents callable to computer-use Zen at any time; Zen stays AI-optimized." It does not say "in my tabs" or "in my logins." The same-install reading satisfies the criterion as written.
 
 ### 2.8 Losses of the split, stated plainly
 
@@ -71,7 +71,7 @@ Boundary-restart (Alternative 2) is rejected as dominated. See Section 2.5.
 
 I would switch from split to build if any one of these becomes true:
 
-1. **Owner ruling on the fork.** The owner rules that "the same Zen" means same live session (agents act in his own tabs/logins at any time while his browsing stays clean). This is a criterion ruling, not a technical finding. Under that ruling the split fails by definition and the build is the only route that satisfies all three legs literally.
+1. **Owner ruling on the fork.** The owner rules that "the same Zen" means same live session (agents act in the user's own tabs/logins at any time while the user's browsing stays clean). This is a criterion ruling, not a technical finding. Under that ruling the split fails by definition and the build is the only route that satisfies all three legs literally.
 2. **Observed continuity demand.** A measured run of real owner tasks shows recurring tasks that require owner-session continuity and cannot be served by a task-scoped login in the agent profile. Threshold I would use: 3 or more such tasks in a single measured batch, or any single task where a separate login is impossible (for example, hardware-bound or session-bound state that cannot be recreated). One anecdote is not enough; a pattern is.
 3. **Split fails its own verification.** The human-leg verification in Section 4.3 fails: the flag-free human profile still hits Cloudflare interstitials on normal browsing, or the agent profile cannot be driven reliably through existing dedicated-session machinery. A split that does not deliver a clean human leg has no cost advantage to defend.
 4. **Build cost collapses.** A proven, maintained, upstream or community hiding layer appears that covers the frozen signals with per-update verification already handled by its maintainer, reducing team cost from 2-5 days plus ownership to adoption plus verification only. Ponytail favours reuse; a reusable component changes the cost equation.

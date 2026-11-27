@@ -60,7 +60,7 @@ Laptop state (verified read-only via ssh-laptop.sh, 2026-11-26): none of the can
 - Repo URL: https://github.com/anchorbrowser/AnchorBrowser-SDK-Typescript (SDKs; platform is hosted)
 - License: SDKs Apache-2.0; platform itself is a paid hosted service (review, 2026-11-26)
 - What it does: Cloud fleet of humanized Chromium sessions for computer-use agents: REST API, CDP WebSocket, TS/Python SDKs, hosted MCP servers, CAPTCHA solving, proxy rotation, cached deterministic action replay ("Web Action Cache").
-- Fits: Nobody on the current roster. Our computer-use work must drive the owner's real Zen on his laptop (logged-in sessions, visible pill, Wayland). A cloud Chromium fleet cannot do that, and sending tasks/credentials to a third-party fleet conflicts with the team's local-first setup.
+- Fits: Nobody on the current roster. Our computer-use work must drive the user's real Zen on the user's laptop (logged-in sessions, visible pill, Wayland). A cloud Chromium fleet cannot do that, and sending tasks/credentials to a third-party fleet conflicts with the team's local-first setup.
 - Install/check status: VM checked, NOT installed. Laptop verified, NOT installed. Install: `npm i anchorbrowser` / `pip install anchorbrowser` + API key; pricing ~$0.05/browser-hour + proxy fees (review).
 - Evidence: Search results 2026-11-26 (anchorterminal review verified 2026-10-08; agent-native index). Review flags: no published SLA, CDP connection puts the API key in the URL, "keyless onboarding" answered disabled.
 - Hard limitation: Cloud-only, Chromium-only, paid, credentials leave the machine. API key in CDP URL is a red flag for our security posture.

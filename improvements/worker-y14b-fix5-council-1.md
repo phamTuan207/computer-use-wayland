@@ -369,7 +369,7 @@ right; this note just records the mechanism.
 - "ydotool" appears twice in the diff, both times as the words
   "no ydotool" in hygiene statements, not usage.
 - The only email in the diff is the noreply GitHub author
-  address (232407559+phamTuan207@users.noreply.github.com);
+  address (phamTuan207);
   no other personal info.
 - No live Zen driving, no browser work. All stubs I spawned
   were killed and verified gone by ps (exact-PID kills; one

@@ -52,7 +52,7 @@ Full SHA-256 values and the recomputation are in
   personal Gmail address in the commit author line. That address is never
   committed to the repo (standing rule: no personal info on GitHub).
 - Committed copy line 90 replaces it with the public noreply address already
-  used in git history (`232407559+phamTuan207@users.noreply.github.com`).
+  used in git history (`phamTuan207`).
 - Nothing else in the file was changed (`diff` shows only line 90).
 - Original source SHA-256: eb34532319120f9fe0e7b4992a25489e5fe58a914fcde9a584d44f92ddf54fa7.
 
