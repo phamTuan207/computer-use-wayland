@@ -979,3 +979,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Team decisions commit 61470bbf (owner delegated 06:19): Codeforces contest 735368 START NOW; Hieu 10 bai thi cuoi ky (6 bai dau bat buoc, 4 bai cuoi optional), group EoMGcsRgKH, owner la group manager.
 - Clone2 la independent reviewer (doc statements + solutions tu repo, danh gia do kho, flag loi statement/test). Em la second reviewer CHI KHI Clone2 flag disagreement hoac capacity cho phep. Mochi + Clone1 du tru, khong duoc giao bai bat buoc. Chua co assignment nao cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 56. CF735368 tiebreak: em rate 4 bai doc lap, da push (2026-11-27 07:43 +07)
+- Coordinator request (chat truc tiep): 2 lanes disagree ve do kho 4 bai. Em rate doc lap tu statements + rubric, khong doc clone2-review, clone2-review-2, hay solutions. File cf735368/mei-ratings.md, commit cc22d8aa, push todolist-push da verify qua ls-remote.
+- Ratings (AI-estimated): Giai Cuu Jerry Thong hieu (Drive Van dung), Rut Gon Phan So Thong hieu (Drive VDC), Chuoi Melodic VDC (Drive VDC, agree), Tin Nhan To Tinh Nhan biet (Drive Thong hieu). Anchors ca 3 Nhan biet.
+- Disclosure: luc 07:18, truoc khi co assignment, em co chay grep qua Clone2 review round 2 trong luc watchdog check, thay 2 dong ngan ve rut-gon-phan-so. Rating cua em suy tu statement; da ghi ro trong file de coordinator can nhac.
+- Em khong cham diem, khong doc ledger/snapshot.
