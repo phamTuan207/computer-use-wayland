@@ -1001,3 +1001,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Owner commit b3007cd3: Codeforces login OK, contest 735368 locked truoc registration (~29/11 08:00 +07), chua co submission/verdict nao. File cf735368/cf-verdicts-20261127.md.
 - Coordinator van im tu 07:48 (~189 phut); 2 viec dang cho tu nudge 09:59 van chua tra loi (Graphify equip, dung/chuyen watchdog). KHAN da bao o muc 58, khong co gi moi.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 60. Clone1 va Clone2 bat dong ve coordinator: Clone1 dung (2026-11-27 11:11 +07)
+- Clone1 watchdog PR 1048 (10:57): coordinator van im 3h09m tu 07:48, nudge 09:57 tren PR 1036 chua tra loi, clone1 ranh, khong leo thang.
+- Clone2 watchdog PR 1049 (10:58): noi coordinator hoat dong lai vi commit b3007cd3 luc 10:48, ket thuc 3h im lang.
+- Em xac minh: b3007cd3 la commit cua owner (addendum CF login, muc 59), khong phai hoat dong cua coordinator. Metadata author/committer cua b3007cd3 va 9f3dfc8f giong nhau nen khong phan biet duoc bang metadata; noi dung commit + nudge 09:59 cua owner cho thay day la viec cua owner. Clone1 dung, Clone2 sai. Coordinator van im ~199 phut, KHAN tu muc 58 van dung, khong leo thang them vi owner da tu leo thang.
+- Em khong cham diem, khong doc ledger/snapshot.
