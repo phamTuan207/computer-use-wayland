@@ -80,8 +80,8 @@ from datetime import datetime, timezone
 # Laptop SSH target (user@host). Set CU_LAPTOP_SSH in the environment;
 # no default is baked in so the repo carries no personal host info.
 HOST = os.environ.get("CU_LAPTOP_SSH", "")
-PROXY = "python3 /home/hatch/workspace/tailscale-proxy.py %h %p"
-KEY = "/home/hatch/.ssh/id_ed25519"
+PROXY = f"python3 {Path.home()}/workspace/tailscale-proxy.py %h %p"
+KEY = str(Path.home() / ".ssh" / "id_ed25519")
 CONTROL_PATH = "/tmp/cm-s0-%r@%h:%p"
 CONTROL_PERSIST = "600"
 SERVER_ALIVE_INTERVAL = "15"

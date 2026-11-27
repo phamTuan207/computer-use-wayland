@@ -1,0 +1,76 @@
+# Import map for scripts/ (I13 architecture guard).
+# Format: <module>: <allowed local imports, comma separated>
+# Generated from the graph at integration start (2026-11-27);
+# every NEW import edge must be added here in the same commit,
+# making each new dependency a deliberate, reviewed decision.
+a11y: cu
+action_result: dom_asserts
+activate-cursor-guard: cu, cursor_session, cursor_theme, indicator, plugin_inventory
+activate-glass: activation_checks, cu, plugin_inventory
+activate-session-backend: cu, cursor_session, cursor_theme, indicator, plugin_inventory
+activation_checks: indicator
+bench_manifest: 
+brief_check: 
+browser_worker: cu
+build: 
+build-cursor: 
+build-cursor-guard: setup
+build-glass: 
+calibration_e2: hit_rate
+cancel_hotkey: cursor_session
+check-perf-evidence: 
+check-visuals-manifest: 
+chromium_cli: overlay
+claim_check: 
+cli-anything: 
+code_exec: dom_asserts, element_ref
+codemode: 
+cu: action_result, cancel_hotkey, code_exec, cursor_session, dom_act, element_ref, fastpath, first_action, indicator, jsonlutil, session_driver, session_policy, warm_browser, zen_backend, zen_pointer
+cursor_session: cancel_hotkey, cursor_theme, indicator
+cursor_theme: 
+det_finish: 
+dom_act: action_result, dom_asserts, element_ref, fastpath, zen_dom
+dom_asserts: 
+drive_log: jsonlutil
+element_ref: dom_asserts
+fastpath: 
+first_action: action_result, cu, dom_act, overlay
+hit_rate: jsonlutil
+hypr_cmd: 
+image_viewer: 
+indicator: activation_checks
+install-glass: 
+jsonlutil: 
+live_metrics: hit_rate, jsonlutil, timing
+mcp_bridge: cu, mcp_bridge_transport
+mcp_bridge_transport: 
+multi_candidate: 
+omarchy_cmd: 
+overlay: hypr_cmd, indicator
+perception_router: 
+plugin_inventory: indicator
+polygon_checks: 
+refresh-visuals-manifest: cu, cursor_theme, visuals
+s2_flip_live: perception_router
+session_cleanup: overlay
+session_driver: browser_worker, cu, visual_delivery
+session_policy: 
+session_remote: cu, cursor_theme, indicator, plugin_inventory
+setup: cu, cursor_session, cursor_theme, indicator, plugin_inventory, visuals
+ssh_mux: 
+step_watchdog: 
+subgoal_policy: 
+sync-installed: 
+task_chain: 
+tc02_controller: jsonlutil, subgoal_policy
+timing: 
+vision_measure: 
+visual_delivery: 
+visuals: activation_checks, cu, cursor_session, cursor_theme, indicator, jsonlutil
+vm_proxy: 
+vscode_cli: 
+warm_browser: 
+zen_backend: element_ref, fastpath, zen_dom
+zen_cli: 
+zen_dom: fastpath
+zen_pointer: fastpath

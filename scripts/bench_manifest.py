@@ -52,12 +52,12 @@ from pathlib import Path
 
 BENCH_SCRIPT = "tests/two_vision_bench.py"
 FIXTURE = "tests/two_vision_fixture.html"
-FIXTURE_MAIN_PATH = (
-    "/home/hatch/workspace/computer-use-wayland/tests/two_vision_fixture.html"
+FIXTURE_MAIN_PATH = str(
+    Path.home() / "workspace/computer-use-wayland/tests/two_vision_fixture.html"
 )
-FIREFOX = "/home/hatch/workspace/tools/firefox/firefox"
-FIREFOX_BIN = "/home/hatch/workspace/tools/firefox/firefox-bin"
-GECKODRIVER = "/home/hatch/workspace/tools/geckodriver"
+FIREFOX = str(Path.home() / "workspace/tools/firefox/firefox")
+FIREFOX_BIN = str(Path.home() / "workspace/tools/firefox/firefox-bin")
+GECKODRIVER = str(Path.home() / "workspace/tools/geckodriver")
 INSTALLER = "computer-use-wayland/scripts/bench_manifest.py"
 FORMAT = 1
 
