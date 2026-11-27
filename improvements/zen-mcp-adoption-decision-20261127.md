@@ -295,3 +295,59 @@ All accessed 2026-11-27.
   improvements/zen-mcp-study-lanes/ (this repo): architecture,
   security audit, comparison, the 55-tool catalog.
 - scripts/zen-rdp (landed integration tree): our channel as measured.
+
+## Final landing status (2026-11-28)
+
+Landed on main via PR #1187, merge commit ca61e288, from landing
+branch zen-mcp-adopt-landing-20261127 (grouped commits e209b980,
+0e462f40, e9617bf6). Landing tree scripts/zen-rdp is byte-identical
+to zen-mcp-adopt-20261127 tip ace79018 (empty diff verified).
+
+Per-item final status against the sequenced plan:
+1. D2 deployed-copy refresh + hash gate: DONE, landed. Laptop
+   machine layer refreshed from the final tree 2026-11-28;
+   rdp_smoke on a dedicated session: all 10 checks PASS including
+   z_deployed_hash. Owner Zen untouched (PID 807599).
+2. D1 bench root-cause + self-test: DONE, landed.
+3. D3 launch helper: DONE, landed (launch_dedicated.py, live-used
+   for the smoke above).
+4. P1 snapshot command: DONE, landed. Clone2 final review raised
+   BLOCKING 1 (ancestor innerText leak); fixed in cf5d8790
+   (wrapsField drops innerText for field-wrapping elements, node
+   probe test added); Clone2 fix verification (29d997d8) confirms
+   CLOSED.
+5. P2a ambiguity refusal: DONE, landed. BLOCKING 2 (top-document
+   pool undisclosed) fixed in cf5d8790 (header, README, verdict
+   poolScope); Clone2 fix verification confirms CLOSED.
+6. P4 list+create wrappers: DONE, landed (zen_spaces.py, pinned
+   method set in smoke, delete absent by construction).
+7. P3 spike: DONE (evidence in improvements/zen-mcp-spikes-
+   20261127.md, landed). Build decision still open.
+8. P6 zen_ask spike: NOT RUN. Pending a separate owner decision
+   (the 2026-11-27 23:28 go-ahead covered final verification and
+   landing only).
+9. P2b refs registry + digest: NOT LANDED. Settling tests landed
+   as code (test_p2b_settling.py); the registry stays gated on F1
+   closure + both settling tests + P1.
+10. P4 move/switch: not scheduled (separate decision).
+11. P5 pattern record: REJECTED as build (unchanged).
+
+Final verification numbers:
+- Landing tree: SHARD MATCH, 1785 tests (ok=1708 error=54 fail=5
+  skip=18), sharded 277.0s vs serial 341.7s, with test_ime_cleanup
+  and test_cursor_session serial-only.
+- Per-test join vs main baseline 71dd25ae: 0 status changes on
+  1785 shared tests.
+- scripts/zen-rdp unit tests: 162 OK (3 env-gated skips).
+- Adopt tree 2adb4c5a full run: 2437 tests, one shard mismatch
+  (test_cursor_session lifecycle test errors under 4-way load,
+  passes serially standalone; explained, serial is gate of
+  record).
+- pii-scan on landed dirs: 21 hits, all pre-existing benign
+  (redaction fixtures, fake .test emails, prose); zero new hits.
+  gitleaks on PR #1187: pass.
+
+Open non-blocking follow-ups (tracked): emoji UTF-16 validation
+MAJOR, P2a M3 refusal disposition, P2a M5 evidence remainder,
+MINORs from both Clone2 reviews, P3 build decision, P6 spike
+decision, P2b gate (F1 + settling tests).
