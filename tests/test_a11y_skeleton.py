@@ -1,10 +1,15 @@
 """Skeleton traversal and drill use the real adapter with fake AT-SPI nodes."""
 import json
 from pathlib import Path
+import sys
 import tempfile
 import time
 import unittest
 from unittest import mock
+
+# Single-pass discover (shard children) may not have the repo
+# root on sys.path yet; the package import below needs it.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests import test_a11y
 
 
