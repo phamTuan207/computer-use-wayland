@@ -49,6 +49,19 @@ def _read_proc_cmdlines():
         yield int(entry.name), raw.decode('utf-8', 'replace').replace('\x00', ' ').strip()
 
 
+def _read_procs_file(path):
+    """Yield (pid, cmdline) from a 'pid cmdline' text file.
+
+    Test support: lets the CLI exit-code test run hermetically
+    instead of depending on the ambient /proc (a parallel test
+    runner's own cmdline can contain 'cursor_session' + 'guard').
+    """
+    for line in Path(path).read_text().splitlines():
+        pid, _, cmdline = line.partition(' ')
+        if pid.isdigit():
+            yield int(pid), cmdline
+
+
 def find_leftovers(state_dir, proc_cmdlines=None):
     """Return a list of leftover descriptions. Empty means clean."""
     state = Path(state_dir)
@@ -106,6 +119,9 @@ def main(argv):
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--clean', action='store_true')
     parser.add_argument('--state-dir', default=str(DEFAULT_STATE))
+    parser.add_argument('--procs-file', default=None,
+                        help='read (pid, cmdline) pairs from this file '
+                             'instead of /proc (test support)')
     args = parser.parse_args(argv)
     if not (args.check or args.clean):
         print('usage: session_cleanup.py --check|--clean [--state-dir DIR]', file=sys.stderr)
@@ -114,7 +130,8 @@ def main(argv):
     if args.clean:
         for line in clean_safe(state):
             print('cleaned: ' + line)
-    leftovers = find_leftovers(state)
+    procs = _read_procs_file(args.procs_file) if args.procs_file else None
+    leftovers = find_leftovers(state, proc_cmdlines=procs)
     if not leftovers:
         print(f'desktop clean: no leftovers in {state}')
         return 0

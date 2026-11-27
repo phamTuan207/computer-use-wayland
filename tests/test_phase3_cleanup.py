@@ -75,13 +75,20 @@ def test_cli_exit_codes():
     with tempfile.TemporaryDirectory() as d:
         state = _fake_state(d)
         state.mkdir()
+        # Hermetic: an empty procs file, so the ambient /proc (a
+        # parallel test runner's cmdline can contain both
+        # 'cursor_session' and 'guard') cannot flip the result.
+        procs = Path(d) / 'procs.txt'
+        procs.write_text('')
         ok = subprocess.run([sys.executable, SCRIPT, '--check',
-                             '--state-dir', str(state)],
+                             '--state-dir', str(state),
+                             '--procs-file', str(procs)],
                             capture_output=True, text=True)
         assert ok.returncode == 0, ok.stdout
         (state / 'session.json').write_text('{}')
         dirty = subprocess.run([sys.executable, SCRIPT, '--check',
-                                '--state-dir', str(state)],
+                                '--state-dir', str(state),
+                                '--procs-file', str(procs)],
                                capture_output=True, text=True)
         assert dirty.returncode == 1
         assert 'snapshot' in dirty.stdout
