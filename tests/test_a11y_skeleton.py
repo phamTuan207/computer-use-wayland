@@ -47,6 +47,40 @@ class SkeletonTests(unittest.TestCase):
         self.assertEqual(out['elements'],[])
         self.assertFalse(out['truncated'])
 
+    def test_cut_flags_and_complete_accounting(self):
+        out=self.a11y.observe(4242,skeleton=True)
+        by_name={e['name']:e for e in out['elements']}
+        # Depth limit (skeleton depth 3) cuts the container: its
+        # child exists but was not walked.
+        self.assertTrue(by_name['container'].get('cut'))
+        self.assertEqual(by_name['container']['children_count'],1)
+        # Fully walked nodes carry no cut flag.
+        self.assertNotIn('cut',by_name['app'])
+        self.assertNotIn('cut',by_name['frame'])
+        self.assertNotIn('cut',by_name['panel'])
+        self.assertTrue(out['truncated'])
+        self.assertFalse(out['complete'])
+        # Drill into the cut node: complete, no cut flags.
+        expanded=self.a11y.drill(out['snapshot'],by_name['container']['ref'])
+        self.assertTrue(expanded['complete'])
+        self.assertFalse(expanded['truncated'])
+        self.assertTrue(all('cut' not in e for e in expanded['elements']))
+        self.assertEqual(expanded['elements'][-1]['children_count'],0)
+
+    def test_children_count_present_in_default_mode(self):
+        leaf=self.node('leaf')
+        iface=mock.Mock()
+        iface.get_n_actions.return_value=1
+        iface.get_action_name.return_value='click'
+        leaf.get_action_iface.return_value=iface
+        parent=self.node('parent',[leaf])
+        self.tree=self.node('app',[parent])
+        self.a11y.applications=lambda: [self.tree]
+        out=self.a11y.observe(4242)
+        self.assertEqual([e['name'] for e in out['elements']],['leaf'])
+        self.assertEqual(out['elements'][0]['children_count'],0)
+        self.assertTrue(out['complete'])
+
     def test_drill_rejects_invalid_stale_changed_and_disabled_ref(self):
         out=self.a11y.observe(4242,skeleton=True)
         for ref in ('e999',None):

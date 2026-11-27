@@ -83,12 +83,14 @@ def describe(e,path,ref):
 def observe(pid,skeleton=False,subtree=None):
     root=app(pid);origin,base=subtree if subtree is not None else (root,[])
     pending=[(origin,base)];items=[];visited=0;start=time.monotonic();truncated=False
+    cut_paths=set()
     while pending and visited<500 and time.monotonic()-start<2:
         e,path=pending.pop();visited+=1
         try:
             item=describe(e,path,'e'+str(len(items)+1))
-            count=e.get_child_count() if skeleton else None
-            if skeleton:item['children_count']=count
+            try:count=e.get_child_count()
+            except Exception:count=None
+            item['children_count']=count
             if skeleton or item['actions'] or item.get('editable'):
                 items.append(item)
                 if len(items)>=80:
@@ -97,11 +99,19 @@ def observe(pid,skeleton=False,subtree=None):
             limit=min(len(base)+3,12) if skeleton else 12
             if len(path)<limit:
                 if count is None:count=e.get_child_count()
-                if skeleton and count>100:truncated=True
+                if count>100:
+                    truncated=True;cut_paths.add(tuple(path))
                 for i in reversed(range(min(count,100))):pending.append((e.get_child_at_index(i),path+[i]))
-            elif skeleton and count:truncated=True
+            elif count:
+                truncated=True;cut_paths.add(tuple(path))
         except Exception:continue
-    snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending) or truncated}
+    # Budget stop (node/time caps) leaves pending children unwalked:
+    # their parents are cut too (I5 per-node accounting).
+    for _e,path in pending:
+        if path:cut_paths.add(tuple(path[:-1]))
+    for item in items:
+        if tuple(item['path']) in cut_paths:item['cut']=True
+    snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending) or truncated,'complete':not (bool(pending) or truncated)}
     prepare_state();sid=uuid.uuid4().hex[:12];path=STATE/(sid+'.json');snapshot['snapshot']=str(path);snapshot['snapshot_id']=sid
     fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     try:
