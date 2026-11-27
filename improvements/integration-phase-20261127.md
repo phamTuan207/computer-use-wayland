@@ -529,6 +529,16 @@ unified lane interface stays pilot-first after I23.
   skipped), ledger trailing newline. Verified post-merge:
   test_core 41/1 pre-existing, dom-rect 3 OK, ledger OK,
   lineage ok, arch-guard PASS.
+- fix-discover DONE+MERGED (06ade1e9 + f3f262f7): hermetic
+  and shard gates fail closed (child exit/SUMMARY/zero-
+  outcome checks, set-difference FAIL, shard id-set
+  verification, _FailedTest package attribution, subTest +
+  setUpClass outcome expansion); 30 tests OK; all redteam
+  repros flip PASS->FAIL. Full-suite shard post-fix:
+  2437/2437 accounted in 208.6s (pre-existing VM state:
+  135 error / 12 fail / 2273 ok / 17 skip). Exposed and
+  fixed test_a11y_skeleton single-pass import fragility.
+  Council fix 1 (shard exit) closed; M8/M9 closed.
 
 ## Sources cited during this phase
 
