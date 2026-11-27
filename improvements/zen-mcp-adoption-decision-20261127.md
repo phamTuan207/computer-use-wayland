@@ -295,3 +295,54 @@ All accessed 2026-11-27.
   improvements/zen-mcp-study-lanes/ (this repo): architecture,
   security audit, comparison, the 55-tool catalog.
 - scripts/zen-rdp (landed integration tree): our channel as measured.
+
+## Execution status (2026-11-27, adoption branch zen-mcp-adopt-20261127)
+
+Owner approved execution 22:48 +07. Five parallel workers, one branch
+each, merged into zen-mcp-adopt-20261127. Merged-tree suite: 125
+tests OK (2 P2b session tests skip cleanly), smoke/bench/launch
+script tests PASS.
+
+- D2 DONE (adopt-dfix a50bfc93): deployed copy refreshed (md5
+  7145e620 -> landed), smoke hash gate exit 17 fails loud on drift
+  (0.2 ms, before attach). Deployed wait: poll-class 212.6 ms ->
+  wait-class (in-process wait_for 1.8 ms; one CLI call instead of N).
+- D1 DONE: root cause was hardcoded wait substrings ("slice",
+  "example") in bench(); fixed by deriving the substring from the
+  URL, no timeout raise. Bench runs=3 total 0.743 s vs 30.273 s
+  timeout burn. Smoke bench self-test (exit 18) added.
+- D3 DONE: launch_dedicated.py (marker + nonce session file, the
+  cheap P7 form included). Fresh launch 0.465 s, probe CLEAN,
+  refusals exit 2 (non-marker dir, owner profile, outside temp).
+- P1 DONE (adopt-p1 26c16c07): snapshot subcommand via guarded
+  evaluate(), I22 over output, value-presence only, completeness
+  flags + snapshotId. 300-control fixture 17,347 B vs 25,919 B cap.
+  Clone2 independent review requested.
+- P2a DONE (adopt-p2a 809085ca): act subcommand, single-eval
+  verify-and-act, true count 100 refusal proven live, wrong-element
+  rate 1/1 -> 0/1, latency parity (73.8 vs 72.4 ms). Clone2
+  independent review requested.
+- P4 DONE (adopt-p4 d68501ce): zen_spaces.py list+create wrappers
+  behind parent gate + audit (44/44), pinned methods in smoke,
+  delete absent by construction (grep-verified).
+- P3 SPIKE DONE (adopt-spike c8b1b54f): coarse lifecycle events DO
+  arrive unsolicited (tabListChanged, descriptor-destroyed,
+  tabNavigated); demux proof passed under 12-tab storm (36/36
+  paired). Library-mode feed is viable; build decision pending.
+- P6 SPIKE BLOCKED: pinned install completed, then a runtime
+  execution-risk check stopped execution before the server ever
+  ran. Card render, focus, and answering path remain unverified.
+  Needs a fresh explicit owner go-ahead to execute the pinned
+  package in the isolated test environment.
+- P2b settling tests DONE as code only (test_p2b_settling.py):
+  fault-injection drop keeps submit counter at 1 with retry=unsafe;
+  identical-Confirm swap shows digest = descriptor stability, not
+  identity. Live 7/7 PASS. P2b itself NOT landed (F1 gate stands).
+
+Merge notes: smoke exit codes renumbered after a collision
+(drift 17, bench 18, pinned methods 19); check letter (j) for bench.
+pii-scan: adoption delta adds zero new hits; the single hit on the
+changed-file scan (rdp_client.py token= comment) is pre-existing at
+431a8d1e. Machine-layer copies must be refreshed from the final
+merged tree after landing (the D2 hash gate will flag the drift
+until then, by design).
