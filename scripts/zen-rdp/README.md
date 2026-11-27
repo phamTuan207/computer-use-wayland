@@ -114,3 +114,46 @@ retires the lane to the interim split automatically; actor
 breakage on two consecutive updates requiring client rewrites
 retires the RDP lane. The interim split remains the operating
 configuration until acceptance passes on the real profile.
+
+## CLI output contract (I1, envelope v1)
+
+`rdp_client.py` prints exactly one JSON envelope on stdout:
+
+```json
+{"version": "1", "ok": true, "command": "tabs",
+ "result": {"tabs": [...], "selected_index": 0},
+ "error": null,
+ "disposition": {"delivery": "delivered_verified",
+                 "retry": "not_applicable"}}
+```
+
+On failure `ok` is false, `result` is null, and `error` carries
+`code` (closed set: unscoped_refused, scope_refused,
+denylist_refused, lock_held, lock_unavailable,
+raw_packet_refused, parent_evaluate_refused,
+port_owner_mismatch, scope_config_invalid,
+profile_marker_required, not_attached, tab_not_found,
+attach_failed, evaluate_failed, transport_error,
+runtime_error, unexpected), `message`, and the same
+`disposition` object. Delivery vocabulary: `not_delivered`,
+`delivery_uncertain`, `delivered_unverified`,
+`delivered_verified`. Retry vocabulary: `safe` (nothing was
+sent), `unsafe` (input may have landed; never replay),
+`not_applicable`. Per command: reads (probe/tabs/report)
+succeed as delivered_verified; eval/peval succeed as
+delivered_unverified (JS ran, page effect not verified by the
+tool); navigate/bench succeed as delivered_verified (navigate
+polls to load). Refusals and pre-send failures are
+not_delivered/safe; post-send action failures are
+delivery_uncertain/unsafe.
+
+Exit codes: 0 success, 1 runtime error, 2 usage/parse error
+(argparse, scope/approval validation, the manual refusals).
+The historical `ERROR: ...` line still goes to stderr.
+
+Migration: consumers that parsed the old bare payload should
+read `result` instead, branch on `error.code` (never message
+text), and treat exit 1 vs 2 as runtime vs usage.
+`--legacy-output` restores the old behavior exactly (bare
+payload, stderr-only errors, exit 2 on any error) as a compat
+shim. The library API (RDPClient, RDPError) is unchanged.

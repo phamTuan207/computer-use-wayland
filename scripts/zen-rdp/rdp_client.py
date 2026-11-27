@@ -126,6 +126,99 @@ class RDPError(Exception):
     pass
 
 
+# --- I1: versioned CLI envelope + disposition (Zen lane pilot) ---
+# The CLI prints exactly one JSON envelope on stdout:
+#   {"version": "1", "ok": bool, "command": <cmd>,
+#    "result": <payload or null>,
+#    "error": {"code", "message", "disposition"} or null,
+#    "disposition": {"delivery", "retry"}}
+# Exit codes: 0 success, 1 runtime error, 2 usage/parse error
+# (argparse and the manual refusals). --legacy-output restores
+# the pre-envelope behavior exactly (bare JSON payload on
+# success, "ERROR: ..." on stderr, exit 2 on any error) for
+# existing consumers. The library API is unchanged.
+# Delivery vocabulary: unknown, not_delivered,
+# delivery_uncertain, delivered_unverified, delivered_verified.
+# Retry vocabulary: safe (nothing was sent; fix and retry),
+# unsafe (input may have landed; never replay), not_applicable.
+ENVELOPE_VERSION = "1"
+_READ_COMMANDS = {"probe", "tabs", "report"}
+
+# Ordered (message substring, code, delivery, retry) for errors
+# that are refusals or pre-send failures: nothing was delivered.
+_REFUSAL_MAP = (
+    ("UNSCOPED REFUSED", "unscoped_refused"),
+    ("SCOPE REFUSED", "scope_refused"),
+    ("CREDENTIAL TAB REFUSED", "denylist_refused"),
+    ("LOCK REFUSED", "lock_held"),
+    ("RAW PACKET REFUSED", "raw_packet_refused"),
+    ("PARENT EVALUATE REFUSED", "parent_evaluate_refused"),
+    ("cannot open lock file", "lock_unavailable"),
+    ("port-owner", "port_owner_mismatch"),
+    ("cannot read cmdline", "port_owner_mismatch"),
+    ("scope config", "scope_config_invalid"),
+    ("evaluate before attach", "not_attached"),
+    ("no pinned tab", "attach_failed"),
+    ("not found in tab list", "tab_not_found"),
+    ("pinned tab", "attach_failed"),
+    ("getTarget gave no consoleActor", "attach_failed"),
+    ("listTabs returned no tabs", "attach_failed"),
+    ("listProcesses returned none", "attach_failed"),
+)
+
+
+def _classify_error(message, cmd):
+    """Map an RDPError message to (code, delivery, retry)."""
+    for needle, code in _REFUSAL_MAP:
+        if needle in message:
+            return code, "not_delivered", "safe"
+    action = cmd not in _READ_COMMANDS
+    if "evaluate exception" in message or "evaluate error" in message:
+        # The JS ran and threw: it was delivered, effect unknown.
+        return "evaluate_failed", "delivery_uncertain", "unsafe"
+    if "socket closed" in message or "timed out" in message or \
+            "timeout" in message.lower():
+        if action:
+            return "transport_error", "delivery_uncertain", "unsafe"
+        return "transport_error", "not_delivered", "safe"
+    if action:
+        return "runtime_error", "delivery_uncertain", "unsafe"
+    return "runtime_error", "not_delivered", "safe"
+
+
+def _success_disposition(cmd):
+    if cmd in ("eval", "peval"):
+        # JS executed; the tool does not verify page effect.
+        return {"delivery": "delivered_unverified",
+                "retry": "not_applicable"}
+    return {"delivery": "delivered_verified", "retry": "not_applicable"}
+
+
+def _emit(cmd, result, legacy):
+    if legacy:
+        print(json.dumps(result, indent=1))
+        return
+    print(json.dumps({"version": ENVELOPE_VERSION, "ok": True,
+                      "command": cmd, "result": result, "error": None,
+                      "disposition": _success_disposition(cmd)},
+                     indent=1))
+
+
+def _fail(cmd, code, message, delivery, retry, exit_code, legacy):
+    # stderr keeps the historical line for log readers either way.
+    print(f"ERROR: {message}", file=sys.stderr)
+    if legacy:
+        return 2
+    print(json.dumps({"version": ENVELOPE_VERSION, "ok": False,
+                      "command": cmd, "result": None,
+                      "error": {"code": code, "message": message,
+                                "disposition": {"delivery": delivery,
+                                                "retry": retry}},
+                      "disposition": {"delivery": delivery,
+                                      "retry": retry}}, indent=1))
+    return exit_code
+
+
 class Scope:
     """Allowed tabs for one attached session.
 
@@ -1078,6 +1171,10 @@ def main():
     ap.add_argument("--tab-url", default=None,
                     help="attach to the tab whose URL contains this "
                          "substring (robust across connections)")
+    ap.add_argument("--legacy-output", action="store_true",
+                    help="pre-envelope output: bare JSON payload on "
+                         "success, ERROR: text on stderr, exit 2 on "
+                         "any error (compat shim for old consumers)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("probe")
     sub.add_parser("tabs")
@@ -1093,23 +1190,32 @@ def main():
     b.add_argument("--real-url", default="https://example.com/")
     b.add_argument("--runs", type=int, default=12)
     args = ap.parse_args()
+    legacy = args.legacy_output
     try:
-        scope, deny, approvals = _build_scope(args)
+        try:
+            scope, deny, approvals = _build_scope(args)
+        except RDPError as e:
+            # Scope/approval argument validation: usage-class.
+            code, delivery, retry = _classify_error(str(e), args.cmd)
+            return _fail(args.cmd, code, str(e), delivery, retry, 2,
+                         legacy)
         if args.no_denylist:
             print(NO_DENYLIST_WARNING, file=sys.stderr)
         if not scope.scoped and not args.unscoped_test:
-            print("ERROR: UNSCOPED REFUSED: no tab scope was given. Pass "
-                  "--scope-tab-id / --scope-url-pattern (or a "
-                  "--scope-config), or pass --unscoped-test explicitly "
-                  "for throwaway/test use.", file=sys.stderr)
-            return 2
+            return _fail(args.cmd, "unscoped_refused",
+                         "UNSCOPED REFUSED: no tab scope was given. Pass "
+                         "--scope-tab-id / --scope-url-pattern (or a "
+                         "--scope-config), or pass --unscoped-test "
+                         "explicitly for throwaway/test use.",
+                         "not_delivered", "safe", 2, legacy)
         if not scope.scoped:
             print(UNSCOPED_WARNING, file=sys.stderr)
         if not args.profile_marker and not args.allow_unmarked_test_attach:
-            print("ERROR: profile marker is required (fail-closed): pass "
-                  "--profile-marker <substring> so the port owner can be "
-                  "verified before attach", file=sys.stderr)
-            return 2
+            return _fail(args.cmd, "profile_marker_required",
+                         "profile marker is required (fail-closed): pass "
+                         "--profile-marker <substring> so the port owner "
+                         "can be verified before attach",
+                         "not_delivered", "safe", 2, legacy)
         if args.allow_unmarked_test_attach and not args.profile_marker:
             print("WARNING: TEST-ONLY unmarked attach: port-owner marker "
                   "check skipped. Never use this against a real session.",
@@ -1123,15 +1229,15 @@ def main():
               "lock_file": args.lock_file,
               "denylist_disabled": args.no_denylist}
         if args.cmd == "bench":
-            print(json.dumps(bench(args.port, args.profile_marker,
-                                   args.local_url, args.real_url,
-                                   args.runs, scope=scope,
-                                   denylist_patterns=deny,
-                                   credential_approvals=approvals,
-                                   allow_unmarked_test_attach=
-                                   args.allow_unmarked_test_attach,
-                                   unscoped_test=args.unscoped_test),
-                             indent=1))
+            _emit(args.cmd, bench(args.port, args.profile_marker,
+                                  args.local_url, args.real_url,
+                                  args.runs, scope=scope,
+                                  denylist_patterns=deny,
+                                  credential_approvals=approvals,
+                                  allow_unmarked_test_attach=
+                                  args.allow_unmarked_test_attach,
+                                  unscoped_test=args.unscoped_test),
+                  legacy)
             return 0
         if args.profile_marker:
             pid, _ = check_port_owner(args.port, args.profile_marker)
@@ -1140,38 +1246,41 @@ def main():
         try:
             if args.cmd == "tabs":
                 tabs, sel = c.list_tabs()
-                print(json.dumps({"tabs": _tab_snapshot(tabs),
-                                  "selected_index": sel}, indent=1))
+                _emit(args.cmd, {"tabs": _tab_snapshot(tabs),
+                                 "selected_index": sel}, legacy)
                 if args.drive_report:
                     c.write_drive_report()
                 return 0
             c.attach(args.tab_id, args.tab_url)
             if args.cmd == "probe":
-                print(json.dumps(c.probe_webdriver(), indent=1))
+                _emit(args.cmd, c.probe_webdriver(), legacy)
             elif args.cmd == "eval":
-                print(json.dumps({"result": c.evaluate(args.expr)}, indent=1))
+                _emit(args.cmd, {"result": c.evaluate(args.expr)}, legacy)
             elif args.cmd == "peval":
-                print(json.dumps({"result": c.parent_evaluate(args.expr)},
-                                 indent=1))
+                _emit(args.cmd, {"result": c.parent_evaluate(args.expr)},
+                      legacy)
             elif args.cmd == "navigate":
                 c.navigate(args.url)
-                print(json.dumps({"navigated": args.url}))
+                _emit(args.cmd, {"navigated": args.url}, legacy)
             elif args.cmd == "report":
                 report = c.drive_report()
                 if args.drive_report:
                     with open(args.drive_report, "w") as f:
                         json.dump(report, f, indent=1)
-                print(json.dumps(report, indent=1))
+                _emit(args.cmd, report, legacy)
                 c.drive_report_path = None  # already written; avoid rewrite
             return 0
         finally:
             c.close()
     except RDPError as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        return 2
+        code, delivery, retry = _classify_error(str(e), args.cmd)
+        return _fail(args.cmd, code, str(e), delivery, retry, 1, legacy)
     except Exception as e:
-        print(f"ERROR: unexpected {type(e).__name__}: {e}", file=sys.stderr)
-        return 2
+        action = args.cmd not in _READ_COMMANDS
+        return _fail(args.cmd, "unexpected",
+                     f"unexpected {type(e).__name__}: {e}",
+                     "delivery_uncertain" if action else "not_delivered",
+                     "unsafe" if action else "safe", 1, legacy)
 
 
 if __name__ == "__main__":

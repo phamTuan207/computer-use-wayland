@@ -299,11 +299,12 @@ class TestScope(unittest.TestCase):
         self.assertIn("UNSCOPED REFUSED", r.stderr)
         self.assertIn("ERROR:", r.stderr)
         # With --unscoped-test: warns loudly, then fails on dead port.
+        # I1: runtime errors exit 1 (was 2 for everything).
         r = subprocess.run(
             [sys.executable, "rdp_client.py", "--port", "1",
              "--unscoped-test", "--allow-unmarked-test-attach", "probe"],
             capture_output=True, text=True, timeout=30)
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn("UNSCOPED", r.stderr)
         self.assertIn("ERROR:", r.stderr)
 
@@ -318,12 +319,13 @@ class TestScope(unittest.TestCase):
         self.assertIn("profile marker is required (fail-closed)",
                       r.stderr)
         # Test-only escape: warns loudly, then fails on the dead port.
+        # I1: runtime errors exit 1 (was 2 for everything).
         r = subprocess.run(
             [sys.executable, "rdp_client.py", "--port", "1",
              "--unscoped-test",
              "--allow-unmarked-test-attach", "probe"],
             capture_output=True, text=True, timeout=30)
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn("TEST-ONLY unmarked attach", r.stderr)
         self.assertIn("ERROR:", r.stderr)
 
