@@ -540,6 +540,56 @@ unified lane interface stays pilot-first after I23.
   fixed test_a11y_skeleton single-pass import fragility.
   Council fix 1 (shard exit) closed; M8/M9 closed.
 
+## Landing to main (2026-11-27 evening)
+
+- FCC batch A (int-rt-rdp c29beb63) merged into
+  integration-20261127 (3bd3c8cd); arch-guard import-map edge
+  for test_redaction added (79b58937). Integration branch
+  verified: full shard 2437/2437 SHARD MATCH, lineage ok.
+- todolist-push landing: merge a831e250 (pushed, ls-remote
+  verified), arch-guard PASS, lineage ok.
+- pick4 regression found during main-landing verification:
+  the a11y batch made query()/ground() call _completeness,
+  parse_ref, wait_actionable; test_pick4_fastpath AST-extracts
+  named functions and stubbed resolve() directly, so 5 tests
+  errored with NameError (also on integration-20261127 and
+  todolist-push). Fixed (90730f43 on integration-20261127,
+  merged to todolist-push 197588dd): extract lists include
+  the new helpers, wait_actionable stubbed like resolve.
+- Main landing: PR #1167 (branch integration-landing-20261127-v2,
+  6 grouped commits 756af47e..00aa295f), merged to main
+  71dd25ae 2026-11-27T14:52:29Z, gitleaks secret-scan pass,
+  ls-remote verified. Squash-apply of the integration diff
+  (87242b01..79b58937) plus dependency completion found by
+  baseline testing: rung3-ci/pii-scan.py (M28a gate),
+  scripts/fastpath.py mapping helpers (+140 additive lines,
+  zen_dom locate_point imports them), scripts/zen_dom.py
+  wholesale (main's 249-line stub replaced by the todolist
+  class; superset API), tests/test_click3_redteam2.py as
+  helpers-only subset for test_zen_dom (full redteam suite
+  stays on todolist-push), pick4 test fix. Machine-value
+  scrubs in docs/testing.md, scripts/zen_cli.py,
+  tests/test_environment_host.py (main copies carried
+  pre-scrub values). import-map.txt gained main-only edges
+  (cu->overlay, mcp_server, session_manager).
+- NOT landed: .github/workflows/rung3-checks.yml. Its steps
+  need rung3-run-log/ + verify-list.py (todolist-only) and
+  arch-guard FAILs on main's historical tree (110 violations
+  in 73 untouched files: docs/, tests/realistic/, native/).
+  Wiring it now would make every main PR red. Follow-up:
+  clean main's tree, then wire CI. The workflow stays live
+  on todolist-push pushes.
+- Main-landing verification (VM): full suite 1785 tests
+  (ok=1708 error=54 fail=5 skip=18) vs pristine main 1673
+  (ok=1595 error=55 fail=5 skip=18). Per-test join: ZERO
+  status changes on shared tests; 113 new tests all ok;
+  test_a11y_skeleton loader-error on main fixed. zen-rdp
+  71/71 OK. arch-guard: 0 violations in landed files.
+  lineage ok. pii-scan hits on landed files are code
+  identifiers + fake test emails only (snapshot gate, not
+  a source gate). Owner Zen probed untouched (PID 807599,
+  RDP 6021 loopback).
+
 ## Sources cited during this phase
 
 - The three source reports above (repo paths + commits).
