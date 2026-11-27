@@ -54,7 +54,7 @@ PILOT (running, unproven).
 | 10 | I17 post-action wait flags (after I1, no default timeout) | agent-desktop I17 | IMPLEMENTED + LIVE-TESTED | ad6476f0 + 5ea67253; live: satisfied + timeout preserves action outcome |
 | 11 | I22 secure-field redaction, DOM/RDP only | agent-desktop I22 | IMPLEMENTED | d1b67da4; field_value sentinel + URL query redaction + AX protected; 49 zen-rdp tests OK, zen_dom back to 4 pre-existing errors |
 | 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | IMPLEMENTED | e12fcf47; children_count both modes + cut flags + complete; walk half stays pilot-first |
-| 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | QUEUED | |
+| 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | IMPLEMENTED + LIVE-TESTED | c2a3e47f; ground live 106ms ok; battery stays pilot-first |
 | 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | QUEUED | |
 | 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | QUEUED | |
 | 16 | I15 root-level incomplete marking | agent-desktop I15 | QUEUED | |
@@ -356,6 +356,20 @@ children_count present; the live tree was too small to
 exercise cut, which is unit-proven on a deeper fake tree.
 The walk half (bounded-concurrency rewrite) stays
 pilot-first per the source report.
+
+### Item 13: I10 auto-wait half (2026-11-27)
+
+a11y.wait_actionable(root, item, cap_ms=1000): polls resolve
++ enabled/visible states + extents stability (two equal
+reads), first check immediate, last failing reason on expiry.
+Wired into act()'s execution loop and ground(). Elements
+without extents pass on enabled+visible alone. Tests: 3 new
+(ready fast, invisible cap, unstable cap) + harness updates;
+39 total OK. Live: ground on a real AT-SPI app ok in 106ms
+wall including subprocess start. The full actionability
+battery stays pilot-first (needs a proven hit-test signal;
+probe row belongs in probes/ledger.jsonl before any battery
+work).
 
 ## Sources cited during this phase
 
