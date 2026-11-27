@@ -489,6 +489,28 @@ unified lane interface stays pilot-first after I23.
   wait_actionable docstring tightened; a11y 45 OK;
   arch-guard PASS. Council 1-15 fixes 2+3 closed; fix 1
   (shard exit) still with int-fix-discover worker.
+- Redteam items 1-15 (delivered 20:30): LAND-WITH-FIXES,
+  no blockers. Majors: M1 I22 fragment tokens unredacted,
+  M2 I22 error paths echo raw URLs, M3 I22 exact-name
+  denylist too narrow, M4 I1 error classification trusts
+  page text (unsafe-replay hole), M5 I21 XF86Switch_VT_* /
+  Terminate_Server / XF86LogOff / plain Sys_Req (superset +
+  power family already fixed by int-fix-blocklist), M6 I10
+  disabled elements never polled, M7 I5 80-cap false
+  complete in non-skeleton mode, M8 M16 set-difference
+  warning-only (with int-fix-discover), M9 M17 run/shard
+  exit 0 (shard part with int-fix-discover), M10 I13 arch
+  guard evasions (with int-fix-archguard). Must-fix before
+  main: M1, M2, M4, M6, M7, M8. Routing (laptop CLIs):
+  FCC = rdp_client.py batch (M1-M4, navigate disposition,
+  wait-timeout validation); opencode = a11y.py batch (M6,
+  M7, I3 query snapshot_id); Codex = small batch (M5 rest,
+  I9 ops/exec, session_cleanup env-gate, lineage root,
+  dom-rect guards, ledger trailing newline). Minors noted
+  as follow-ups: zen_live port-owner guard (latent),
+  argparse no-envelope on usage errors (document),
+  cdp.mjs raw url in snapshot (out of I22 narrow scope,
+  follow-up item).
 
 ## Sources cited during this phase
 
