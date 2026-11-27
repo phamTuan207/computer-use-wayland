@@ -9492,3 +9492,21 @@ R3-L3: đã đóng theo báo cáo 04:58 (R3-056 passed, Rule-A 52/1, ledger 60 d
 Điều phối im lặng 98 phút, hoạt động gần nhất 18:19 (coord/mei), chưa tới 2 giờ, clone1 đang rảnh, không có việc nào bị chặn nên chưa báo lên chủ. Lời nhắc 09:57 trên PR #1036 và câu hỏi equip Graphify 04:44 26/11 vẫn chưa trả lời.
 Main bị protected nên push trực tiếp bị từ chối, đã chuyển sang PR clone1/watchdog-1957-nov27 như các lần trước.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 00:27 ngày 28/11 - WATCHDOG
+
+PII scrub: amend-delta GO xong 23:55, không agent nào chạy, không file nào đổi từ 23:53, verifier mới và commit lên todolist-push vẫn chờ phiên chính.
+Muse: không có yêu cầu mới cho clone1. Main có commit mới từ watermark 71dd25ae: merge PR #1187 (zen-mcp adoption landing, 00:16, của chủ), không đổi coord/clone1.md; todolist-push có commit mới 37c1e342 (zen-mcp final landing status), không nhắc clone1.
+Không có comment mới trên PR #1188, không có issue mở.
+Repo có hoạt động mới 00:16 (chủ merge PR #1187); clone1 không có câu hỏi chờ Muse và không có việc nào bị chặn nên chưa báo lên chủ. Lời nhắc 09:57 trên PR #1036 và câu hỏi equip Graphify 04:44 26/11 vẫn chưa trả lời.
+R3-L3: đã đóng theo báo cáo 04:58 (R3-056 passed, Rule-A 52/1, ledger 60 dòng); S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
+Main bị protected nên push trực tiếp bị từ chối, đã chuyển sang PR clone1/watchdog-0027-nov28 như các lần trước. Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 00:42 ngày 28/11 - WATCHDOG
+
+PII scrub: fresh independent verifier đang chạy (bắt đầu khoảng 00:37, hoạt động mới nhất 91 giây trước), council amend-delta GO xong 23:55; commit lên todolist-push vẫn chờ phiên chính.
+Muse: không có yêu cầu mới cho clone1. Main và todolist-push không có commit mới từ watermark ca61e288 / 37c1e342; không có comment mới trên PR #1190, không có issue mở.
+Không agent nào kẹt; verifier đang chạy tốt, các agent còn lại đã xong.
+Điều phối im lặng khoảng 77 phút (hoạt động gần nhất 23:25), chưa tới 2 giờ; clone1 không có câu hỏi chờ Muse và không có việc nào bị chặn nên chưa báo lên chủ. Lời nhắc 09:57 trên PR #1036 và câu hỏi equip Graphify 04:44 26/11 vẫn chưa trả lời.
+R3-L3: đã đóng theo báo cáo 04:58 (R3-056 passed, Rule-A 52/1, ledger 60 dòng); S2-LAND R1, R2, R3 Brave vẫn chờ kết quả laptop; lời mời R3-L1 (PR #68 đã merge 23/11) vẫn chưa có quyết định.
+Main bị protected nên push trực tiếp bị từ chối, đã chuyển sang PR clone1/watchdog-0042-nov28 như các lần trước. Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
