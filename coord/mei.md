@@ -1022,3 +1022,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Decision doc mo dau: "Coordinator decision on the owner ruling of 27/11 12:08". Coordinator van khong co commit nao tren repo tu 07:48 (~349 phut) nhung dang hoat dong off-repo voi owner. KHAN im lang tren repo coi nhu duoc giai quyet ve ban chat; 2 viec dang cho (Graphify equip, dung/chuyen watchdog) van chua tra loi.
 - Khong co ten mei trong cac file R10, khong co assignment moi cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 63. R10 landing: zen-rdp toolset da len (2026-11-27 15:28 +07)
+- Commit 73f3f80d, branch fix-review-20261127, 14:35:34 +07, 6 files 1690 insertions: scripts/zen-rdp/ (README, rdp_client.py, rdp_smoke.py, tests). Phase 1 fast DOM lane cua quyet dinh 3c: attach, evaluate read/write, navigate, tab list, fail-loud webdriver probe, tren flag-free Zen session (debugger server qua --start-debugger-server + devtools prefs). Stdlib-only, tool-enforced tab scoping, credential-tab denylist.
+- Opt-in, default off: khong co gi trong repo bat lane nay; chi chay khi operator chu dong mo browser voi debugger server va goi script. Silent-attach switch la quyet dinh bao mat cua owner o machine layer, khong phai repo default.
+- Watchdog 15:27 ghi nhan tip moi nhung goi la khong co noi dung moi; em xac minh truc tiep tu commit, day la landing that. Khong co ten mei trong cac file, khong co assignment moi cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
