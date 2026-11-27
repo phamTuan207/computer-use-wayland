@@ -23,12 +23,15 @@ sides are required.
 | 7 | `liveness-check.py`, `liveness-config.json`, `liveness-report-*.md` | Runs the list section 8 service checks and writes a dated report: service reachability, sqliteonline app served (a real query run needs a browser on the laptop), R3-009 WAVE error counts (PENDING until a browser check), fixtures under ~/rung3, DP-03 port count from `ss -tlnp`, test accounts and ttsmp3 quota (SKIP until synthesis configures them; the script never logs in and never stores a password). |
 | 8 | `resume.py` | Run state is thu-tu-chay.txt plus the ledger. `resume.py next` lists the next ungraded task and its evidence state. `resume.py checkpoint <TASK>` verifies the ledger row and the manifest hash match. Checkpoint after every task: collect-evidence (writes the manifest) plus the ledger append. A restart is a new run code with old results preserved, never silently merged. |
 | 9 | `snapshot.py` | Copies an evidence folder to a snapshot directory with manifest.json and sha256 per file, verified after copy, for the scorer handoff. The scorer gets only the snapshot path. |
+| 10 | `pre-freeze-triage.md`, `pre-freeze-gate.py` | M11d: pre-freeze triage of the task list and keys. The doc is the procedure (mandatory bar written first, six finding classes, time-boxed lanes plus council, red team and independent verifier, catch rate reported after first use). The gate is a thin wrapper running verify-list.py then check-key-hash.py, plus an optional triage-record section check; it reimplements nothing. |
 
 ## Quick commands (from the repo root)
 
 ```
 python3 rung3-ci/verify-list.py
 python3 rung3-ci/check-key-hash.py
+python3 rung3-ci/pre-freeze-gate.py
+python3 rung3-ci/pre-freeze-gate.py --triage-record rung3-run-log/pre-freeze-triage-<run>.md
 python3 rung3-ci/validate-ledger.py rung3-run-log/R3-L3-grades.jsonl
 python3 rung3-ci/collect-evidence.py R3-007
 python3 rung3-ci/tier-a-check.py --key rung3-ci/test-keys.json --evidence ~/rung3-chung-cu/R3-007 --task R3-007
