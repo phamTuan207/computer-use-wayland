@@ -323,9 +323,11 @@ Per-item final status against the sequenced plan:
    method set in smoke, delete absent by construction).
 7. P3 spike: DONE (evidence in improvements/zen-mcp-spikes-
    20261127.md, landed). Build decision still open.
-8. P6 zen_ask spike: NOT RUN. Pending a separate owner decision
-   (the 2026-11-27 23:28 go-ahead covered final verification and
-   landing only).
+8. P6 zen_ask spike: NOT RUN, REJECTED by the owner on
+   2026-11-28 06:12 (owner does not want to be asked back; the
+   consent-card interaction contract is closed, not deferred).
+   The 2026-11-27 23:28 go-ahead covered final verification and
+   landing only, and no separate go-ahead will be sought.
 9. P2b refs registry + digest: NOT LANDED. Settling tests landed
    as code (test_p2b_settling.py); the registry stays gated on F1
    closure + both settling tests + P1.
@@ -349,5 +351,7 @@ Final verification numbers:
 
 Open non-blocking follow-ups (tracked): emoji UTF-16 validation
 MAJOR, P2a M3 refusal disposition, P2a M5 evidence remainder,
-MINORs from both Clone2 reviews, P3 build decision, P6 spike
-decision, P2b gate (F1 + settling tests).
+MINORs from both Clone2 reviews, P3 build decision (owner
+delegated to the team 2026-11-28 06:12: test, meet, decide),
+P2b gate (F1 + settling tests). P6 is closed by owner rejection
+(2026-11-28), not a follow-up.
