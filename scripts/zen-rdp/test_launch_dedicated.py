@@ -30,6 +30,11 @@ def main():
                    "devtools.debugger.prompt-connection",
                    "devtools.debugger.remote-host", "9231"):
         assert needle in text, needle
+    # confirm_repost pref (2026-11-28): dedicated profiles only.
+    # The pref must be present in the dedicated user.js AND the
+    # helper must keep refusing owner-profile roots, so the pref
+    # can never land in the owner's profile through this tool.
+    assert "dom.confirm_repost.testing.always_accept" in text
 
     with tempfile.TemporaryDirectory() as td:
         fresh = Path(td) / "prof"

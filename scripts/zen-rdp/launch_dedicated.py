@@ -57,13 +57,24 @@ def _now_iso():
 
 def user_js_text(port):
     """Devtools prefs a fresh profile needs or --start-debugger-server
-    never listens (D3 footgun)."""
+    never listens (D3 footgun).
+
+    Also sets dom.confirm_repost.testing.always_accept: reloading a
+    POST result page otherwise blocks forever on the confirm-repost
+    dialog (measured 2026-11-28: location.reload() on a POST page
+    produced no second POST within 6 s; Mozilla firefox-mcp fixed
+    the same pain with this pref). Safe ONLY because this helper
+    serves dedicated throwaway profiles by construction (temp-dir
+    only, marker-guarded, owner roots refused): silent resubmission
+    must never be enabled in the owner's profile, and this function
+    is never used to write one."""
     return (
         'user_pref("devtools.chrome.enabled", true);\n'
         'user_pref("devtools.debugger.remote-enabled", true);\n'
         'user_pref("devtools.debugger.prompt-connection", false);\n'
         'user_pref("devtools.debugger.remote-host", "127.0.0.1");\n'
         f'user_pref("devtools.debugger.remote-port", {int(port)});\n'
+        'user_pref("dom.confirm_repost.testing.always_accept", true);\n'
     )
 
 
