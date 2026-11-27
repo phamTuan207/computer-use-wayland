@@ -83,7 +83,7 @@ zen-rdp/test_envelope: zen-rdp/rdp_client
 zen-rdp/test_lock: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
 zen-rdp/test_rdp_client: zen-rdp/rdp_client
 zen-rdp/test_rdp_smoke: zen-rdp/rdp_smoke
-zen-rdp/test_redaction: zen-rdp/rdp_client
+zen-rdp/test_redaction: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
 zen-rdp/test_scope_unittest: zen-rdp/rdp_client
 zen_backend: element_ref, fastpath, zen_dom
 zen_cli: 
