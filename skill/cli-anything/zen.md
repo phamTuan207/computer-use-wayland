@@ -198,6 +198,14 @@ output under `result`.
    but it was deliberately never run against his session (it would
    add a tab to his Zen). Use it only when he explicitly asked to
    open something in his own Zen, and say so in the report.
+10. Secure field values are never read. The DOM tools redact
+    password fields where they control the bytes (snapshot
+    values, `field_value`, RDP report URLs), but a raw
+    `evaluate()` can still read `input.value`: never use it on
+    a password or credential field, and never print a field
+    value you did not need. Typing into a secure field is
+    verified with `verify_typed` (bool only), never by reading
+    the value back into a report.
 10. For DOM work on a tab (click, fill, read elements), use
     `computer-use browser observe/act`. This wrapper does not do DOM.
 

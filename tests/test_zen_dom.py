@@ -197,6 +197,13 @@ class FakeWdSession(ZenSession):
                 return None
             return {'value': field.get('value'),
                     'editable': bool(field.get('contenteditable', False))}
+        if 'field_value' in script:
+            field = self.dom_fields.get(selector) if selector else None
+            if field is None:
+                return None
+            if field.get('type') == 'password':
+                return '[secure field value redacted]'
+            return field.get('value')
         field = self.dom_fields.get(selector) if selector else None
         if 'mozInnerScreenX' in script:
             return list(self.dom_origin)
@@ -711,6 +718,17 @@ class TestDomHelpers(unittest.TestCase):
         session = self._session()
         self.assertEqual(session.field_value('#msg-input'), 'hello')
         self.assertTrue(session.verify_typed('#msg-input', 'hello'))
+
+    def test_field_value_redacts_password_fields(self):
+        session = self._session()
+        session.dom_fields['#pw'] = {'rect': {'x': 0, 'y': 0, 'width': 10,
+                                              'height': 10},
+                                     'focused': False, 'value': 'hunter2',
+                                     'covered': False, 'type': 'password'}
+        self.assertEqual(session.field_value('#pw'),
+                         '[secure field value redacted]')
+        # verify_typed still compares the raw value internally.
+        self.assertTrue(session.verify_typed('#pw', 'hunter2'))
         self.assertFalse(session.verify_typed('#msg-input', 'goodbye'))
         self.assertIsNone(session.field_value('#nope'))
 

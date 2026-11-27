@@ -327,8 +327,51 @@ def check_port_owner(port, marker):
 
 def _tab_snapshot(tabs):
     return [{"actor": t.get("actor"), "tab_id": _canon_tab_id(t.get("actor")),
-             "url": t.get("url", ""), "title": t.get("title", ""),
+             "url": _redact_url(t.get("url", "")), "title": t.get("title", ""),
              "selected": bool(t.get("selected"))} for t in tabs]
+
+
+# I22: query parameters whose values never reach output bytes
+# (tabs listing, drive report). Scope matching keeps raw URLs
+# internally; only snapshots/reports are redacted.
+_SENSITIVE_PARAMS = {
+    "token", "access_token", "refresh_token", "id_token", "password",
+    "passwd", "pwd", "secret", "api_key", "apikey", "auth",
+    "authorization", "session", "sid", "code", "key", "signature",
+    "sig", "otp", "pin",
+}
+
+
+def _redact_url(url):
+    if not url or "?" not in url:
+        return url
+    base, _, query = url.partition("?")
+    frag = ""
+    if "#" in query:
+        query, _, frag = query.partition("#")
+    parts = []
+    for pair in query.split("&"):
+        name, eq, _val = pair.partition("=")
+        if eq and name.lower() in _SENSITIVE_PARAMS:
+            parts.append(name + "=REDACTED")
+        else:
+            parts.append(pair)
+    out = base + "?" + "&".join(parts)
+    return out + ("#" + frag if frag else "")
+
+
+def _redact_report_urls(node):
+    """Redact every 'url' string in a report dict, in place."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == "url" and isinstance(value, str):
+                node[key] = _redact_url(value)
+            else:
+                _redact_report_urls(value)
+    elif isinstance(node, list):
+        for item in node:
+            _redact_report_urls(item)
+    return node
 
 
 def _tab_diff(before, after):
@@ -999,7 +1042,7 @@ class RDPClient:
                 probe = self.probe_webdriver()
             except Exception as e:
                 probe = self._probe_result or {"error": str(e)}
-        return {
+        report = {
             "generated_at": _now_iso(),
             "session_started_at": self._started_at,
             "port": self.port,
@@ -1022,6 +1065,8 @@ class RDPClient:
             "actions": dict(self._actions),
             "retries": self._retries,
         }
+        # I22: no sensitive URL query values in report bytes.
+        return _redact_report_urls(report)
 
     def write_drive_report(self, path=None):
         path = path or self.drive_report_path
