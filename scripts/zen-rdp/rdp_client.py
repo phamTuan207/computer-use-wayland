@@ -60,6 +60,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
+from urllib.parse import unquote
 
 # Generic credential-tab URL fragments. The CLI enables these by default;
 # --scope-config patterns override them; --no-denylist disables the
@@ -274,13 +275,18 @@ _REFUSAL_MAP = (
 
 def _classify_error(message, cmd):
     """Map an RDPError message to (code, delivery, retry)."""
+    msg = str(message or "")
+    if "evaluate exception" in msg or "evaluate error" in msg:
+        # The JS ran and threw (page-controlled text), or the evaluation
+        # errored: delivered, effect unknown. Checked BEFORE the refusal
+        # needles so page exception text can never classify as a safe
+        # refusal; genuine refusals (scope/lock/port-owner) never carry
+        # this prefix.
+        return "evaluate_failed", "delivery_uncertain", "unsafe"
     for needle, code in _REFUSAL_MAP:
-        if needle in message:
+        if needle in msg:
             return code, "not_delivered", "safe"
     action = cmd not in _READ_COMMANDS
-    if "evaluate exception" in message or "evaluate error" in message:
-        # The JS ran and threw: it was delivered, effect unknown.
-        return "evaluate_failed", "delivery_uncertain", "unsafe"
     if "wait_for timeout" in message or "wait_load timeout" in message:
         # The action landed; only the post-action wait expired.
         return "wait_timeout", "delivered_unverified", "unsafe"
@@ -295,8 +301,10 @@ def _classify_error(message, cmd):
 
 
 def _success_disposition(cmd):
-    if cmd in ("eval", "peval"):
-        # JS executed; the tool does not verify page effect.
+    if cmd in ("eval", "peval", "navigate"):
+        # JS executed (eval/peval) or navigateTo sent (navigate); the
+        # tool does not verify page effect, including whether the
+        # navigate URL actually changed.
         return {"delivery": "delivered_unverified",
                 "retry": "not_applicable"}
     return {"delivery": "delivered_verified", "retry": "not_applicable"}
@@ -438,44 +446,151 @@ def _tab_snapshot(tabs):
 
 # I22: query parameters whose values never reach output bytes
 # (tabs listing, drive report). Scope matching keeps raw URLs
-# internally; only snapshots/reports are redacted.
+# internally; only snapshots/reports are redacted. Matching is
+# normalized (percent-decode, lowercase, split on separators and
+# camelCase humps into whole tokens, whole-token stem match) so
+# variants like accessToken, csrf_token, api-key, %74oken all hit.
 _SENSITIVE_PARAMS = {
     "token", "access_token", "refresh_token", "id_token", "password",
     "passwd", "pwd", "secret", "api_key", "apikey", "auth",
-    "authorization", "session", "sid", "code", "key", "signature",
-    "sig", "otp", "pin",
+    "authorization", "session", "sessionid", "sid", "code", "key",
+    "signature", "sig", "otp", "pin",
 }
+
+# Whole-token sensitive stems matched after normalization. Token-level
+# (never substring): innocent names like "zipcode" stay intact while
+# "code" in "verification_code" is caught.
+_SENSITIVE_STEMS = frozenset((
+    "token", "secret", "password", "passwd", "pass", "auth", "session",
+    "csrf", "otp", "code", "key", "credential", "bearer", "jwt", "saml",
+    "assertion", "ticket", "signature", "private", "jsessionid",
+))
+
+_SENSITIVE_NAMES = frozenset(
+    re.sub(r"[-_.\s]+", "", k).lower() for k in _SENSITIVE_PARAMS)
+
+_REDACTED = "REDACTED"
+
+# http(s) URLs embedded in text (e.g. inside error/prose strings).
+_URL_TEXT_RE = re.compile(r"https?://[^\s'\"<>]+", re.IGNORECASE)
+
+
+def _is_sensitive_param(name):
+    """True when a param name is sensitive: normalized name equals a
+    known-sensitive name, or any normalized whole token equals a stem.
+    Normalization percent-decodes, lowercases, splits on separators
+    (-/_/./space) and camelCase humps, so accessToken -> access+token."""
+    raw = (name or "").strip()
+    if not raw:
+        return False
+    norm = re.sub(r"%[0-9a-fA-F]{2}", lambda m: chr(int(m.group(0)[1:], 16)),
+                  raw)
+    tokens = tuple(t for t in re.split(
+        r"[-_.\s]+|(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])",
+        norm) if t)
+    if re.sub(r"[-_.\s]+", "", norm).lower() in _SENSITIVE_NAMES:
+        return True
+    return any(t.lower() in _SENSITIVE_STEMS for t in tokens)
+
+
+def _redact_pair(pair):
+    """Redact one k=v pair (query, fragment, path param). Nested pair
+    values whose decoded form carries a sensitive pair
+    (next=/cb?token=SECRET) are redacted too; otherwise the pair is
+    preserved verbatim."""
+    name, eq, val = pair.partition("=")
+    if not eq:
+        return pair
+    if _is_sensitive_param(name):
+        return f"{name}={_REDACTED}"
+    if "?" in val:
+        head, _, nested = val.partition("?")
+        new_nested = _redact_query_pairs(nested)
+        if new_nested == nested:
+            return pair
+        redact_val = f"{head}?{new_nested}" if nested else head
+        return f"{name}={redact_val}"
+    if "%" in val:
+        decoded = unquote(val)
+        if decoded != val:
+            if "?" in decoded:
+                head, _, nested = decoded.partition("?")
+                new_nested = _redact_query_pairs(nested)
+                if new_nested == nested:
+                    return pair
+                redact_val = f"{head}?{new_nested}" if nested else head
+                return f"{name}={redact_val}"
+            elif _is_sensitive_param(decoded.partition("=")[0]):
+                return f"{name}={_REDACTED}"
+    return pair
+
+
+def _redact_query_pairs(query):
+    return "&".join(_redact_pair(p) for p in query.split("&") if p)
+
+
+def _redact_path(path):
+    """Redact ;-separated path parameters (e.g. /app;jsessionid=ABC)."""
+    if ";" not in path:
+        return path
+    return ";".join(_redact_pair(s) if "=" in s else s
+                    for s in path.split(";"))
 
 
 def _redact_url(url):
-    if not url or "?" not in url:
+    """Redact sensitive query/fragment params, userinfo passwords and
+    path params from a URL. Non-URL text passes through unchanged;
+    only URL-shaped strings are redacted."""
+    if not url:
         return url
-    base, _, query = url.partition("?")
-    frag = ""
-    if "#" in query:
-        query, _, frag = query.partition("#")
-    parts = []
-    for pair in query.split("&"):
-        name, eq, _val = pair.partition("=")
-        if eq and name.lower() in _SENSITIVE_PARAMS:
-            parts.append(name + "=REDACTED")
-        else:
-            parts.append(pair)
-    out = base + "?" + "&".join(parts)
-    return out + ("#" + frag if frag else "")
+    m = re.match(r"^([A-Za-z][A-Za-z0-9+.\-]*://)([^/?#]*)", url)
+    if not m:
+        return url
+    scheme, authority = m.group(1), m.group(2)
+    userinfo, at, host = authority.partition("@")
+    if at and ":" in userinfo:
+        user, pw = userinfo.split(":", 1)
+        if pw:
+            userinfo = f"{user}:{_REDACTED}"
+    if at:
+        authority = f"{userinfo}@{host}"
+    rest = url[m.end():]
+    p_and_q, _, frag = rest.partition("#")
+    path, sep, query = p_and_q.partition("?")
+    redacted_path = _redact_path(path)
+    out = f"{scheme}{authority}{redacted_path}"
+    if sep:
+        out += "?" + (_redact_query_pairs(query) if query else "")
+    if frag:
+        out += "#" + (_redact_query_pairs(frag) if ("=" in frag or "&" in frag) else frag)
+    return out
+
+
+def _redact_text(s):
+    """Redact http(s) URL substrings inside arbitrary text
+    (error/prose strings included). Conservative: only URL text is
+    redacted, non-URL text is never mangled."""
+    if not isinstance(s, str) or not _URL_TEXT_RE.search(s):
+        return s
+    return _URL_TEXT_RE.sub(lambda m: _redact_url(m.group(0)), s)
 
 
 def _redact_report_urls(node):
-    """Redact every 'url' string in a report dict, in place."""
+    """Redact every URL string in a report dict, in place, via a
+    recursive walk of dicts and lists plus bare URL strings. Covers
+    keys like url/href plus any string value that looks like (or
+    contains) an http(s) URL, including error strings."""
     if isinstance(node, dict):
-        for key, value in node.items():
-            if key == "url" and isinstance(value, str):
-                node[key] = _redact_url(value)
+        for key, value in list(node.items()):
+            if isinstance(value, str):
+                node[key] = _redact_text(value)
             else:
                 _redact_report_urls(value)
     elif isinstance(node, list):
         for item in node:
             _redact_report_urls(item)
+    elif isinstance(node, str):
+        return _redact_text(node)
     return node
 
 
@@ -670,7 +785,7 @@ class RDPClient:
             self._scope_refusals.append(
                 {"op": op, "tab_id": tab_id, "url": url, "at": _now_iso()})
             raise RDPError(
-                f"SCOPE REFUSED: {op} on tab {tab_id!r} url={url!r} is out "
+                f"SCOPE REFUSED: {op} on tab {tab_id!r} url={_redact_url(url)!r} is out "
                 f"of scope (allowed tab ids: {sorted(self.scope.tab_ids)}, "
                 f"url patterns: {self.scope.url_patterns})")
         if self.denylist_patterns:
@@ -691,7 +806,7 @@ class RDPClient:
                          "pattern": hit, "at": _now_iso()})
                     raise RDPError(
                         f"CREDENTIAL TAB REFUSED: {op} on tab {tab_id!r} "
-                        f"url={url!r} matches denylist pattern {hit!r}. "
+                        f"url={_redact_url(url)!r} matches denylist pattern {hit!r}. "
                         f"Pass --allow-credential-tab {tab_id} together "
                         f"with --approval-note <text> to approve explicitly.")
 
@@ -886,16 +1001,16 @@ class RDPClient:
             if tab is not None and pin_url \
                     and (tab.get("url") or "") != pin_url:
                 raise RDPError(
-                    f"pinned tab {pin_id!r} url changed {pin_url!r} -> "
-                    f"{tab.get('url')!r} (positional id shift?); refusing "
+                    f"pinned tab {pin_id!r} url changed {_redact_url(pin_url)!r} -> "
+                    f"{_redact_url(tab.get('url') or '')!r} (positional id shift?); refusing "
                     f"re-attach, refusing selected-tab fallback")
         if tab is None and pin_url:
             tab = next((t for t in self._tabs
                         if (t.get("url") or "") == pin_url), None)
         if tab is None:
             raise RDPError(
-                f"pinned tab {pin_id!r} url={pin_url!r} not found after "
-                f"target swap; refusing selected-tab fallback")
+                f"pinned tab {pin_id!r} url={_redact_url(pin_url)} not found "
+                f"after target swap; refusing selected-tab fallback")
         self.get_target(tab_actor=tab.get("actor"))
 
     def attach(self, tab_actor=None, tab_url=None):
@@ -1046,7 +1161,7 @@ class RDPClient:
                 return
             except Exception as e:
                 last = e
-        raise RDPError(f"navigateTo failed for {url}: {last}")
+        raise RDPError(f"navigateTo failed for {_redact_url(url)}: {last}")
 
     def navigate(self, url):
         """navigateTo via target actor, fallback to descriptor actor.
@@ -1073,7 +1188,7 @@ class RDPClient:
                          "pattern": hit, "at": _now_iso()})
                     raise RDPError(
                         f"CREDENTIAL TAB REFUSED: navigate destination "
-                        f"{url!r} matches denylist pattern {hit!r}. Pass "
+                        f"{_redact_url(url)!r} matches denylist pattern {hit!r}. Pass "
                         f"--allow-credential-tab {self.desc_actor} together "
                         f"with --approval-note <text> to approve explicitly.")
         try:
@@ -1314,7 +1429,7 @@ def bench(port, marker, local_url, real_url, runs, scope=None,
             c.navigate(url)
             c.wait_load(substr, timeout=30)
             xs.append(time.monotonic() - t0)
-        out[label] = {"url": url, "median_ms": ms(median(xs)),
+        out[label] = {"url": _redact_url(url), "median_ms": ms(median(xs)),
                       "runs_ms": [ms(x) for x in xs]}
     c.close()
     return out
@@ -1438,6 +1553,12 @@ def main():
                      "--wait-for requires --wait-timeout SECONDS "
                      "(no default timeout by design)",
                      "not_delivered", "safe", 2, legacy)
+    if args.wait_timeout is not None and args.wait_timeout <= 0:
+        # I22: a wait budget must be positive; 0/negative are usage errors.
+        return _fail(args.cmd, "wait_timeout_invalid",
+                     f"--wait-timeout must be > 0 (got {args.wait_timeout}); "
+                     "the wait budget must be positive",
+                     "not_delivered", "safe", 2, legacy)
     try:
         try:
             scope, deny, approvals = _build_scope(args)
@@ -1511,7 +1632,7 @@ def main():
                       legacy)
             elif args.cmd == "navigate":
                 c.navigate(args.url)
-                action_result = {"navigated": args.url}
+                action_result = {"navigated": _redact_url(args.url)}
                 if not args.wait_for:
                     _emit(args.cmd, action_result, legacy)
             elif args.cmd == "report":

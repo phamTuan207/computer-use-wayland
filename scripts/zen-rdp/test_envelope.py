@@ -40,6 +40,18 @@ class ClassifyTests(unittest.TestCase):
             rc._classify_error("evaluate exception: boom", "eval"),
             ("evaluate_failed", "delivery_uncertain", "unsafe"))
 
+    def test_evaluate_exception_with_refusal_text_is_not_refusal(self):
+        # M4: page-controlled exception text can never classify as a safe
+        # refusal; the evaluate-failure pattern is checked first.
+        self.assertEqual(
+            rc._classify_error(
+                "evaluate exception: Error: SCOPE REFUSED blah", "eval"),
+            ("evaluate_failed", "delivery_uncertain", "unsafe"))
+        self.assertEqual(
+            rc._classify_error(
+                "evaluate error: Error: LOCK REFUSED blah", "eval"),
+            ("evaluate_failed", "delivery_uncertain", "unsafe"))
+
     def test_transport_read_vs_action(self):
         self.assertEqual(
             rc._classify_error("RDP socket closed by server", "tabs"),
@@ -53,8 +65,9 @@ class ClassifyTests(unittest.TestCase):
                          "delivered_verified")
         self.assertEqual(rc._success_disposition("eval")["delivery"],
                          "delivered_unverified")
+        # navigate never verifies the URL actually changed: unverified.
         self.assertEqual(rc._success_disposition("navigate")["delivery"],
-                         "delivered_verified")
+                         "delivered_unverified")
 
 
 class CliEnvelopeTests(unittest.TestCase):
@@ -134,6 +147,23 @@ class WaitForTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         env = json.loads(proc.stdout)
         self.assertEqual(env["error"]["code"], "wait_timeout_required")
+
+    def test_cli_wait_timeout_zero_rejected(self):
+        proc = run_cli("--port", "1", "--allow-unmarked-test-attach",
+                       "--scope-tab-id", "tabDescriptor1", "eval", "1",
+                       "--wait-for", "true", "--wait-timeout", "0")
+        self.assertEqual(proc.returncode, 2)
+        env = json.loads(proc.stdout)
+        self.assertEqual(env["error"]["code"], "wait_timeout_invalid")
+        self.assertEqual(env["disposition"]["delivery"], "not_delivered")
+
+    def test_cli_wait_timeout_negative_rejected(self):
+        proc = run_cli("--port", "1", "--allow-unmarked-test-attach",
+                       "--scope-tab-id", "tabDescriptor1", "eval", "1",
+                       "--wait-for", "true", "--wait-timeout", "-1")
+        self.assertEqual(proc.returncode, 2)
+        env = json.loads(proc.stdout)
+        self.assertEqual(env["error"]["code"], "wait_timeout_invalid")
 
     def test_cli_wait_for_rejected_on_read_command(self):
         # --wait-for lives on eval/navigate only; elsewhere argparse
