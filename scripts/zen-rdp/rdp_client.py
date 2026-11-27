@@ -176,6 +176,9 @@ def _classify_error(message, cmd):
     if "evaluate exception" in message or "evaluate error" in message:
         # The JS ran and threw: it was delivered, effect unknown.
         return "evaluate_failed", "delivery_uncertain", "unsafe"
+    if "wait_for timeout" in message or "wait_load timeout" in message:
+        # The action landed; only the post-action wait expired.
+        return "wait_timeout", "delivered_unverified", "unsafe"
     if "socket closed" in message or "timed out" in message or \
             "timeout" in message.lower():
         if action:
@@ -204,13 +207,14 @@ def _emit(cmd, result, legacy):
                      indent=1))
 
 
-def _fail(cmd, code, message, delivery, retry, exit_code, legacy):
+def _fail(cmd, code, message, delivery, retry, exit_code, legacy,
+          result=None):
     # stderr keeps the historical line for log readers either way.
     print(f"ERROR: {message}", file=sys.stderr)
     if legacy:
         return 2
     print(json.dumps({"version": ENVELOPE_VERSION, "ok": False,
-                      "command": cmd, "result": None,
+                      "command": cmd, "result": result,
                       "error": {"code": code, "message": message,
                                 "disposition": {"delivery": delivery,
                                                 "retry": retry}},
@@ -890,6 +894,30 @@ class RDPClient:
         except Exception:
             pass  # wait_load re-attaches as needed
 
+    def wait_for(self, expr, timeout, poll_interval=0.1):
+        """Poll evaluate(expr) until truthy or timeout (I17).
+
+        No default timeout at the CLI layer: the caller names the
+        budget. Transient evaluate errors (context destroyed
+        mid-navigation) count as not-yet. Returns the truthy
+        value. On expiry raises RDPError carrying the last
+        observed value so the caller can report what the page
+        actually showed."""
+        deadline = time.monotonic() + timeout
+        last = None
+        while True:
+            try:
+                last = self.evaluate(expr, timeout=5)
+            except Exception:
+                last = None
+            if last:
+                return last
+            if time.monotonic() >= deadline:
+                raise RDPError(
+                    f"wait_for timeout after {timeout}s: {expr!r} "
+                    f"last value {last!r}")
+            time.sleep(poll_interval)
+
     def wait_load(self, url_substr, timeout=30):
         deadline = time.monotonic() + timeout
         last_reattach = 0.0
@@ -1175,6 +1203,13 @@ def main():
                     help="pre-envelope output: bare JSON payload on "
                          "success, ERROR: text on stderr, exit 2 on "
                          "any error (compat shim for old consumers)")
+    ap.add_argument("--wait-for", default=None, metavar="EXPR",
+                    help="after navigate/eval, poll this JS expression "
+                         "until truthy (I17). Requires --wait-timeout; "
+                         "there is no default timeout")
+    ap.add_argument("--wait-timeout", type=float, default=None,
+                    metavar="SECONDS",
+                    help="budget for --wait-for (required with it)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("probe")
     sub.add_parser("tabs")
@@ -1191,6 +1226,15 @@ def main():
     b.add_argument("--runs", type=int, default=12)
     args = ap.parse_args()
     legacy = args.legacy_output
+    if args.wait_for and args.wait_timeout is None:
+        return _fail(args.cmd, "wait_timeout_required",
+                     "--wait-for requires --wait-timeout SECONDS "
+                     "(no default timeout by design)",
+                     "not_delivered", "safe", 2, legacy)
+    if args.wait_for and args.cmd not in ("navigate", "eval"):
+        return _fail(args.cmd, "wait_for_unsupported",
+                     "--wait-for applies to navigate and eval only",
+                     "not_delivered", "safe", 2, legacy)
     try:
         try:
             scope, deny, approvals = _build_scope(args)
@@ -1252,16 +1296,21 @@ def main():
                     c.write_drive_report()
                 return 0
             c.attach(args.tab_id, args.tab_url)
+            action_result = None
             if args.cmd == "probe":
                 _emit(args.cmd, c.probe_webdriver(), legacy)
             elif args.cmd == "eval":
-                _emit(args.cmd, {"result": c.evaluate(args.expr)}, legacy)
+                action_result = {"result": c.evaluate(args.expr)}
+                if not args.wait_for:
+                    _emit(args.cmd, action_result, legacy)
             elif args.cmd == "peval":
                 _emit(args.cmd, {"result": c.parent_evaluate(args.expr)},
                       legacy)
             elif args.cmd == "navigate":
                 c.navigate(args.url)
-                _emit(args.cmd, {"navigated": args.url}, legacy)
+                action_result = {"navigated": args.url}
+                if not args.wait_for:
+                    _emit(args.cmd, action_result, legacy)
             elif args.cmd == "report":
                 report = c.drive_report()
                 if args.drive_report:
@@ -1269,6 +1318,22 @@ def main():
                         json.dump(report, f, indent=1)
                 _emit(args.cmd, report, legacy)
                 c.drive_report_path = None  # already written; avoid rewrite
+            if args.wait_for and action_result is not None:
+                try:
+                    waited = c.wait_for(args.wait_for, args.wait_timeout)
+                except RDPError as e:
+                    # Preserve the action's own outcome in result.
+                    code, delivery, retry = _classify_error(
+                        str(e), args.cmd)
+                    return _fail(args.cmd, code, str(e), delivery,
+                                 retry, 1, legacy,
+                                 result={"action_result": action_result,
+                                         "wait": {"status": "timeout",
+                                                  "expr": args.wait_for}})
+                action_result["wait"] = {"status": "satisfied",
+                                         "expr": args.wait_for,
+                                         "value": waited}
+                _emit(args.cmd, action_result, legacy)
             return 0
         finally:
             c.close()

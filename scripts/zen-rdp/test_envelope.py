@@ -98,5 +98,55 @@ class CliEnvelopeTests(unittest.TestCase):
         self.assertEqual(json.loads(out.getvalue()), {"tabs": []})
 
 
+class WaitForTests(unittest.TestCase):
+    def make_client(self, values):
+        client = rc.RDPClient.__new__(rc.RDPClient)
+        seq = iter(values)
+        client.evaluate = lambda expr, timeout=5: next(seq)
+        return client
+
+    def test_wait_for_returns_first_truthy(self):
+        client = self.make_client([False, None, "ready"])
+        self.assertEqual(client.wait_for("x", timeout=5,
+                                         poll_interval=0.01), "ready")
+
+    def test_wait_for_timeout_carries_last_value(self):
+        client = self.make_client([False] * 1000)
+        with self.assertRaisesRegex(rc.RDPError, "wait_for timeout"):
+            client.wait_for("x", timeout=0.05, poll_interval=0.01)
+
+    def test_wait_for_tolerates_transient_errors(self):
+        calls = {"n": 0}
+
+        def flaky(expr, timeout=5):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise rc.RDPError("context destroyed")
+            return True
+
+        client = rc.RDPClient.__new__(rc.RDPClient)
+        client.evaluate = flaky
+        self.assertTrue(client.wait_for("x", timeout=5,
+                                        poll_interval=0.01))
+
+    def test_cli_wait_for_requires_timeout(self):
+        proc = run_cli("--port", "1", "--wait-for", "true", "eval", "1")
+        self.assertEqual(proc.returncode, 2)
+        env = json.loads(proc.stdout)
+        self.assertEqual(env["error"]["code"], "wait_timeout_required")
+
+    def test_cli_wait_for_rejected_on_read_command(self):
+        proc = run_cli("--port", "1", "--wait-for", "true",
+                       "--wait-timeout", "1", "tabs")
+        self.assertEqual(proc.returncode, 2)
+        env = json.loads(proc.stdout)
+        self.assertEqual(env["error"]["code"], "wait_for_unsupported")
+
+    def test_wait_timeout_classification(self):
+        self.assertEqual(
+            rc._classify_error("wait_for timeout after 1s: 'x'", "eval"),
+            ("wait_timeout", "delivered_unverified", "unsafe"))
+
+
 if __name__ == "__main__":
     unittest.main()

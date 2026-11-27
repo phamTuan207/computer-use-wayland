@@ -157,3 +157,19 @@ text), and treat exit 1 vs 2 as runtime vs usage.
 `--legacy-output` restores the old behavior exactly (bare
 payload, stderr-only errors, exit 2 on any error) as a compat
 shim. The library API (RDPClient, RDPError) is unchanged.
+
+## Post-action waits (I17)
+
+`--wait-for EXPR --wait-timeout SECONDS` after `navigate` or
+`eval` polls the JS expression until truthy. There is no
+default timeout: the caller names the budget, so a 2 s failure
+never silently becomes a 30 s one. On expiry the envelope
+error code is `wait_timeout` and `result` still carries the
+action's own outcome (`action_result`), because the action
+landed; only the wait expired. Rule of thumb: use wait-for
+when the next step needs page state that settles
+asynchronously (rendered text, a route change); use I6-style
+post-action verification when the question is whether the
+action itself took effect; use I10 auto-wait on the a11y lane
+for element readiness before acting. Never use a fixed sleep
+in place of any of the three.
