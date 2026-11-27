@@ -187,7 +187,7 @@ def ground(snapshot_path,ref):
     ref=parse_ref(snapshot,ref)
     item=next((e for e in snapshot['elements'] if e['ref']==ref),None)
     if item is None:raise ValueError('valid accessibility ref required')
-    root=app(snapshot['pid']);element=resolve(root,item)
+    root=app(snapshot['pid']);element=wait_actionable(root,item)
     extents=_component_extents(element)
     if extents is None:raise ValueError('element exposes no extents; use vision')
     root_extents=_component_extents(root)
@@ -214,6 +214,42 @@ def resolve(root,item):
     if not e.get_state_set().contains(Atspi.StateType.SENSITIVE):raise ValueError('element is disabled')
     return e
 
+ACTIONABLE_CAP_MS=1000
+
+def wait_actionable(root,item,cap_ms=1000):
+    """Auto-wait (I10): poll until the element is enabled, visible
+    (when the state exists), and its extents are stable across
+    two reads, up to cap_ms. First check is immediate, so a
+    ready element costs one extra extents read. Raises the last
+    failing reason on expiry; a stale tree raises at once."""
+    deadline=time.monotonic()+cap_ms/1000.0
+    last_reason='not actionable'
+    prev_extents=None
+    while True:
+        e=resolve(root,item)
+        states=e.get_state_set()
+        visible=True
+        for name in ('VISIBLE','SHOWING'):
+            state=getattr(Atspi.StateType,name,None)
+            if state is not None and not states.contains(state):
+                visible=False
+        if not visible:
+            last_reason='element is not visible'
+            prev_extents=None
+        else:
+            extents=_component_extents(e)
+            if extents is not None and extents==prev_extents:
+                return e
+            if extents is None:
+                # No extents exposed: enabled+visible is all we can
+                # prove; do not block the action on a missing box.
+                return e
+            prev_extents=extents
+            last_reason='element extents not stable'
+        if time.monotonic()>=deadline:
+            raise ValueError(last_reason+' (auto-wait cap %dms)'%cap_ms)
+        time.sleep(0.02)
+
 def drill(path,ref):
     snapshot=read_json_file(path)
     if snapshot.get('backend')!='a11y' or time.time()-snapshot['created']>90:raise ValueError('stale accessibility snapshot')
@@ -237,7 +273,7 @@ def act(path,actions):
     completed=0;result={'ok':True};start=time.monotonic()
     try:
         for a in actions:
-            e=resolve(root,refs[a['ref']])
+            e=wait_actionable(root,refs[a['ref']])
             if a['type']=='click':
                 interface=e.get_action_iface();names=[interface.get_action_name(i).lower() for i in range(interface.get_n_actions())]
                 index=next((i for i,n in enumerate(names) if n in ('click','press','toggle')),None)

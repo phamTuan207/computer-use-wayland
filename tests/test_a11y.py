@@ -15,11 +15,15 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import cu
 SOURCE = (ROOT / 'scripts/a11y.py').read_text()
 
+import types as _types
+ATspiStub = _types.SimpleNamespace(StateType=_types.SimpleNamespace(
+    SENSITIVE='sensitive', VISIBLE='visible', SHOWING='showing'))
+
 
 class A11yAdapterTests(unittest.TestCase):
     def setUp(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
         self.element = mock.Mock()
         self.element.get_action_iface.return_value = self.element
         self.element.get_n_actions.return_value = 1
@@ -27,7 +31,7 @@ class A11yAdapterTests(unittest.TestCase):
         self.element.do_action.return_value = True
         self.snapshot = {'backend': 'a11y', 'created': time.time(), 'pid': 1,
                          'elements': [{'ref': 'e1', 'editable': True, 'actions': ['click']}]}
-        self.ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value=self.snapshot),
+        self.ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value=self.snapshot),
                        validate_actions=cu.validate_actions, app=mock.Mock(),
                        resolve=mock.Mock(return_value=self.element),
                        observe=mock.Mock(side_effect=RuntimeError('observe failed')))
@@ -119,7 +123,9 @@ class ResolverTests(unittest.TestCase):
         element.get_name.return_value = name
         element.get_role_name.return_value = role
         states = mock.Mock()
-        states.contains.side_effect = lambda state: sensitive and state == self.sensitive
+        states.contains.side_effect = lambda state: (
+            (sensitive and state == self.sensitive)
+            or state in ('visible', 'showing'))
         element.get_state_set.return_value = states
         element.get_child_at_index.side_effect = lambda i: (children or [])[i]
         return element
@@ -132,6 +138,44 @@ class ResolverTests(unittest.TestCase):
     def test_none_name_matches_empty_snapshot_name(self):
         root = self.node(name=None)
         self.assertIs(self.resolve(root, self.item()), root)
+
+    def _wait_actionable(self, extents):
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef)
+                 and n.name == 'wait_actionable']
+        ns = dict(time=time, Atspi=ATspiStub, resolve=self.resolve,
+                  _component_extents=lambda e: extents)
+        exec(compile(ast.Module(body=nodes, type_ignores=[]),
+                     'a11y.py', 'exec'), ns)
+        return ns['wait_actionable']
+
+    def test_wait_actionable_ready_element_returns_fast(self):
+        wait = self._wait_actionable([0, 0, 10, 10])
+        root = self.node(name='')
+        start = time.monotonic()
+        self.assertIs(wait(root, self.item(), cap_ms=1000), root)
+        self.assertLess(time.monotonic() - start, 0.5)
+
+    def test_wait_actionable_invisible_hits_cap(self):
+        wait = self._wait_actionable([0, 0, 10, 10])
+        root = self.node(name='')
+        root.get_state_set.return_value.contains.side_effect = (
+            lambda state: state == self.sensitive)
+        with self.assertRaisesRegex(ValueError, 'not visible'):
+            wait(root, self.item(), cap_ms=60)
+
+    def test_wait_actionable_unstable_extents_hits_cap(self):
+        seq = iter([[0, 0, 10, 10], [1, 0, 10, 10]] * 100)
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef)
+                 and n.name == 'wait_actionable']
+        ns = dict(time=time, Atspi=ATspiStub, resolve=self.resolve,
+                  _component_extents=lambda e: next(seq))
+        exec(compile(ast.Module(body=nodes, type_ignores=[]),
+                     'a11y.py', 'exec'), ns)
+        with self.assertRaisesRegex(ValueError, 'not stable'):
+            ns['wait_actionable'](self.node(name=''), self.item(),
+                                  cap_ms=60)
 
     def test_none_name_against_old_name_is_stale_not_type_error(self):
         root = self.node(name=None)
@@ -151,8 +195,8 @@ class ResolverTests(unittest.TestCase):
 
     def test_production_act_with_production_resolve_nameless(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
-        ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value={
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
+        ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
                           'role': 'button', 'actions': ['click']}]}),
@@ -173,10 +217,10 @@ class ResolverTests(unittest.TestCase):
 
     def test_name_changed_between_guards_sends_no_input(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
         root = self.node(name='')
         root.get_name.side_effect = ['', 'changed']
-        ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value={
+        ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
                           'role': 'button', 'actions': ['click']}]}),
@@ -192,8 +236,8 @@ class ResolverTests(unittest.TestCase):
 
     def test_stale_name_at_preflight_raises_before_input(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
-        ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value={
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
+        ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
                           'role': 'button', 'actions': ['click']}]}),
@@ -453,7 +497,7 @@ class QualifiedRefTests(unittest.TestCase):
     def setUp(self):
         nodes = [n for n in ast.parse(SOURCE).body
                  if isinstance(n, ast.FunctionDef)
-                 and n.name in ('parse_ref', 'act')]
+                 and n.name in ('parse_ref', 'act', 'wait_actionable')]
         self.element = mock.Mock()
         self.element.get_action_iface.return_value = self.element
         self.element.get_n_actions.return_value = 1
@@ -463,7 +507,7 @@ class QualifiedRefTests(unittest.TestCase):
                          'snapshot_id': 'abc123',
                          'elements': [{'ref': 'e1', 'editable': True,
                                        'actions': ['click']}]}
-        self.ns = dict(time=time, sys=sys,
+        self.ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10],
                        read_json_file=mock.Mock(return_value=self.snapshot),
                        validate_actions=cu.validate_actions, app=mock.Mock(),
                        resolve=mock.Mock(return_value=self.element),
