@@ -1,0 +1,3 @@
+AI-estimated rating: Nhan biet
+
+The solution uses only the rock-paper-scissors win/loss relationships and a comparison among the three known move counts. The key insight is that at least one of z >= y, x >= z, or y >= x holds; choosing that move for every round guarantees wins are at least losses regardless of order. The limits are small, and the only edge cases are zero counts and ties in the comparisons.
