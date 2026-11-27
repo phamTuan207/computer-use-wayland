@@ -32,9 +32,23 @@ Transport: a minimal stdlib Marionette wire-protocol client (no pip
 dependency). The same payloads run unchanged under Mozilla's
 marionette_driver package (set_context("chrome") +
 execute_async_script(js, script_args=[...], sandbox="system")) if the
-raw command names ever drift; the protocol-3 names used here
-(newSession, setContext, executeAsyncScript) are the first thing
-`introspect` end-to-end verifies on a new machine.
+raw command names ever drift; the namespaced protocol-3 names used
+here (WebDriver:NewSession, Marionette:SetContext,
+WebDriver:ExecuteAsyncScript, WebDriver:DeleteSession) are the first
+thing `introspect` end-to-end verifies on a new machine. The greeting
+is a length-prefixed frame like every other message, and async
+completion is signalled by calling the callback Marionette appends as
+the last script argument.
+
+Launch gate: chrome-context (system principal) work requires Zen to
+be launched with MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1 in its environment;
+without it setContext fails with "System access is required". On a
+bare VM Zen also needs a D-Bus session bus (dbus-run-session) or
+startup stalls before the Marionette listener opens. After the
+2026-11-27 RDP switch, the owner's live Zen no longer opens a
+Marionette listener at all; this tool targets throwaway profiles
+launched with --marionette (see
+improvements/zen-r17-continuation-20261127.md).
 
 WARNING: a Marionette session is full system-principal control of the
 browser profile. Keep the listener on localhost only, and test on a
@@ -49,7 +63,7 @@ import sys
 # ---------- JS payloads (chrome context, system principal) ----------
 
 _PRELUDE = """
-const done = (v) => { try { marionetteScriptFinished(v); } catch (e) {} };
+const done = (v) => { try { arguments[arguments.length - 1](v); } catch (e) {} };
 const fail = (msg) => done({ error: String(msg) });
 const pickTab = (part) => {
   const hits = gBrowser.tabs.filter(
@@ -225,14 +239,11 @@ class Marionette:
         self.buf += chunk
 
     def _read_greeting(self):
-        decoder = json.JSONDecoder()
-        while True:
-            try:
-                obj, end = decoder.raw_decode(self.buf.decode("utf-8", "replace"))
-                self.buf = self.buf[end:]
-                return obj
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                self._fill()
+        # The greeting is a length-prefixed frame like every other
+        # message: b'50:{"applicationType":"gecko","marionetteProtocol":3}'.
+        # Parsing it as bare JSON reads the "50" as a number and leaves
+        # ":{...}" in the buffer, which then breaks the first frame read.
+        return self._read_frame()
 
     def _read_frame(self):
         while b":" not in self.buf:
@@ -261,20 +272,25 @@ class Marionette:
         return result
 
     def new_session(self):
-        return self.command("newSession", {"capabilities": {}})
+        return self.command("WebDriver:NewSession", {"capabilities": {}})
 
     def set_context(self, context):
-        return self.command("setContext", {"value": context})
+        return self.command("Marionette:SetContext", {"value": context})
 
     def execute_async(self, script, args=()):
         # sandbox="system" asks Marionette for a system-principal sandbox,
         # the documented privilege mechanism for chrome-context work.
-        return self.command("executeAsyncScript",
-                            {"script": script, "args": list(args), "sandbox": "system"})
+        result = self.command("WebDriver:ExecuteAsyncScript",
+                              {"script": script, "args": list(args), "sandbox": "system"})
+        # WebDriver wraps script results as {"value": ...}; unwrap so
+        # callers see the payload's own return shape.
+        if isinstance(result, dict) and set(result) == {"value"}:
+            return result["value"]
+        return result
 
     def close(self):
         try:
-            self.command("deleteSession")
+            self.command("WebDriver:DeleteSession")
         except Exception:
             pass
         self.sock.close()
@@ -285,20 +301,24 @@ class Marionette:
 def run_op(client, args):
     client.new_session()
     client.set_context("chrome")
+    # Lazy: only the chosen subcommand's arguments are dereferenced.
+    # argparse defines --to/--tab-url/--label/... only for the
+    # subcommand actually chosen, so an eager table crashes on
+    # unrelated attributes.
     ops = {
-        "introspect": (JS_INTROSPECT, ()),
-        "list": (JS_LIST, ()),
-        "switch-workspace": (JS_SWITCH_WORKSPACE, (args.to,)),
-        "move-workspace": (JS_MOVE_WORKSPACE, (args.tab_url, args.to)),
-        "create-folder": (JS_CREATE_FOLDER, ([args.label] + list(args.tab_url_multi),)),
-        "move-folder": (JS_MOVE_FOLDER, (args.tab_url, args.to)),
-        "leave-folder": (JS_LEAVE_FOLDER, (args.tab_url,)),
-        "move-folder-space": (JS_MOVE_FOLDER_SPACE, (args.folder, args.to)),
-        "pin": (JS_PIN, (args.tab_url, True)),
-        "unpin": (JS_PIN, (args.tab_url, False)),
-        "move-tab": (JS_MOVE_TAB, (args.tab_url, args.index)),
+        "introspect": lambda: (JS_INTROSPECT, ()),
+        "list": lambda: (JS_LIST, ()),
+        "switch-workspace": lambda: (JS_SWITCH_WORKSPACE, (args.to,)),
+        "move-workspace": lambda: (JS_MOVE_WORKSPACE, (args.tab_url, args.to)),
+        "create-folder": lambda: (JS_CREATE_FOLDER, ([args.label] + list(args.tab_url_multi),)),
+        "move-folder": lambda: (JS_MOVE_FOLDER, (args.tab_url, args.to)),
+        "leave-folder": lambda: (JS_LEAVE_FOLDER, (args.tab_url,)),
+        "move-folder-space": lambda: (JS_MOVE_FOLDER_SPACE, (args.folder, args.to)),
+        "pin": lambda: (JS_PIN, (args.tab_url, True)),
+        "unpin": lambda: (JS_PIN, (args.tab_url, False)),
+        "move-tab": lambda: (JS_MOVE_TAB, (args.tab_url, args.index)),
     }
-    script, script_args = ops[args.cmd]
+    script, script_args = ops[args.cmd]()
     return client.execute_async(script, script_args)
 
 

@@ -251,7 +251,10 @@ class JsPayloadTests(unittest.TestCase):
         self.assertIn("moveTabToWorkspace", zen_live.JS_MOVE_WORKSPACE)
         self.assertIn('need("gZenWorkspaces")', zen_live.JS_LIST)
         for payload in (zen_live.JS_LIST, zen_live.JS_MOVE_WORKSPACE, zen_live.JS_CREATE_FOLDER):
-            self.assertIn("marionetteScriptFinished", payload)
+            # Async completion is the callback Marionette appends as the
+            # last script argument (marionetteScriptFinished is gone).
+            self.assertIn("arguments[arguments.length - 1](v)", payload)
+            self.assertNotIn("marionetteScriptFinished", payload)
 
 
 class FakeMarionetteServer(threading.Thread):
@@ -276,7 +279,9 @@ class FakeMarionetteServer(threading.Thread):
 
     def run(self):
         conn, _ = self.listener.accept()
-        self._send(conn, b'{"applicationType":"gecko","marionetteProtocol":3}')
+        # The real server sends the greeting as a length-prefixed frame.
+        greeting = b'{"applicationType":"gecko","marionetteProtocol":3}'
+        self._send(conn, str(len(greeting)).encode() + b":" + greeting)
         buf = b""
         while True:
             try:
@@ -294,13 +299,15 @@ class FakeMarionetteServer(threading.Thread):
                 msg = json.loads(rest[:size])
                 buf = rest[size:]
                 self.commands.append(msg[2])
-                if self.mode == "error" and msg[2] == "executeAsyncScript":
+                if self.mode == "error" and msg[2] == "WebDriver:ExecuteAsyncScript":
                     reply = [1, msg[1], {"error": "fake failure"}, None]
                 elif self.mode == "wrongid":
                     reply = [1, msg[1] + 99, None, None]
                 else:
-                    result = {"sessionId": "fake"} if msg[2] == "newSession" else \
-                        {"echoArgs": msg[3].get("args")} if msg[2] == "executeAsyncScript" else None
+                    # WebDriver wraps script results as {"value": ...};
+                    # NewSession returns sessionId/capabilities unwrapped.
+                    result = {"sessionId": "fake", "capabilities": {}} if msg[2] == "WebDriver:NewSession" else \
+                        {"value": {"echoArgs": msg[3].get("args")}} if msg[2] == "WebDriver:ExecuteAsyncScript" else None
                     reply = [1, msg[1], None, result]
                 payload = json.dumps(reply).encode()
                 self._send(conn, str(len(payload)).encode() + b":" + payload)
@@ -320,7 +327,9 @@ class MarionetteClientTests(unittest.TestCase):
         result = client.execute_async("script body", ("a", 1))
         self.assertEqual(result["echoArgs"], ["a", 1])
         client.close()
-        self.assertEqual(server.commands[:3], ["newSession", "setContext", "executeAsyncScript"])
+        self.assertEqual(server.commands[:3],
+                         ["WebDriver:NewSession", "Marionette:SetContext",
+                          "WebDriver:ExecuteAsyncScript"])
 
     def test_split_frames_reassemble(self):
         client, _server = self._client("dribble")
@@ -341,6 +350,18 @@ class MarionetteClientTests(unittest.TestCase):
         with self.assertRaises(zen_live.MarionetteError):
             client.new_session()
         client.sock.close()
+
+    def test_run_op_list_needs_no_other_subcommand_args(self):
+        # Regression (R17 D3): run_op must not dereference arguments
+        # belonging to other subcommands; `list` defines none of them.
+        import argparse
+        client, server = self._client()
+        result = zen_live.run_op(client, argparse.Namespace(cmd="list"))
+        self.assertEqual(result, {"echoArgs": []})
+        client.close()
+        self.assertEqual(server.commands[:3],
+                         ["WebDriver:NewSession", "Marionette:SetContext",
+                          "WebDriver:ExecuteAsyncScript"])
 
 
 if __name__ == "__main__":
