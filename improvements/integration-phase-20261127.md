@@ -434,6 +434,22 @@ unified lane interface stays pilot-first after I23.
   workers, each on its own branch off integration-20261127;
   coordinator merges, gates, lands. Quality gates unchanged
   (unit green, live test, gate, measured numbers).
+- Laptop CLI routing (owner directive 20:20, save parent
+  tokens): implementation/test work routes to laptop CLIs
+  where practical; council+redteam gates and live-test
+  discipline unchanged. Probed live 20:23 (detached,
+  non-interactive, all OK): fcc-claude -p
+  --dangerously-skip-permissions; codex exec --sandbox
+  danger-full-access (codex-cli 0.172.0; herdr present for
+  interactive Codex, never tmux); opencode run -m
+  opencode/deepseek-v4.1-flash-free (opencode/ prefix ONLY).
+  Laptop gh is logged in (phamTuan207); laptop checkout
+  ~/computer-use-wayland exists (todolist-push, has another
+  worker's untracked files, leave alone; use fresh worktrees
+  off origin/integration-20261127 for CLI workers). The 16
+  Muse subagents already running finish as-is; the NEXT
+  wave (pilots, gate rework) routes to laptop CLIs. Mochi
+  gets no new tasks (resting).
 
 ## Sources cited during this phase
 
