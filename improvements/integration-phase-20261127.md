@@ -521,6 +521,14 @@ unified lane interface stays pilot-first after I23.
   snapshot_id; 50 a11y tests OK; live: observe complete,
   ground ok, query carries snapshot_id (first live check
   used query wrong, corrected and re-proven).
+- Codex small batch DONE+MERGED (1a429dd1): M5 rest
+  (XF86Switch_VT_*, Terminate_Server, XF86LogOff, plain
+  Sys_Req refused), I9 matrix ops+exec-bit, session_cleanup
+  --procs-file env-gated, lineage root from __file__,
+  dom-rect guards (out==screenshot refused, non-finite
+  skipped), ledger trailing newline. Verified post-merge:
+  test_core 41/1 pre-existing, dom-rect 3 OK, ledger OK,
+  lineage ok, arch-guard PASS.
 
 ## Sources cited during this phase
 
