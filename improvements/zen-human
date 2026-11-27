@@ -1,0 +1,15 @@
+#!/bin/bash
+# zen-human: launch the owner's Zen profile flag-free (R10 split, Step 1).
+# No automation flags ever: pages must see a normal browser.
+# A background cmdline probe runs 5s after launch and fails loud
+# (log + critical notification) if a NEW flagged human-profile
+# process appeared, which would mean launch-path leakage.
+# The flagged launcher for deliberate agent sessions is zen-ai
+# (escape hatch only, always logged); agent work defaults to
+# dedicated profiles via cli-anything-zen session start.
+PROBE="$HOME/.local/bin/zen-human-probe"
+if [[ -x "$PROBE" ]]; then
+  setsid nohup bash -c "sleep 5; exec \"$PROBE\" --mode cmdline" \
+    >/dev/null 2>&1 </dev/null &
+fi
+exec /opt/zen-browser-bin/zen-bin "$@"
