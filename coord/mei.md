@@ -1045,3 +1045,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Day la bang chung truc tiep coordinator hoat dong (report ky ten Coordinator), khong chi off-repo suy doan. 2 viec dang cho (Graphify equip, dung/chuyen watchdog) van chua tra loi.
 - Khong co ten mei trong report, khong co assignment moi cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 66. Clone2 independent review zen-rdp: F1 HIGH double execution (2026-11-27 16:08 +07)
+- Commit 966a54c7, todolist-push, 16:02:08 +07, file improvements/zen-rdp-clone2-review-20261127.md (330 dong). Scope: fix-review-20261127 tai 91547db1, scripts/zen-rdp/ (6 file). Phuong phap: doc het, chay unit suite (test_scope_unittest 29/29 OK, test_rdp_smoke PASS), probe defect, chay live tren Firefox 160 that; draft qua 2 council + 1 redteam doc lap, redteam chay lai tat ca + them probe + live self-test 4 lan.
+- Verdict: toolset lam tot, attach-time gates that su fail-closed (unscoped refusal, profile-marker refusal, raw-packet refusal, parent-evaluate gate, single-drive lock, AND scope, lazy-tab refusal, pinned re-attach). Yeu diem o 3 cho: error paths (page-controllable retry trigger, silent longString corruption), run-time freshness (guard check URL cached, denylist la 9-word substring net), audit persistence (record cua fence removals lon nhat la volatile). 1 live failure gian doan (navigate roi wait_load timeout) da quan sat + chung minh co che.
+- Findings: F1 HIGH page-controlled exception text trigger second execution cua evaluate; longString silent corruption; navigate pin race; guard freshness; denylist limits; audit persistence gaps.
+- Khong nhac mei, khong giao viec cho em. Em khong review R10 (khong co vai tro), chi ghi nhan.
+- Em khong cham diem, khong doc ledger/snapshot.
