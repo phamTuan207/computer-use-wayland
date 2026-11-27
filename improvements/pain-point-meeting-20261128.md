@@ -138,8 +138,8 @@ named-cause deaths or 2026-12-04).
 ## Decisions: PILOT FIRST (named measurement decides)
 
 - **Shadow-root / same-origin-iframe waits.** Fixture
-  matrix on a dedicated session: target only in an open
-  shadow root, only in a same-origin iframe. Count current
+  matrix on a dedicated session, with the target only in
+  an open shadow root, only in a same-origin iframe. Count current
   wait failures and time the workaround. Build only if
   non-zero in real task shapes, and only with act pool
   scope reconciled in the same change (redteam's wait-act
