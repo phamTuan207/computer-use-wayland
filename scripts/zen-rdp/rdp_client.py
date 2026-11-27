@@ -1828,7 +1828,7 @@ class RDPClient:
         msg = str(exc)
         return any(m in msg for m in cls._REFUSAL_MARKERS)
 
-    def wait_for(self, expr, timeout, poll_interval=0.1):
+    def wait_for(self, expr, timeout, poll_interval=0.1, gone=False):
         """Poll evaluate(expr) until truthy or timeout (I17).
 
         No default timeout at the CLI layer: the caller names the
@@ -1840,7 +1840,16 @@ class RDPClient:
         what the page actually showed. F1 contract: expr must be a
         read-only predicate (it is re-evaluated on every poll tick
         by design, so it is idempotent-by-contract and keeps the
-        RT-06 replay recovery)."""
+        RT-06 replay recovery).
+
+        gone=True inverts the one condition (Mozilla firefox-mcp
+        wait_for semantics, adopted 2026-11-28): poll until expr
+        is falsy and return that falsy value. A transient error is
+        never "gone" (only an observed falsy value counts), and the
+        F11 terminal check runs before a falsy is accepted, so a
+        dead tab raises tab_destroyed instead of falsely reporting
+        the element gone (M8 shape: dead-tab evaluate returns
+        falsy)."""
         deadline = time.monotonic() + timeout
         last = None
         wait_desc = getattr(self, "desc_actor", None)
@@ -1850,21 +1859,43 @@ class RDPClient:
             # the dead tab's console returns falsy, never errors).
             if self._terminal_flag_for(wait_desc) is not None:
                 raise self._tab_destroyed_error(wait_desc, "wait_for")
+            errored = False
             try:
                 last = self.evaluate(expr, timeout=5)
             except Exception as e:
                 if self._is_guard_refusal(e):
                     raise
                 last = None
-            if last:
+                errored = True
+            if not gone and last:
                 return last
             if self._terminal_flag_for(wait_desc) is not None:
                 raise self._tab_destroyed_error(wait_desc, "wait_for")
+            if gone and not errored and not last:
+                return last
             if time.monotonic() >= deadline:
                 raise RDPError(
                     f"wait_for timeout after {timeout}s: {expr!r} "
-                    f"last value {last!r}")
+                    f"gone={gone} last value {last!r}")
             time.sleep(poll_interval)
+
+    def wait_for_selector(self, selector, timeout, gone=False,
+                          poll_interval=0.1):
+        """Wait until elements matching `selector` are present
+        (count > 0), or with gone=True until none remain
+        (count == 0). The count is over the TOP DOCUMENT only
+        (document.querySelectorAll; iframes and shadow DOM are
+        not entered, same pool as act's selector path), and the
+        verdict discloses poolScope so a "gone" here is never
+        mistaken for a whole-tab absence proof. Returns the
+        verdict dict; timeouts raise RDPError via wait_for."""
+        expr = (f"document.querySelectorAll({json.dumps(selector)})"
+                ".length")
+        count = self.wait_for(expr, timeout,
+                              poll_interval=poll_interval, gone=gone)
+        return {"selector": selector,
+                "count": count if isinstance(count, int) else 0,
+                "gone": gone, "poolScope": "top-document"}
 
     def wait_load(self, url_substr, timeout=30):
         deadline = time.monotonic() + timeout
@@ -2333,6 +2364,10 @@ def main():
         p.add_argument("--wait-timeout", type=float, default=None,
                        metavar="SECONDS",
                        help="budget for --wait-for (required with it)")
+        p.add_argument("--wait-gone", action="store_true",
+                       help="invert --wait-for: poll until the "
+                            "expression is falsy (element gone). "
+                            "Requires --wait-for")
     sub.add_parser("spaces")
     sub.add_parser("folders")
     sc = sub.add_parser("space-create")
@@ -2354,6 +2389,11 @@ def main():
     legacy = args.legacy_output
     args.wait_for = getattr(args, "wait_for", None)
     args.wait_timeout = getattr(args, "wait_timeout", None)
+    args.wait_gone = getattr(args, "wait_gone", False)
+    if args.wait_gone and not args.wait_for:
+        return _fail(args.cmd, "wait_gone_requires_wait_for",
+                     "--wait-gone inverts --wait-for and requires it",
+                     "not_delivered", "safe", 2, legacy)
     if args.wait_for and args.wait_timeout is None:
         return _fail(args.cmd, "wait_timeout_required",
                      "--wait-for requires --wait-timeout SECONDS "
@@ -2512,7 +2552,8 @@ def main():
                 c.drive_report_path = None  # already written; avoid rewrite
             if args.wait_for and action_result is not None:
                 try:
-                    waited = c.wait_for(args.wait_for, args.wait_timeout)
+                    waited = c.wait_for(args.wait_for, args.wait_timeout,
+                                        gone=args.wait_gone)
                 except RDPError as e:
                     # Preserve the action's own outcome in result.
                     code, delivery, retry = _classify_error(
@@ -2521,9 +2562,11 @@ def main():
                                  retry, 1, legacy,
                                  result={"action_result": action_result,
                                          "wait": {"status": "timeout",
-                                                  "expr": args.wait_for}})
+                                                  "expr": args.wait_for,
+                                                  "gone": args.wait_gone}})
                 action_result["wait"] = {"status": "satisfied",
                                          "expr": args.wait_for,
+                                         "gone": args.wait_gone,
                                          "value": waited}
                 _emit(args.cmd, action_result, legacy)
             return 0

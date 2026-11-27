@@ -177,6 +177,75 @@ class WaitForTests(unittest.TestCase):
             rc._classify_error("wait_for timeout after 1s: 'x'", "eval"),
             ("wait_timeout", "delivered_unverified", "unsafe"))
 
+    def test_wait_for_gone_returns_first_falsy(self):
+        client = self.make_client([True, 1, 0])
+        self.assertEqual(client.wait_for("x", timeout=5,
+                                         poll_interval=0.01,
+                                         gone=True), 0)
+
+    def test_wait_for_gone_error_is_never_gone(self):
+        # A transient error must not read as "gone": only an
+        # observed falsy value counts. Errors then falsy -> falsy;
+        # errors forever -> timeout.
+        calls = {"n": 0}
+
+        def flaky(expr, timeout=5):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise rc.RDPError("context destroyed")
+            return False
+
+        client = rc.RDPClient.__new__(rc.RDPClient)
+        client.evaluate = flaky
+        self.assertFalse(client.wait_for("x", timeout=5,
+                                         poll_interval=0.01,
+                                         gone=True))
+
+        def always_error(expr, timeout=5):
+            raise rc.RDPError("context destroyed")
+
+        client2 = rc.RDPClient.__new__(rc.RDPClient)
+        client2.evaluate = always_error
+        with self.assertRaisesRegex(rc.RDPError, "wait_for timeout"):
+            client2.wait_for("x", timeout=0.05, poll_interval=0.01,
+                             gone=True)
+
+    def test_wait_for_gone_dead_tab_raises_not_gone(self):
+        # F11 interplay: a destroyed tab's evaluate returns falsy
+        # (M8 shape). gone must raise tab_destroyed, never report
+        # the element gone.
+        client = rc.RDPClient.__new__(rc.RDPClient)
+        client.desc_actor = "server1.conn0.tabDescriptor1"
+        client._terminal_destroyed = {
+            "descriptor": "server1.conn0.tabDescriptor1",
+            "at": "2026-11-28T00:00:00+07:00"}
+        client.evaluate = lambda expr, timeout=5: False
+        with self.assertRaisesRegex(rc.RDPError, "tab destroyed"):
+            client.wait_for("x", timeout=5, poll_interval=0.01,
+                            gone=True)
+
+    def test_wait_for_selector_present_and_gone(self):
+        client = self.make_client([0, 3])
+        verdict = client.wait_for_selector(".banner", timeout=5,
+                                           poll_interval=0.01)
+        self.assertEqual(verdict, {"selector": ".banner", "count": 3,
+                                   "gone": False,
+                                   "poolScope": "top-document"})
+        client = self.make_client([2, 1, 0])
+        verdict = client.wait_for_selector(".banner", timeout=5,
+                                           poll_interval=0.01,
+                                           gone=True)
+        self.assertEqual(verdict["count"], 0)
+        self.assertTrue(verdict["gone"])
+        self.assertEqual(verdict["poolScope"], "top-document")
+
+    def test_cli_wait_gone_requires_wait_for(self):
+        proc = run_cli("--port", "1", "eval", "1", "--wait-gone")
+        self.assertEqual(proc.returncode, 2)
+        env = json.loads(proc.stdout)
+        self.assertEqual(env["error"]["code"],
+                         "wait_gone_requires_wait_for")
+
 
 if __name__ == "__main__":
     unittest.main()
