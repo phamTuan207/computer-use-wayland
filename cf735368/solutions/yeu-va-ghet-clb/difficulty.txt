@@ -1,0 +1,3 @@
+AI-estimated difficulty: Nhan biet
+
+The solution counts occurrences for each ID, then finds the least and greatest counts while applying the smaller-ID tie rule. Constraints are small enough for a straightforward ordered map and scan, so there is no advanced algorithm or significant performance pressure.
