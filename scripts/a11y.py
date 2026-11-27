@@ -114,7 +114,10 @@ def observe(pid,skeleton=False,subtree=None):
             if skeleton or item['actions'] or item.get('editable'):
                 items.append(item)
                 if len(items)>=80:
-                    if skeleton:truncated=bool(count or pending)
+                    # The item cap stops the walk in both modes, so the
+                    # snapshot is incomplete even when nothing is pending
+                    # (the 80th item's children were never queued).
+                    truncated=True
                     break
             limit=min(len(base)+3,12) if skeleton else 12
             if len(path)<limit:
@@ -172,6 +175,7 @@ def query(pid,name=None,role=None,limit=20):
     incomplete=incomplete or len(matched)>limit
     return {'backend':'a11y-query','pid':pid,'app_name':snapshot['app_name'],
             'created':snapshot['created'],'snapshot':snapshot['snapshot'],
+            'snapshot_id':snapshot.get('snapshot_id'),
             'elements':matched[:limit],'matched':len(matched),
             'truncated':bool(snapshot.get('truncated')) or len(matched)>limit,
             'complete':not incomplete,'incomplete':incomplete,'read_errors':errors}
@@ -250,35 +254,43 @@ def wait_actionable(root,item,cap_ms=1000):
     """Auto-wait (I10): poll until the element is enabled, visible
     (when the state exists), and its extents are stable across
     two reads, up to cap_ms. First check is immediate, so a
-    ready element costs one extra extents read. Disabled and
-    stale elements fail fast: resolve() raises at once, before
-    the cap applies, so the cap only absorbs invisible and
-    extents-unstable states. Raises the last failing reason on
-    expiry."""
+    ready element costs one extra extents read. A disabled element
+    is treated as not-yet: it is polled until it enables or the
+    cap expires, then the disabled reason is raised. Stale elements
+    still fail fast: resolve() raises at once, before the cap
+    applies. Raises the last failing reason on expiry."""
     deadline=time.monotonic()+cap_ms/1000.0
     last_reason='not actionable'
     prev_extents=None
     while True:
-        e=resolve(root,item)
-        states=e.get_state_set()
-        visible=True
-        for name in ('VISIBLE','SHOWING'):
-            state=getattr(Atspi.StateType,name,None)
-            if state is not None and not states.contains(state):
-                visible=False
-        if not visible:
-            last_reason='element is not visible'
+        try:
+            e=resolve(root,item)
+        except ValueError as exc:
+            # Only the disabled state is transient; a stale tree or
+            # any other resolve failure must fail fast.
+            if str(exc)!='element is disabled':raise
+            last_reason='element is disabled'
             prev_extents=None
         else:
-            extents=_component_extents(e)
-            if extents is not None and extents==prev_extents:
-                return e
-            if extents is None:
-                # No extents exposed: enabled+visible is all we can
-                # prove; do not block the action on a missing box.
-                return e
-            prev_extents=extents
-            last_reason='element extents not stable'
+            states=e.get_state_set()
+            visible=True
+            for name in ('VISIBLE','SHOWING'):
+                state=getattr(Atspi.StateType,name,None)
+                if state is not None and not states.contains(state):
+                    visible=False
+            if not visible:
+                last_reason='element is not visible'
+                prev_extents=None
+            else:
+                extents=_component_extents(e)
+                if extents is not None and extents==prev_extents:
+                    return e
+                if extents is None:
+                    # No extents exposed: enabled+visible is all we can
+                    # prove; do not block the action on a missing box.
+                    return e
+                prev_extents=extents
+                last_reason='element extents not stable'
         if time.monotonic()>=deadline:
             raise ValueError(last_reason+' (auto-wait cap %dms)'%cap_ms)
         time.sleep(0.02)

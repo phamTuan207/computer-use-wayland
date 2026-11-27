@@ -138,6 +138,26 @@ class SkeletonTests(unittest.TestCase):
         self.assertEqual(last['children_count'],1)
         self.assertEqual(len(self.a11y.drill(out['snapshot'],last['ref'])['elements']),2)
 
+    def test_eighty_item_cap_marks_incomplete_in_default_mode(self):
+        # M7: 80 actionable children, the 80th still has unwalked children
+        # and pending is empty. The cap must mark the snapshot incomplete.
+        def actionable(name,children=()):
+            e=self.node(name,children)
+            iface=mock.Mock()
+            iface.get_n_actions.return_value=1
+            iface.get_action_name.return_value='click'
+            e.get_action_iface.return_value=iface
+            return e
+        children=[actionable(str(i)) for i in range(79)]
+        children.append(actionable('last',[self.node('g%d'%i) for i in range(5)]))
+        self.tree=self.node('app',children)
+        out=self.a11y.observe(4242)
+        self.assertEqual(len(out['elements']),80)
+        self.assertEqual(out['elements'][-1]['children_count'],5)
+        self.assertTrue(out['truncated'])
+        self.assertTrue(out['incomplete'])
+        self.assertFalse(out['complete'])
+
     def test_two_second_budget_preserves_root_drill_ref(self):
         with mock.patch.object(self.a11y.time,'monotonic',side_effect=[0,0,3]):
             out=self.a11y.observe(4242,skeleton=True)

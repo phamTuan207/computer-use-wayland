@@ -177,6 +177,37 @@ class ResolverTests(unittest.TestCase):
             ns['wait_actionable'](self.node(name=''), self.item(),
                                   cap_ms=60)
 
+    def test_wait_actionable_polls_disabled_until_enabled(self):
+        wait = self._wait_actionable([0, 0, 10, 10])
+        root = self.node(name='')
+        calls = {'sensitive': 0}
+
+        def contains(state):
+            if state == self.sensitive:
+                calls['sensitive'] += 1
+                return calls['sensitive'] > 1
+            return state in ('visible', 'showing')
+
+        root.get_state_set.return_value.contains.side_effect = contains
+        self.assertIs(wait(root, self.item(), cap_ms=1000), root)
+        self.assertGreaterEqual(calls['sensitive'], 2)
+
+    def test_wait_actionable_disabled_forever_hits_cap_with_reason(self):
+        wait = self._wait_actionable([0, 0, 10, 10])
+        root = self.node(name='', sensitive=False)
+        start = time.monotonic()
+        with self.assertRaisesRegex(ValueError, 'element is disabled'):
+            wait(root, self.item(), cap_ms=60)
+        self.assertGreaterEqual(time.monotonic() - start, 0.05)
+
+    def test_wait_actionable_stale_still_raises_immediately(self):
+        wait = self._wait_actionable([0, 0, 10, 10])
+        root = self.node(name='changed')
+        start = time.monotonic()
+        with self.assertRaisesRegex(ValueError, 'accessibility tree changed'):
+            wait(root, self.item(), cap_ms=1000)
+        self.assertLess(time.monotonic() - start, 0.5)
+
     def test_none_name_against_old_name_is_stale_not_type_error(self):
         root = self.node(name=None)
         with self.assertRaisesRegex(ValueError, 'accessibility tree changed'):
@@ -617,6 +648,35 @@ class CompletenessTests(unittest.TestCase):
         self.assertFalse(result['snapshot_complete'])
         self.assertEqual(result['snapshot_read_errors'], 1)
         self.assertEqual(result['extents'], [0, 0, 10, 10])
+
+
+class QuerySnapshotIdTests(unittest.TestCase):
+    """I3: a query result carries its source snapshot_id, so callers can
+    form qualified refs from the result alone."""
+
+    def setUp(self):
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef)
+                 and n.name in ('query', '_completeness')]
+        self.snapshot = {'backend': 'a11y', 'pid': 1, 'app_name': 'App',
+                         'created': time.time(), 'snapshot': '/tmp/x.json',
+                         'snapshot_id': 'abc123', 'truncated': False,
+                         'complete': True, 'incomplete': False,
+                         'read_errors': 0,
+                         'elements': [{'ref': 'e1', 'name': 'Save',
+                                       'role': 'push button'}]}
+        self.ns = dict(_pick4=lambda: True,
+                       observe=mock.Mock(return_value=self.snapshot))
+        exec(compile(ast.Module(body=nodes, type_ignores=[]),
+                     'a11y.py', 'exec'), self.ns)
+
+    def test_query_result_carries_snapshot_id(self):
+        result = self.ns['query'](1, name='Save')
+        self.assertEqual(result['snapshot_id'], 'abc123')
+        self.assertEqual(result['snapshot'], '/tmp/x.json')
+        self.assertEqual(result['elements'][0]['ref'], 'e1')
+        self.assertEqual(result['snapshot_id'] + ':' + result['elements'][0]['ref'],
+                         'abc123:e1')
 
 
 if __name__ == '__main__':
