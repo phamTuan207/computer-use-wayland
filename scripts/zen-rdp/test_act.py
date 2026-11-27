@@ -93,11 +93,22 @@ class ScriptContractTests(unittest.TestCase):
         script = rc._act_script({"text": "Action"}, "click")
         self.assertIn('"text": "Action"', script)
         self.assertIn('"action": "click"', script)
-        # Exhaustive count + honest truncation, never a capped count.
+        # Exhaustive count over the top-document pool + honest
+        # truncation, never a capped count.
         self.assertIn("candidatesTruncated", script)
         self.assertIn("SCAN_CAP", script)
         self.assertIn("count !== 1", script)
         self.assertIn("JSON.stringify", script)
+
+    def test_script_discloses_pool_scope(self):
+        # Clone2 final-review BLOCKING 2: the pool is top-document
+        # only (no iframes/shadow DOM); every verdict must say so.
+        script = rc._act_script({"text": "Action"}, "click")
+        self.assertIn("poolScope", script)
+        self.assertIn("top-document", script)
+        self.assertEqual(script.count("poolScope: POOL_SCOPE"),
+                         script.count("JSON.stringify({"),
+                         "every verdict return carries poolScope")
 
     def test_script_never_takes_first_match(self):
         # The only .click() in the script is guarded by count === 1
@@ -123,13 +134,36 @@ class ActVerdictTests(unittest.TestCase):
     def test_unique_target_acts_and_returns_verdict(self):
         client = make_client({"acted": True, "action": "click", "count": 1,
                               "candidatesTruncated": False,
+                              "poolScope": "top-document",
                               "target": {"tag": "button", "role": "button",
                                          "name": "Submit", "text": "Submit"}})
         verdict = client.act({"role": "button", "name": "Submit"}, "click")
         self.assertTrue(verdict["acted"])
         self.assertEqual(verdict["descriptor"]["name"], "Submit")
+        self.assertEqual(verdict["poolScope"], "top-document")
         self.assertEqual(client._actions["act"], 1)
         self.assertEqual(client._act_refusals, [])
+
+    def test_pool_scope_disclosed_on_refusal_and_defaulted(self):
+        # Refusals carry poolScope through to the ActRefusal verdict
+        # and the drive-report refusal record.
+        client = make_client({"acted": False, "reason": "ambiguous",
+                              "count": 2, "candidatesTruncated": False,
+                              "poolScope": "top-document",
+                              "candidates": []})
+        with self.assertRaises(rc.ActRefusal) as ctx:
+            client.act({"text": "Action"}, "click")
+        self.assertEqual(ctx.exception.refusal["poolScope"],
+                         "top-document")
+        self.assertEqual(client._act_refusals[0]["poolScope"],
+                         "top-document")
+        # A verdict missing the field gets the disclosure defaulted
+        # python-side, so no verdict leaves act() without its scope.
+        client = make_client({"acted": True, "action": "click", "count": 1,
+                              "candidatesTruncated": False,
+                              "target": {"tag": "button"}})
+        verdict = client.act({"text": "Go"}, "click")
+        self.assertEqual(verdict["poolScope"], "top-document")
 
     def test_ambiguous_refusal_carries_true_count(self):
         client = make_client({"acted": False, "reason": "ambiguous",
