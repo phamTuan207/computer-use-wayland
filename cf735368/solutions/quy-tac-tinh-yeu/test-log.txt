@@ -1,0 +1,62 @@
+# Test log — Quy Tac Tinh Yeu
+
+All timestamps are Asia/Ho_Chi_Minh (UTC+07:00). Task start: 2026-11-27 07:18:08; elapsed times are measured from that time.
+
+## Step records
+- 2026-11-27 07:18:08 (+00:00): Task started; found long-lived Codex exec PID 106038.
+- 2026-11-27 07:18:11 (+00:03): Acquired the computer-use overlay as Codex PID 106038. Status reported label `Computer use active` and `visible=true`.
+- 2026-11-27 07:18:17 (+00:09): Read the coding instructions and confirmed the target directory was empty.
+- 2026-11-27 07:18:27 (+00:19): Wrote `sol.cpp` and compiled successfully.
+- 2026-11-27 07:18:43 (+00:35): Ran the sample and three self-made cases; all passed.
+
+## Compile
+Command:
+`g++ -O2 -std=c++17 -o /home/james/cf735368-work/quy-tac-tinh-yeu/sol /home/james/cf735368-work/quy-tac-tinh-yeu/sol.cpp`
+
+Result: PASS (exit code 0; executable created).
+
+## Tests
+
+### 1. Sample
+Input:
+```text
+6
+5 8 3 7 9 6
+```
+Hand-computed expected output: `5` (skip first 2; threshold is 8; index 5 has score 9).
+Actual output: `5`
+Result: PASS
+
+### 2. Self-made: minimum n and m=0, maximum score
+Input:
+```text
+1
+1000000000
+```
+Hand-computed expected output: `1` (m=0, threshold=-1, so the only person qualifies).
+Actual output: `1`
+Result: PASS
+
+### 3. Self-made: fallback, integer m, maximum scores
+Input:
+```text
+6
+1000000000 1000000000 7 8 9 10
+```
+Hand-computed expected output: `6` (m=2; no later score exceeds 1000000000, so select n).
+Actual output: `6`
+Result: PASS
+
+### 4. Self-made: qualifying person immediately after survey
+Input:
+```text
+3
+1 1000000000 2
+```
+Hand-computed expected output: `2` (m=1; index 2 exceeds the survey maximum 1).
+Actual output: `2`
+Result: PASS
+
+No failures occurred; no debugging cycle was needed.
+- 2026-11-27 07:19:11 (+01:03): Verified output files; released Codex holder with the same PID 106038. Post-release status still showed a Muse holder (PID null), `visible=true`, label `Computer use active`; no other holder was changed.
+- 2026-11-27 07:19:19 (+01:11): Task artifacts complete; final status recorded.

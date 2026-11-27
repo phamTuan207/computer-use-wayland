@@ -1,0 +1,3 @@
+AI-estimated difficulty: Thong hieu
+
+The solution applies an array scan in two phases: compute the maximum among the first floor(37n/100) scores, then find the first later score that exceeds it, with the last index as fallback. The main edge cases are m=0, integer division in m, and no qualifying score; n <= 10^5 makes a linear scan comfortably sufficient.
