@@ -37,7 +37,7 @@ computer-use cli run chromium -- <command>
 - Chromium installed (`chromium` on PATH).
 - For tab commands: a Chromium with a loopback CDP endpoint, normally
   started by `computer-use browser start` (endpoint
-  `http://127.0.0.1:9222`, dedicated agent profile). Pham Tuan's own
+  `http://127.0.0.1:9222`, dedicated agent profile). the owner's own
   Chromium runs WITHOUT a remote debugging port (verified 2026-11-18:
   no DevToolsActivePort file, nothing listening on 9222), so the
   wrapper can never attach to his session.

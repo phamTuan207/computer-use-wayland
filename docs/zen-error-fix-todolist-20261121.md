@@ -1,5 +1,5 @@
 # TODO LIST SIEU CHI TIET - Fix toan bo loi trong file tong hop + Zen automation
-# Ngay: 21/11/2026. Chu: Pham Tuan.
+# Ngay: 21/11/2026. Owner: the project owner.
 # Nguon: LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md (phan A-I) + LOI-COMPUTER-USE-TU-LICH-SU-CHAT-20261121.md (I1-I46)
 # Nguyen tac: first principles, tim goc sua goc, khong va trieu chung. Khong ep agent theo 1 tu duy, khuyen khich sang tao. Do thoi gian + log moi buoc. Commit nho push nhieu, vai tram commit cung duoc. Mail commit: phamTuan207 (232407559+phamTuan207@users.noreply.github.com).
 

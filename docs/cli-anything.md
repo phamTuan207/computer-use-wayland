@@ -29,7 +29,7 @@ Upstream root `LICENSE` is Apache License 2.0 (verified in the checkout).
 Vendored files are docs only, each carrying the upstream URL and HEAD in
 its header, with the Apache 2.0 notice preserved. Harness code is not
 vendored, so no code-license decision is needed yet. Resolved 2026-11-19:
-Pham Tuan got permission from the repo owner to use CLI-Anything freely,
+The project owner got permission from the repo owner to use CLI-Anything freely,
 so the MIT vs Apache 2.0 flag is cleared. Credit: CLI-Anything is by HKUDS,
 the Data Intelligence Lab at the University of Hong Kong, led by Prof. Chao
 Huang (https://github.com/HKUDS/CLI-Anything, Apache License 2.0).
