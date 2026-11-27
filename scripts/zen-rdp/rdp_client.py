@@ -8,12 +8,25 @@ navigate-to-load polling, latency bench).
 RT-20 additions (enforced IN the tool, not in briefs):
 - Scope set at attach: allowed tab descriptor ids and/or URL glob patterns.
   evaluate/navigate/getTarget on an out-of-scope tab raises RDPError.
-  No scope = legacy behavior, but a loud UNSCOPED warning is printed.
-- Credential-tab denylist: URL patterns from --scope-config (JSON) or the
-  generic defaults below (opt-in via --use-default-denylist; default off).
+  When BOTH tab ids and URL patterns are given, a tab must match BOTH
+  (AND semantics). No scope is REFUSED unless --unscoped-test is passed
+  explicitly (loud warning, recorded in the drive report).
+- Credential-tab denylist: ON by default in the CLI (generic defaults
+  below; --scope-config patterns override them). Disabling requires the
+  explicit --no-denylist flag (loud warning, recorded in the report).
   A denylisted tab is refused even when in scope, unless an explicit
-  approval (--allow-credential-tab + --approval-note) covers that tab id;
-  approvals used are recorded in the drive report.
+  approval (--allow-credential-tab + --approval-note) covers it;
+  approvals used are recorded in the drive report. A tab reporting an
+  empty URL (lazy/unloaded) is treated as denylisted while the denylist
+  is enabled. Approvals may key by tab id or by URL pattern; id-keyed
+  approvals are positional and migrate when tab ids shift, so URL
+  patterns are the robust form.
+- Parent-process target evaluate (chrome JS) is available only with
+  allow_parent=True / --allow-parent; every parent evaluate is recorded
+  in the drive report. Large string results (RDP longString grips) are
+  fetched in full via substring requests for tab and parent evaluates.
+- Single-drive lock: --lock-file (or RDP_LOCK_FILE) flock()s the file
+  for the session; a second client on the same file is refused.
 - Drive report (JSON): webdriver probe, tab list before/after with diff,
   scope used, denylist hits, scope refusals, approvals used, action counts.
   Written to --drive-report on session end, or on demand via `report`.
@@ -33,8 +46,10 @@ Landed fixes (R10 landing integration):
   --allow-unmarked-test-attach flag, which warns loudly.
 """
 import argparse
+import fcntl
 import fnmatch
 import json
+import os
 import re
 import socket
 import subprocess
@@ -42,8 +57,9 @@ import sys
 import time
 from datetime import datetime, timezone
 
-# Generic credential-tab URL fragments (opt-in; denylist is OFF unless a
-# config file supplies patterns or --use-default-denylist is passed).
+# Generic credential-tab URL fragments. The CLI enables these by default;
+# --scope-config patterns override them; --no-denylist disables the
+# denylist explicitly (loud warning, recorded in the drive report).
 DEFAULT_CREDENTIAL_DENYLIST = [
     "login", "signin", "sign-in", "account", "auth", "oauth",
     "password", "checkout", "payment",
@@ -55,6 +71,19 @@ UNSCOPED_WARNING = (
     "--scope-tab-id / --scope-url-pattern (or a --scope-config) to "
     "restrict it. Unscoped mode is for throwaway/test use only."
 )
+
+NO_DENYLIST_WARNING = (
+    "WARNING: credential denylist DISABLED via --no-denylist - "
+    "credential tabs (login/account/payment URLs) are NOT refused in "
+    "this session. This is recorded in the drive report."
+)
+
+# Denylist "pattern" recorded when a tab reports an empty URL (lazy tab).
+LAZY_TAB_PATTERN = "<empty-url-lazy-tab>"
+
+# Packet types that must go through the guarded methods, never raw
+# request() (see RDPClient.request).
+_GUARDED_PACKET_TYPES = ("evaluateJSAsync", "navigateTo")
 
 
 def median(xs):
@@ -100,8 +129,10 @@ class RDPError(Exception):
 class Scope:
     """Allowed tabs for one attached session.
 
-    A tab is in scope when its descriptor id is listed OR its URL matches
-    any URL glob pattern. An empty Scope means unscoped (legacy behavior).
+    AND semantics: when BOTH tab ids and URL patterns are given, a tab
+    must match BOTH (id listed AND URL matches a pattern) to be in
+    scope. When only one kind is given, that kind decides. An empty
+    Scope means unscoped (refused at attach unless unscoped-test).
     """
 
     def __init__(self, tab_ids=None, url_patterns=None):
@@ -115,10 +146,16 @@ class Scope:
     def matches(self, tab_id, url):
         if not self.scoped:
             return True
-        if tab_id is not None and _canon_tab_id(tab_id) in \
-                {_canon_tab_id(t) for t in self.tab_ids}:
-            return True
-        return any(_url_matches(url, p) for p in self.url_patterns)
+        id_ok = None
+        if self.tab_ids:
+            id_ok = tab_id is not None and _canon_tab_id(tab_id) in \
+                {_canon_tab_id(t) for t in self.tab_ids}
+        url_ok = None
+        if self.url_patterns:
+            url_ok = any(_url_matches(url, p) for p in self.url_patterns)
+        if id_ok is not None and url_ok is not None:
+            return id_ok and url_ok
+        return bool(id_ok if id_ok is not None else url_ok)
 
     def to_dict(self):
         return {"scoped": self.scoped, "tab_ids": sorted(self.tab_ids),
@@ -198,26 +235,71 @@ def _tab_snapshot(tabs):
 
 
 def _tab_diff(before, after):
-    b = {t.get("tab_id") or t["actor"]: t for t in before}
-    a = {t.get("tab_id") or t["actor"]: t for t in after}
-    added = [a[k] for k in a if k not in b]
-    removed = [b[k] for k in b if k not in a]
-    navigated = [{"tab_id": k, "from_url": b[k]["url"], "to_url": a[k]["url"]}
-                 for k in a if k in b and a[k]["url"] != b[k]["url"]]
-    return {"added": added, "removed": removed, "navigated": navigated}
+    """Diff two tab snapshots. Descriptor ids are POSITIONAL and shift
+    when tabs open/close, so id-keyed diff is only sound when the id
+    sets are identical. Otherwise key by (url, title) pairs (multiset):
+    a navigation then shows as one removed + one added pair, and
+    `navigated` stays empty (cannot attribute reliably)."""
+    b_ids = [t.get("tab_id") or t["actor"] for t in before]
+    a_ids = [t.get("tab_id") or t["actor"] for t in after]
+    if set(b_ids) == set(a_ids):
+        b = {t.get("tab_id") or t["actor"]: t for t in before}
+        a = {t.get("tab_id") or t["actor"]: t for t in after}
+        navigated = [{"tab_id": k, "from_url": b[k]["url"],
+                      "to_url": a[k]["url"]}
+                     for k in a if a[k]["url"] != b[k]["url"]]
+        return {"added": [], "removed": [], "navigated": navigated,
+                "key_mode": "tab_id"}
+    from collections import Counter
+    b_pairs = Counter((t.get("url", ""), t.get("title", "")) for t in before)
+    a_pairs = Counter((t.get("url", ""), t.get("title", "")) for t in after)
+    added, removed = [], []
+    seen = Counter()
+    for t in after:
+        p = (t.get("url", ""), t.get("title", ""))
+        seen[p] += 1
+        if seen[p] > b_pairs.get(p, 0):
+            added.append(t)
+    seen = Counter()
+    for t in before:
+        p = (t.get("url", ""), t.get("title", ""))
+        seen[p] += 1
+        if seen[p] > a_pairs.get(p, 0):
+            removed.append(t)
+    return {"added": added, "removed": removed, "navigated": [],
+            "key_mode": "url_title"}
 
 
 class RDPClient:
     def __init__(self, port, host="127.0.0.1", timeout=15, scope=None,
                  denylist_patterns=None, credential_approvals=None,
-                 drive_report_path=None, transport=None, warn_unscoped=True):
+                 drive_report_path=None, transport=None, warn_unscoped=True,
+                 unscoped_test=False, allow_parent=False, lock_file=None,
+                 denylist_disabled=False):
         self.port = port
         self.scope = scope if scope is not None else Scope()
         self.denylist_patterns = list(denylist_patterns or [])
         self.credential_approvals = dict(credential_approvals or {})
         self.drive_report_path = drive_report_path
+        self.unscoped_test = bool(unscoped_test)
+        self.allow_parent = bool(allow_parent)
+        self.denylist_disabled = bool(denylist_disabled)
+        if not self.scope.scoped and not self.unscoped_test:
+            raise RDPError(
+                "UNSCOPED REFUSED: no tab scope was given. Pass a scope "
+                "(--scope-tab-id / --scope-url-pattern / --scope-config), "
+                "or pass --unscoped-test explicitly for throwaway/test "
+                "use (loud warning, recorded in the drive report).")
         if warn_unscoped and not self.scope.scoped:
             print(UNSCOPED_WARNING, file=sys.stderr)
+        # Single-drive lock (RT-23 fence): flock the file for the whole
+        # session; refuse to attach when another drive holds it.
+        self.lock_file = lock_file or os.environ.get("RDP_LOCK_FILE") \
+            or None
+        self._lock_fd = None
+        self._lock_holder_pid = None
+        if self.lock_file:
+            self._acquire_lock(self.lock_file)
         if transport is not None:
             self.sock = transport
         else:
@@ -234,11 +316,54 @@ class RDPClient:
         self._pinned_tab_id = None
         self._pinned_url = ""
         self._retries = 0
-        self._actions = {"evaluate": 0, "navigate": 0, "get_target": 0}
+        self._actions = {"evaluate": 0, "navigate": 0, "get_target": 0,
+                         "parent_evaluate": 0}
         self._denylist_hits = []
         self._scope_refusals = []
         self._approvals_used = []
+        self._parent_evals = []
+        self._parent_desc = None
+        self._parent_console = None
+        self.parent_url = None
+        self._internal_call = False  # guarded methods set this (request())
         self._started_at = _now_iso()
+
+    # -- single-drive lock --------------------------------------------------
+    def _acquire_lock(self, path):
+        try:
+            fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+        except OSError as e:
+            raise RDPError(f"cannot open lock file {path!r}: {e}")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            holder = ""
+            try:
+                with open(path) as f:
+                    holder = f.read().strip()
+            except OSError:
+                pass
+            os.close(fd)
+            raise RDPError(
+                f"LOCK REFUSED: lock file {path!r} is already held"
+                + (f" by pid {holder}" if holder else "")
+                + "; refusing to attach (single-drive fence)")
+        try:
+            os.ftruncate(fd, 0)
+            os.write(fd, f"{os.getpid()}\n".encode())
+        except OSError:
+            pass
+        self._lock_fd = fd
+        self._lock_holder_pid = os.getpid()
+
+    def _release_lock(self):
+        if self._lock_fd is not None:
+            try:
+                fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
+                os.close(self._lock_fd)
+            except OSError:
+                pass
+            self._lock_fd = None
 
     # -- scope / denylist guards -------------------------------------------
     def _guard(self, tab_id, url, op):
@@ -252,10 +377,13 @@ class RDPClient:
                 f"of scope (allowed tab ids: {sorted(self.scope.tab_ids)}, "
                 f"url patterns: {self.scope.url_patterns})")
         if self.denylist_patterns:
-            hit = next((p for p in self.denylist_patterns
-                        if _url_matches(url, p)), None)
+            # Lazy/unloaded tabs report url='': no pattern can match, so
+            # treat the empty URL itself as denylisted (fail-closed).
+            hit = LAZY_TAB_PATTERN if not url else next(
+                (p for p in self.denylist_patterns
+                 if _url_matches(url, p)), None)
             if hit is not None:
-                note = self._approval_note(tab_id)
+                note = self._approval_note(tab_id, url)
                 if note is not None:
                     self._approvals_used.append(
                         {"op": op, "tab_id": tab_id, "url": url,
@@ -270,12 +398,19 @@ class RDPClient:
                         f"Pass --allow-credential-tab {tab_id} together "
                         f"with --approval-note <text> to approve explicitly.")
 
-    def _approval_note(self, tab_id):
-        """Approval note for tab_id (canonical match), or None."""
+    def _approval_note(self, tab_id, url=None):
+        """Approval note covering (tab_id, url), or None. Keys match by
+        canonical tab id first, then as URL patterns. Id-keyed approvals
+        are positional (they migrate when tab ids shift); URL-pattern
+        approvals are the robust form."""
         canon = _canon_tab_id(tab_id)
         for k, v in self.credential_approvals.items():
             if _canon_tab_id(k) == canon:
                 return v
+        if url:
+            for k, v in self.credential_approvals.items():
+                if _url_matches(url, k):
+                    return v
         return None
 
     def _guard_current(self, op):
@@ -307,6 +442,16 @@ class RDPClient:
         self.sock.sendall(f"{len(data)}:".encode() + data)
 
     def request(self, obj, expect_from=None, timeout=15, expect_key=None):
+        # Guarded packet types (evaluate/navigate) must go through the
+        # guarded methods, which set _internal_call. Raw request() of
+        # those types is refused so scope cannot be bypassed by sending
+        # packets directly. (The private _send stays internal-only.)
+        if obj.get("type") in _GUARDED_PACKET_TYPES \
+                and not self._internal_call:
+            raise RDPError(
+                f"RAW PACKET REFUSED: request() of type "
+                f"{obj.get('type')!r} must go through the guarded "
+                f"evaluate()/navigate()/parent_evaluate() methods")
         self.sock.settimeout(timeout)
         self._send(obj)
         while True:
@@ -352,14 +497,11 @@ class RDPClient:
         self._current_tab = cur if cur is not None else tabs[sel]
         if self.desc_actor is None:
             self.desc_actor = tabs[sel]["actor"]
-        # Keep the pinned URL fresh (the pinned tab may have navigated).
-        if self._pinned_tab_id:
-            pinned = next(
-                (t for t in tabs
-                 if _canon_tab_id(t.get("actor")) == self._pinned_tab_id),
-                None)
-            if pinned is not None:
-                self._pinned_url = pinned.get("url", "")
+        # NOTE: the pinned URL is deliberately NOT refreshed here.
+        # Descriptor ids are positional; refreshing the pin by id lookup
+        # would follow a shifted id onto a different tab and defeat the
+        # URL verification in _reattach_pinned. The pin updates only in
+        # get_target(), i.e. when we deliberately (re)attach.
         return tabs, sel
 
     def refresh_target(self):
@@ -431,7 +573,10 @@ class RDPClient:
     def _reattach_pinned(self):
         """Re-attach to the SAME tab after a target swap (RT-06: closing
         DevTools kills the held consoleActor once with noSuchActor).
-        Pinned by canonical tab id, URL fallback. Never falls back to
+        Pinned by canonical tab id with URL VERIFICATION: descriptor
+        ids are positional, so an id hit whose URL differs from the
+        pinned URL is a different tab and is refused (fail-closed).
+        URL fallback only when the id is absent. Never falls back to
         the selected tab: selected-pick can land on the wrong tab."""
         pin_id, pin_url = self._pinned_tab_id, self._pinned_url
         if not pin_id and not pin_url:
@@ -441,6 +586,12 @@ class RDPClient:
         if pin_id:
             tab = next((t for t in self._tabs
                         if _canon_tab_id(t.get("actor")) == pin_id), None)
+            if tab is not None and pin_url \
+                    and (tab.get("url") or "") != pin_url:
+                raise RDPError(
+                    f"pinned tab {pin_id!r} url changed {pin_url!r} -> "
+                    f"{tab.get('url')!r} (positional id shift?); refusing "
+                    f"re-attach, refusing selected-tab fallback")
         if tab is None and pin_url:
             tab = next((t for t in self._tabs
                         if (t.get("url") or "") == pin_url), None)
@@ -472,6 +623,37 @@ class RDPClient:
             return grip
         return grip
 
+    def _fetch_long_string(self, grip):
+        """Fetch full text of an RDP longString grip via substring
+        requests (ported from L1 l1_parent.py). Large evaluate results
+        (innerText/outerHTML) arrive as longString grips, not text."""
+        actor = grip.get("actor")
+        length = grip.get("length", 0)
+        parts = []
+        pos = 0
+        while pos < length:
+            end = min(pos + 8000, length)
+            self._send({"to": actor, "type": "substring",
+                        "start": pos, "end": end})
+            while True:
+                m = self._recv()
+                if m.get("from") == actor:
+                    break
+                if m.get("error"):
+                    raise RDPError(f"substring error: {str(m)[:400]}")
+            sub = m.get("substring", "")
+            if isinstance(sub, dict):
+                sub = sub.get("value", "")
+            parts.append(sub)
+            pos = end
+        return "".join(parts)
+
+    def _unwrap_full(self, grip):
+        """_unwrap plus longString fetching (needs the live socket)."""
+        if isinstance(grip, dict) and grip.get("type") == "longString":
+            return self._fetch_long_string(grip)
+        return self._unwrap(grip)
+
     def evaluate(self, expr, timeout=20):
         if not self.console_actor:
             raise RDPError("evaluate before attach (no console actor)")
@@ -497,9 +679,59 @@ class RDPClient:
                 if m.get("exception"):
                     raise RDPError(f"evaluate exception: {str(m)[:400]}")
                 self._actions["evaluate"] += 1
-                return self._unwrap(m.get("result"))
+                return self._unwrap_full(m.get("result"))
             if m.get("error"):
                 raise RDPError(f"evaluate error: {str(m)[:400]}")
+
+    # -- parent-process target (chrome JS, gated) -----------------------------
+    def _open_parent(self):
+        """Resolve the parent-process console actor (cached).
+        Path: listProcesses -> parentProcessTarget getTarget."""
+        if self._parent_console:
+            return
+        procs = self.request({"to": "root", "type": "listProcesses"},
+                             expect_from="root", expect_key="processes")
+        plist = procs.get("processes") or []
+        if not plist:
+            raise RDPError(f"listProcesses returned none: {str(procs)[:400]}")
+        parent = next((p for p in plist if p.get("isParent")), plist[0])
+        self._parent_desc = parent.get("actor")
+        tgt = self.request({"to": self._parent_desc, "type": "getTarget"},
+                           expect_from=self._parent_desc)
+        frame = tgt.get("frame") or tgt.get("target") \
+            or tgt.get("process") or {}
+        self._parent_console = frame.get("consoleActor")
+        self.parent_url = frame.get("url")
+        if not self._parent_console:
+            raise RDPError(
+                f"parent getTarget gave no consoleActor: {str(tgt)[:500]}")
+
+    def parent_evaluate(self, expr, timeout=20):
+        """Evaluate JS in the parent-process (chrome) target. Gated:
+        requires allow_parent=True at construction (CLI --allow-parent).
+        Every call is recorded in the drive report (count + first 80
+        chars of the expression). Chrome JS bypasses tab scope by
+        design; the gate + audit record are the fence."""
+        if not self.allow_parent:
+            raise RDPError(
+                "PARENT EVALUATE REFUSED: parent-process evaluate "
+                "requires allow_parent=True (CLI --allow-parent)")
+        self._open_parent()
+        self._parent_evals.append(
+            {"expr_prefix": expr[:80], "at": _now_iso()})
+        self.sock.settimeout(timeout)
+        self._send({"to": self._parent_console, "type": "evaluateJSAsync",
+                    "text": expr})
+        while True:
+            m = self._recv()
+            if m.get("type") == "evaluationResult":
+                if m.get("exception"):
+                    raise RDPError(
+                        f"parent evaluate exception: {str(m)[:400]}")
+                self._actions["parent_evaluate"] += 1
+                return self._unwrap_full(m.get("result"))
+            if m.get("error"):
+                raise RDPError(f"parent evaluate error: {str(m)[:400]}")
 
     def _navigate_send(self, url):
         """Send navigateTo via target actor, fallback descriptor actor."""
@@ -508,8 +740,12 @@ class RDPClient:
             if not actor:
                 continue
             try:
-                self.request({"to": actor, "type": "navigateTo",
-                              "url": url}, expect_from=actor)
+                self._internal_call = True
+                try:
+                    self.request({"to": actor, "type": "navigateTo",
+                                  "url": url}, expect_from=actor)
+                finally:
+                    self._internal_call = False
                 return
             except Exception as e:
                 last = e
@@ -527,7 +763,7 @@ class RDPClient:
             hit = next((p for p in self.denylist_patterns
                         if _url_matches(url, p)), None)
             if hit is not None:
-                note = self._approval_note(self.desc_actor)
+                note = self._approval_note(self.desc_actor, url)
                 if note is not None:
                     self._approvals_used.append(
                         {"op": "navigate-destination",
@@ -647,8 +883,13 @@ class RDPClient:
             "session_started_at": self._started_at,
             "port": self.port,
             "scope": self.scope.to_dict(),
+            "unscoped_test": self.unscoped_test,
             "denylist": {"enabled": bool(self.denylist_patterns),
+                         "disabled_via_flag": self.denylist_disabled,
                          "patterns": list(self.denylist_patterns)},
+            "parent_evaluates": list(self._parent_evals),
+            "lock": {"file": self.lock_file,
+                     "holder_pid": self._lock_holder_pid},
             "probe": probe,
             "tabs_before": tabs_before,
             "tabs_after": tabs_after,
@@ -681,11 +922,20 @@ class RDPClient:
             self.sock.close()
         except Exception:
             pass
+        self._release_lock()
 
 
 def bench(port, marker, local_url, real_url, runs, scope=None,
           denylist_patterns=None, credential_approvals=None,
-          allow_unmarked_test_attach=False):
+          allow_unmarked_test_attach=False, unscoped_test=False):
+    # bench navigates the attached tab destructively (about:blank,
+    # local, real URLs). It must never run against a real session
+    # without the explicit throwaway opt-in.
+    if not unscoped_test:
+        raise RDPError(
+            "BENCH REFUSED: bench navigates the attached tab "
+            "destructively; pass --unscoped-test explicitly to run it "
+            "(throwaway/test use only)")
     if marker:
         check_port_owner(port, marker)
     elif not allow_unmarked_test_attach:
@@ -694,7 +944,8 @@ def bench(port, marker, local_url, real_url, runs, scope=None,
             "--profile-marker <substring> so the port owner can be "
             "verified before attach")
     kw = {"scope": scope, "denylist_patterns": denylist_patterns,
-          "credential_approvals": credential_approvals}
+          "credential_approvals": credential_approvals,
+          "unscoped_test": True}
     out = {"port": port, "runs": runs,
            "scoped": bool(scope and scope.scoped)}
     # attach-to-first-evaluate: fresh connection each run
@@ -745,7 +996,13 @@ def bench(port, marker, local_url, real_url, runs, scope=None,
 
 
 def _build_scope(args):
-    """Merge --scope-config + CLI flags into (Scope, denylist, approvals)."""
+    """Merge --scope-config + CLI flags into (Scope, denylist, approvals).
+
+    Denylist posture: ON by default (generic defaults). --scope-config
+    credential_denylist_patterns override the defaults. --no-denylist
+    disables explicitly (loud warning in main(), recorded in report).
+    --use-default-denylist is accepted for compatibility (now default).
+    """
     tab_ids, patterns, deny = [], [], None
     if args.scope_config:
         cfg = load_scope_config(args.scope_config)
@@ -754,7 +1011,14 @@ def _build_scope(args):
         deny = cfg["credential_denylist_patterns"]
     tab_ids += list(args.scope_tab_id or [])
     patterns += list(args.scope_url_pattern or [])
-    if args.use_default_denylist and not deny:
+    if getattr(args, "no_denylist", False) \
+            and getattr(args, "use_default_denylist", False):
+        raise RDPError(
+            "--no-denylist and --use-default-denylist conflict; pass "
+            "only one")
+    if getattr(args, "no_denylist", False):
+        deny = []
+    elif not deny:
         deny = list(DEFAULT_CREDENTIAL_DENYLIST)
     approvals = {}
     if args.allow_credential_tab or args.approval_note:
@@ -784,7 +1048,23 @@ def main():
                     help="JSON file: scope_tab_ids, scope_url_patterns, "
                          "credential_denylist_patterns")
     ap.add_argument("--use-default-denylist", action="store_true",
-                    help="enable the generic credential denylist patterns")
+                    help="enable the generic credential denylist patterns "
+                         "(now the default; kept for compatibility)")
+    ap.add_argument("--no-denylist", action="store_true",
+                    help="DISABLE the credential denylist (loud warning; "
+                         "recorded in the drive report)")
+    ap.add_argument("--unscoped-test", action="store_true",
+                    help="allow an UNSCOPED session (throwaway/test use "
+                         "only; loud warning; recorded in drive report). "
+                         "Without a scope and without this flag the CLI "
+                         "refuses to attach.")
+    ap.add_argument("--allow-parent", action="store_true",
+                    help="allow parent-process (chrome JS) evaluate via "
+                         "the peval subcommand (recorded in report)")
+    ap.add_argument("--lock-file", default=None,
+                    help="single-drive lock file (flock for the session; "
+                         "second client refused). Default: RDP_LOCK_FILE "
+                         "env or none. Owner drives must set this.")
     ap.add_argument("--allow-credential-tab", action="append", default=[],
                     help="tab id approved past the denylist (repeatable; "
                          "requires --approval-note)")
@@ -804,6 +1084,8 @@ def main():
     sub.add_parser("report")
     e = sub.add_parser("eval")
     e.add_argument("expr")
+    pe = sub.add_parser("peval")
+    pe.add_argument("expr")
     n = sub.add_parser("navigate")
     n.add_argument("url")
     b = sub.add_parser("bench")
@@ -813,6 +1095,14 @@ def main():
     args = ap.parse_args()
     try:
         scope, deny, approvals = _build_scope(args)
+        if args.no_denylist:
+            print(NO_DENYLIST_WARNING, file=sys.stderr)
+        if not scope.scoped and not args.unscoped_test:
+            print("ERROR: UNSCOPED REFUSED: no tab scope was given. Pass "
+                  "--scope-tab-id / --scope-url-pattern (or a "
+                  "--scope-config), or pass --unscoped-test explicitly "
+                  "for throwaway/test use.", file=sys.stderr)
+            return 2
         if not scope.scoped:
             print(UNSCOPED_WARNING, file=sys.stderr)
         if not args.profile_marker and not args.allow_unmarked_test_attach:
@@ -827,7 +1117,11 @@ def main():
         kw = {"scope": scope, "denylist_patterns": deny,
               "credential_approvals": approvals,
               "drive_report_path": args.drive_report,
-              "warn_unscoped": False}  # main() already warned loudly
+              "warn_unscoped": False,  # main() already warned loudly
+              "unscoped_test": args.unscoped_test,
+              "allow_parent": args.allow_parent,
+              "lock_file": args.lock_file,
+              "denylist_disabled": args.no_denylist}
         if args.cmd == "bench":
             print(json.dumps(bench(args.port, args.profile_marker,
                                    args.local_url, args.real_url,
@@ -835,7 +1129,9 @@ def main():
                                    denylist_patterns=deny,
                                    credential_approvals=approvals,
                                    allow_unmarked_test_attach=
-                                   args.allow_unmarked_test_attach), indent=1))
+                                   args.allow_unmarked_test_attach,
+                                   unscoped_test=args.unscoped_test),
+                             indent=1))
             return 0
         if args.profile_marker:
             pid, _ = check_port_owner(args.port, args.profile_marker)
@@ -854,6 +1150,9 @@ def main():
                 print(json.dumps(c.probe_webdriver(), indent=1))
             elif args.cmd == "eval":
                 print(json.dumps({"result": c.evaluate(args.expr)}, indent=1))
+            elif args.cmd == "peval":
+                print(json.dumps({"result": c.parent_evaluate(args.expr)},
+                                 indent=1))
             elif args.cmd == "navigate":
                 c.navigate(args.url)
                 print(json.dumps({"navigated": args.url}))

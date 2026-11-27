@@ -14,12 +14,15 @@ Checks:
   c  webdriver probe CLEAN, native false (client probe, fail-loud)
   d  evaluate round-trip (1+1 == 2, DOM read sane)
   e  parent-process target: typeof gZenWorkspaces / gBrowser /
-     gZenFolders all "object"
+     gZenFolders all "object" (landed client API, allow_parent gate)
   f  bind is 127.0.0.1-only (ss)
   g  latency spot numbers (informational, never fails the run)
+  h  navigate the attached tab to about:blank and wait-load
+     (proves navigateTo still works post-update). NOTE: (h) replaces
+     the attached tab content; run smoke on a throwaway/tasked tab.
 
 Exit codes: 0 pass, 2 setup/usage, 10 owner, 11 attach, 12 probe,
-13 evaluate, 14 parent target, 15 bind.
+13 evaluate, 14 parent target, 15 bind, 16 navigate.
 
 Stdlib only. Reuses rdp_client.py (same directory) for attach,
 evaluate, and the webdriver probe. Sends no OS input; ydotool is
@@ -48,7 +51,8 @@ except ImportError as e:
     sys.exit(2)
 
 EXIT = {"setup": 2, "a_port_owner": 10, "b_attach": 11, "c_webdriver": 12,
-        "d_evaluate": 13, "e_parent_target": 14, "f_bind": 15}
+        "d_evaluate": 13, "e_parent_target": 14, "f_bind": 15,
+        "h_navigate": 16}
 
 PARENT_GLOBALS = ("gZenWorkspaces", "gBrowser", "gZenFolders")
 
@@ -71,37 +75,11 @@ def parse_bind(ss_text, port):
 
 
 def parent_evaluate(client, expr, timeout=10):
-    """Evaluate in the parent-process (chrome) target. Raises RDPError."""
-    procs = client.request({"to": "root", "type": "listProcesses"},
-                           expect_from="root", expect_key="processes")
-    plist = procs.get("processes") or []
-    if not plist:
-        raise RDPError(f"listProcesses returned none: {str(procs)[:300]}")
-    pdesc = None
-    for p in plist:
-        if p.get("isParent"):
-            pdesc = p.get("actor")
-            break
-    if not pdesc:
-        pdesc = plist[0].get("actor")
-    if not pdesc:
-        raise RDPError(f"no process actor in {str(plist)[:300]}")
-    tgt = client.request({"to": pdesc, "type": "getTarget"},
-                         expect_from=pdesc)
-    frame = tgt.get("frame") or tgt.get("target") or tgt.get("process") or {}
-    pconsole = frame.get("consoleActor")
-    if not pconsole:
-        raise RDPError(f"parent getTarget gave no consoleActor: {str(tgt)[:300]}")
-    client.sock.settimeout(timeout)
-    client._send({"to": pconsole, "type": "evaluateJSAsync", "text": expr})
-    while True:
-        m = client._recv()
-        if m.get("type") == "evaluationResult":
-            if m.get("exception"):
-                raise RDPError(f"parent evaluate exception: {str(m)[:300]}")
-            return RDPClient._unwrap(m.get("result")), frame.get("url")
-        if m.get("error"):
-            raise RDPError(f"parent evaluate error: {str(m)[:300]}")
+    """Evaluate in the parent-process (chrome) target via the landed
+    client API (gated by allow_parent, recorded in the drive report).
+    Returns (value, parent_url). Raises RDPError."""
+    value = client.parent_evaluate(expr, timeout=timeout)
+    return value, client.parent_url
 
 
 def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
@@ -133,7 +111,13 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
     client = None
     try:
         t0 = time.monotonic()
-        client = RDPClient(port, host=host, timeout=timeout)
+        # Smoke is a gate tool: it attaches to the selected tab
+        # unscoped (explicit unscoped_test opt-in) and uses the parent
+        # target for read-only typeof checks (explicit allow_parent).
+        # Denylist stays off here; scoped agent drives enforce it.
+        client = RDPClient(port, host=host, timeout=timeout,
+                           unscoped_test=True, allow_parent=True,
+                           denylist_patterns=[], warn_unscoped=False)
         client.attach()
         first = client.evaluate("1+1")
         attach_ms = ms(time.monotonic() - t0)
@@ -192,6 +176,15 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
             report["checks"]["f_bind"] = {"status": "PASS", **detail}
         except Exception as e:
             return fail("f_bind", e)
+
+        # (h) navigate the attached tab to about:blank and wait-load
+        try:
+            client.navigate("about:blank")
+            loaded = client.wait_load("about:blank", timeout=10)
+            report["checks"]["h_navigate"] = {
+                "status": "PASS", "loaded": loaded}
+        except Exception as e:
+            return fail("h_navigate", e)
 
         # (g) latency spot numbers (informational)
         xs = []

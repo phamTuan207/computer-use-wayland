@@ -20,22 +20,36 @@ repo default.
 
 - `rdp_client.py` - RDP client with tool-enforced tab scoping
   (RT-20): per-session tab scope (descriptor ids and/or URL glob
-  patterns), credential-tab denylist with explicit approvals, JSON
-  drive report (probe, tab diff, refusals, approvals, action counts,
-  retry count). Fail-closed port-owner guard: an explicit
-  `--profile-marker` is required before attach (test-only escape:
-  `--allow-unmarked-test-attach`, warns loudly). Tab-pinned
-  re-attach: when a target swap (e.g. DevTools close) kills the held
-  console actor with `noSuchActor`, evaluate/navigate re-attach to
-  the same tab (canonical descriptor id, URL fallback, never
-  selected-pick) and retry once (RT-06).
+  patterns; AND semantics when both are given), credential-tab
+  denylist with explicit approvals (ON by default in the CLI;
+  `--scope-config` patterns override; `--no-denylist` disables with
+  a loud warning recorded in the report; lazy tabs reporting an
+  empty URL count as denylisted), JSON drive report (probe, tab
+  diff, refusals, approvals, action counts, retry count, parent
+  evaluates, lock holder). Unscoped sessions are refused unless
+  `--unscoped-test` is passed explicitly (throwaway/test only).
+  Parent-process (chrome JS) evaluate requires `--allow-parent` and
+  is audited in the drive report. Raw `request()` refuses
+  evaluate/navigate packet types; they must go through the guarded
+  methods. Large string results (longString grips) are fetched in
+  full. Single-drive lock: `--lock-file` / `RDP_LOCK_FILE` flock()s
+  the file for the session and refuses a second client. Fail-closed
+  port-owner guard: an explicit `--profile-marker` is required
+  before attach (test-only escape: `--allow-unmarked-test-attach`,
+  warns loudly). Tab-pinned re-attach: when a target swap (e.g.
+  DevTools close) kills the held console actor with `noSuchActor`,
+  evaluate/navigate re-attach to the same tab (canonical descriptor
+  id with URL verification, URL fallback, never selected-pick) and
+  retry once (RT-06).
 - `rdp_smoke.py` - per-update smoke test (RT-05/RT-18). Runs after
   every Zen update, before agent use resumes. Fail-loud, fail-closed:
   stops at the first failed check, prints one JSON object, exits with
   a distinct nonzero code per check (port owner, attach, webdriver
-  probe, evaluate, parent-target Zen internals, loopback bind;
-  latency is informational). Takes `--port` and `--profile-marker`
-  as required arguments; it never guesses a port.
+  probe, evaluate, parent-target Zen internals, loopback bind,
+  navigate to about:blank; latency is informational). Takes `--port`
+  and `--profile-marker` as required arguments; it never guesses a
+  port. The navigate check replaces the attached tab content: run
+  smoke on a throwaway or tasked tab, never a valued owner tab.
 - `test_scope_unittest.py` - unit tests (fake transport, no browser):
   scoping, denylist + approvals, drive-report diff, fail-closed
   marker, noSuchActor retry pinning.
@@ -57,6 +71,12 @@ Everything machine-specific lives on the laptop machine layer only:
 - Scope-config JSON files (real scope patterns and credential-tab
   denylist entries; the schema and generic defaults are in
   `rdp_client.py`).
+- The registry-driven wrapper path for owner drives MUST set
+  `--lock-file` (or `RDP_LOCK_FILE`) so exactly one drive holds the
+  owner session at a time, and MUST pass a scope plus the denylist
+  (default-on) for every owner drive. `--unscoped-test`,
+  `--no-denylist`, and `--allow-unmarked-test-attach` are forbidden
+  on the owner channel.
 - Drive reports and smoke JSON output (they carry tab lists, URLs,
   pids, and cmdlines).
 

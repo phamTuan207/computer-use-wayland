@@ -2,7 +2,8 @@
 """Unit test for rdp_smoke pure logic (no browser needed).
 
 Covers parse_bind (loopback pass / wildcard fail / missing fail)
-and the exit-code map (distinct code per failed check).
+and the exit-code map (distinct code per failed check, including
+h_navigate = 16).
 Run: python3 test_rdp_smoke.py
 Ports below are arbitrary examples for the pure-logic test only.
 """
@@ -45,6 +46,7 @@ def main():
     codes = list(EXIT.values())
     assert len(codes) == len(set(codes)), f"exit codes not distinct: {EXIT}"
     assert 0 not in codes, "0 is reserved for PASS"
+    assert EXIT.get("h_navigate") == 16, f"navigate check code: {EXIT}"
     print("test_rdp_smoke: PASS (5 bind cases, distinct exit codes)")
     return 0
 

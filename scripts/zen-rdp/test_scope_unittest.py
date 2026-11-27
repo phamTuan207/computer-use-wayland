@@ -2,10 +2,13 @@
 """RT-20 scope tests for rdp_client.py (stdlib unittest, fake transport).
 
 Covers: in-scope evaluate ok, out-of-scope refused (id + URL pattern),
-denylist refused, denylist+approval ok and logged, unscoped warning,
-drive-report diff correctness, CLI approval-pair validation, fail-closed
-profile marker, and tab-pinned noSuchActor retry (RT-06: DevTools close
-swaps the tab target and kills the held consoleActor once).
+AND scope semantics, denylist refused (incl. lazy empty-URL tabs),
+denylist+approval ok and logged (id- and URL-pattern-keyed), unscoped
+refused without explicit opt-in, drive-report diff (id-keyed and
+url/title-keyed), CLI approval-pair validation, fail-closed profile
+marker, tab-pinned noSuchActor retry with URL verification (RT-06),
+raw request() packet guard, parent-evaluate gate + audit, longString
+fetching, single-drive lock, and bench refusal without --unscoped-test.
 
 Run: python3 -m unittest test_scope_unittest -v
 No browser needed. ydotool is banned (not used).
@@ -18,8 +21,8 @@ import sys
 import unittest
 from contextlib import redirect_stderr
 
-from rdp_client import (DEFAULT_CREDENTIAL_DENYLIST, RDPClient, RDPError,
-                        Scope)
+from rdp_client import (DEFAULT_CREDENTIAL_DENYLIST, LAZY_TAB_PATTERN,
+                        RDPClient, RDPError, Scope, _build_scope, bench)
 
 TAB_A = "server1.conn0.tabDescriptor1"   # http://localhost/page-a.html
 TAB_B = "server1.conn0.tabDescriptor2"   # http://localhost/page-b.html
@@ -85,6 +88,13 @@ class FakeRDPTransport:
         to = req.get("to")
         if t == "listTabs":
             self._reply({"from": "root", "tabs": self.tabs, "selected": 0})
+        elif t == "listProcesses":
+            self._reply({"from": "root", "processes": [
+                {"actor": "server1.conn0.processDescriptor1",
+                 "isParent": True}]})
+        elif t == "substring":
+            n = int(req.get("end", 0)) - int(req.get("start", 0))
+            self._reply({"from": to, "substring": "x" * max(n, 0)})
         elif t == "getTarget":
             self._reply({"from": to, "frame": {
                 "actor": to + ".target",
@@ -117,6 +127,12 @@ class FakeRDPTransport:
     def _eval(expr):
         if expr == "1+1":
             return {"type": "number", "value": 2}
+        if "repeat" in expr:
+            return {"type": "longString",
+                    "actor": "server1.conn0.longString1",
+                    "length": 20000, "initial": ""}
+        if expr.startswith("typeof ") and "navigator" not in expr:
+            return {"type": "string", "value": "object"}
         if expr == "navigator.webdriver":
             return {"type": "boolean", "value": False}
         if expr == "typeof navigator.webdriver":
@@ -197,9 +213,14 @@ class TestScope(unittest.TestCase):
         c.close()
 
     def test_unscoped_warning(self):
+        # No scope and no opt-in: refused at construction.
+        with self.assertRaises(RDPError) as cm:
+            make_client()
+        self.assertIn("UNSCOPED REFUSED", str(cm.exception))
+        # Explicit opt-in: warns loudly and proceeds.
         err = io.StringIO()
         with redirect_stderr(err):
-            c = make_client()
+            c = make_client(unscoped_test=True)
         self.assertIn("UNSCOPED", err.getvalue())
         c.close()
         err = io.StringIO()
@@ -212,7 +233,9 @@ class TestScope(unittest.TestCase):
         fake = FakeRDPTransport()
         c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_A]))
         c.attach(TAB_A)
-        # Mutate the world: B navigates, C closes, D opens.
+        # Mutate the world: B navigates, C closes, D opens. Id sets
+        # differ, so the diff keys by (url, title): B's navigation
+        # shows as removed old pair + added new pair.
         fake.tabs[1]["url"] = "http://localhost/page-b2.html"
         del fake.tabs[2]
         fake.tabs.append({"actor": "server1.conn0.tabDescriptor4",
@@ -220,13 +243,28 @@ class TestScope(unittest.TestCase):
                           "title": "Page D", "selected": False})
         report = c.drive_report()
         diff = report["tab_diff"]
-        self.assertEqual([t["actor"] for t in diff["added"]],
-                         ["server1.conn0.tabDescriptor4"])
-        self.assertEqual([t["actor"] for t in diff["removed"]], [TAB_C])
-        self.assertEqual(len(diff["navigated"]), 1)
-        self.assertEqual(diff["navigated"][0]["tab_id"], "tabDescriptor2")
+        self.assertEqual(diff["key_mode"], "url_title")
+        self.assertEqual(sorted(t["actor"] for t in diff["added"]),
+                         [TAB_B, "server1.conn0.tabDescriptor4"])
+        self.assertEqual(sorted(t["actor"] for t in diff["removed"]),
+                         [TAB_B, TAB_C])
+        self.assertEqual(diff["navigated"], [])
         self.assertEqual(report["probe"]["verdict"], "CLEAN")
         self.assertTrue(report["scope"]["scoped"])
+        c.close()
+
+    def test_drive_report_diff_id_keyed_when_ids_identical(self):
+        fake = FakeRDPTransport()
+        c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_A]))
+        c.attach(TAB_A)
+        fake.tabs[1]["url"] = "http://localhost/page-b2.html"
+        report = c.drive_report()
+        diff = report["tab_diff"]
+        self.assertEqual(diff["key_mode"], "tab_id")
+        self.assertEqual(diff["added"], [])
+        self.assertEqual(diff["removed"], [])
+        self.assertEqual(len(diff["navigated"]), 1)
+        self.assertEqual(diff["navigated"][0]["tab_id"], "tabDescriptor2")
         c.close()
 
     def test_canon_tab_id_across_connections(self):
@@ -253,8 +291,17 @@ class TestScope(unittest.TestCase):
         self.assertIn("must be passed together", r.stderr)
 
     def test_cli_unscoped_warning_and_error_exit(self):
+        # No scope, no --unscoped-test: refused before any connection.
         r = subprocess.run(
             [sys.executable, "rdp_client.py", "--port", "1", "probe"],
+            capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("UNSCOPED REFUSED", r.stderr)
+        self.assertIn("ERROR:", r.stderr)
+        # With --unscoped-test: warns loudly, then fails on dead port.
+        r = subprocess.run(
+            [sys.executable, "rdp_client.py", "--port", "1",
+             "--unscoped-test", "--allow-unmarked-test-attach", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)
         self.assertIn("UNSCOPED", r.stderr)
@@ -262,8 +309,10 @@ class TestScope(unittest.TestCase):
 
     def test_cli_marker_fail_closed(self):
         # No marker and no test escape: refused before any connection.
+        # (--unscoped-test passed so the marker check is what fires.)
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1", "probe"],
+            [sys.executable, "rdp_client.py", "--port", "1",
+             "--unscoped-test", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)
         self.assertIn("profile marker is required (fail-closed)",
@@ -271,11 +320,36 @@ class TestScope(unittest.TestCase):
         # Test-only escape: warns loudly, then fails on the dead port.
         r = subprocess.run(
             [sys.executable, "rdp_client.py", "--port", "1",
+             "--unscoped-test",
              "--allow-unmarked-test-attach", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)
         self.assertIn("TEST-ONLY unmarked attach", r.stderr)
         self.assertIn("ERROR:", r.stderr)
+
+    def test_cli_bench_refused_without_unscoped_test(self):
+        r = subprocess.run(
+            [sys.executable, "rdp_client.py", "--port", "1",
+             "--allow-unmarked-test-attach", "bench",
+             "--local-url", "http://localhost/slice.html"],
+            capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("ERROR:", r.stderr)
+
+    def test_build_scope_denylist_default_on(self):
+        import types
+        args = types.SimpleNamespace(
+            scope_config=None, scope_tab_id=[], scope_url_pattern=[],
+            use_default_denylist=False, no_denylist=False,
+            allow_credential_tab=[], approval_note=None)
+        _scope, deny, _appr = _build_scope(args)
+        self.assertEqual(deny, DEFAULT_CREDENTIAL_DENYLIST)
+        args.no_denylist = True
+        _scope, deny, _appr = _build_scope(args)
+        self.assertEqual(deny, [])
+        args.use_default_denylist = True
+        with self.assertRaises(RDPError):
+            _build_scope(args)
 
 
 class TestNoSuchActorRetry(unittest.TestCase):
@@ -332,6 +406,136 @@ class TestNoSuchActorRetry(unittest.TestCase):
         with self.assertRaises(RDPError) as cm:
             c.evaluate("1+1")
         self.assertIn("refusing selected-tab fallback", str(cm.exception))
+        c.close()
+
+
+class TestHardening(unittest.TestCase):
+    """L7 hardening: AND scope, lazy tabs, raw-packet guard, parent
+    gate, longString, lock, bench gate."""
+
+    def test_scope_and_semantics(self):
+        # Both id and URL given: TAB_A id matches but URL pattern does
+        # not -> refused. TAB_B URL matches but id does not -> refused.
+        c = make_client(scope=Scope(tab_ids=[TAB_A],
+                                    url_patterns=["*page-b*"]))
+        with self.assertRaises(RDPError) as cm:
+            c.attach(TAB_A)
+        self.assertIn("SCOPE REFUSED", str(cm.exception))
+        with self.assertRaises(RDPError):
+            c.get_target(TAB_B)
+        c.close()
+        # Both match -> ok.
+        c = make_client(scope=Scope(tab_ids=[TAB_A],
+                                    url_patterns=["*page-a*"]))
+        c.attach(TAB_A)
+        self.assertEqual(c.evaluate("1+1"), 2)
+        c.close()
+
+    def test_lazy_tab_empty_url_denylisted(self):
+        tabs = [{"actor": TAB_A, "url": "", "title": "Lazy",
+                 "selected": True}]
+        c = make_client(transport=FakeRDPTransport(tabs),
+                        scope=Scope(tab_ids=[TAB_A]),
+                        denylist_patterns=list(DEFAULT_CREDENTIAL_DENYLIST))
+        with self.assertRaises(RDPError) as cm:
+            c.attach(TAB_A)
+        self.assertIn("CREDENTIAL TAB REFUSED", str(cm.exception))
+        self.assertEqual(c._denylist_hits[0]["pattern"], LAZY_TAB_PATTERN)
+        c.close()
+        # Explicit approval covers the lazy tab.
+        c = make_client(transport=FakeRDPTransport(
+                            [dict(t) for t in tabs]),
+                        scope=Scope(tab_ids=[TAB_A]),
+                        denylist_patterns=list(DEFAULT_CREDENTIAL_DENYLIST),
+                        credential_approvals={TAB_A: "lazy ok"})
+        c.attach(TAB_A)
+        self.assertEqual(c.evaluate("1+1"), 2)
+        c.close()
+
+    def test_approval_by_url_pattern(self):
+        c = make_client(
+            scope=Scope(tab_ids=[TAB_C]),
+            denylist_patterns=list(DEFAULT_CREDENTIAL_DENYLIST),
+            credential_approvals={"*login*": "url-keyed approval"})
+        c.attach(TAB_C)
+        self.assertEqual(c.evaluate("1+1"), 2)
+        self.assertTrue(c._approvals_used)
+        c.close()
+
+    def test_raw_request_guarded_types_refused(self):
+        c = make_client(scope=Scope(tab_ids=[TAB_A]))
+        c.attach(TAB_A)
+        with self.assertRaises(RDPError) as cm:
+            c.request({"to": c.console_actor, "type": "evaluateJSAsync",
+                       "text": "1+1"})
+        self.assertIn("RAW PACKET REFUSED", str(cm.exception))
+        with self.assertRaises(RDPError):
+            c.request({"to": c.desc_actor, "type": "navigateTo",
+                       "url": "http://localhost/page-b.html"})
+        # Guarded methods still work.
+        self.assertEqual(c.evaluate("1+1"), 2)
+        c.close()
+
+    def test_parent_evaluate_gate_and_audit(self):
+        c = make_client(scope=Scope(tab_ids=[TAB_A]))
+        c.attach(TAB_A)
+        with self.assertRaises(RDPError) as cm:
+            c.parent_evaluate("typeof gBrowser")
+        self.assertIn("PARENT EVALUATE REFUSED", str(cm.exception))
+        c.close()
+        c = make_client(scope=Scope(tab_ids=[TAB_A]), allow_parent=True)
+        c.attach(TAB_A)
+        self.assertEqual(c.parent_evaluate("typeof gBrowser"), "object")
+        report = c.drive_report()
+        self.assertEqual(len(report["parent_evaluates"]), 1)
+        self.assertEqual(report["parent_evaluates"][0]["expr_prefix"],
+                         "typeof gBrowser")
+        self.assertEqual(report["actions"]["parent_evaluate"], 1)
+        c.close()
+
+    def test_long_string_tab_evaluate(self):
+        c = make_client(scope=Scope(tab_ids=[TAB_A]))
+        c.attach(TAB_A)
+        v = c.evaluate("'x'.repeat(20000)")
+        self.assertIsInstance(v, str)
+        self.assertEqual(len(v), 20000)
+        c.close()
+
+    def test_lock_refuses_second_client(self):
+        import tempfile
+        import os
+        path = os.path.join(tempfile.mkdtemp(), "drive.lock")
+        c1 = make_client(scope=Scope(tab_ids=[TAB_A]), lock_file=path)
+        with self.assertRaises(RDPError) as cm:
+            make_client(scope=Scope(tab_ids=[TAB_A]), lock_file=path)
+        self.assertIn("LOCK REFUSED", str(cm.exception))
+        report = c1.drive_report()
+        self.assertEqual(report["lock"]["file"], path)
+        self.assertEqual(report["lock"]["holder_pid"], os.getpid())
+        c1.close()
+        # After release, a new client can take the lock.
+        c2 = make_client(scope=Scope(tab_ids=[TAB_A]), lock_file=path)
+        c2.close()
+
+    def test_bench_refused_without_unscoped_test(self):
+        with self.assertRaises(RDPError) as cm:
+            bench(1, None, "http://localhost/slice.html",
+                  "https://example.com/", 1,
+                  allow_unmarked_test_attach=True)
+        self.assertIn("BENCH REFUSED", str(cm.exception))
+
+    def test_reattach_url_mismatch_refused(self):
+        fake = FakeRDPTransport()
+        c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_B]))
+        c.attach(TAB_B)
+        # Positional shift: TAB_B's id now shows a different URL.
+        for t in fake.tabs:
+            if t["actor"] == TAB_B:
+                t["url"] = "http://localhost/other.html"
+        fake.fail_evals = 1
+        with self.assertRaises(RDPError) as cm:
+            c.evaluate("1+1")
+        self.assertIn("refusing", str(cm.exception))
         c.close()
 
 

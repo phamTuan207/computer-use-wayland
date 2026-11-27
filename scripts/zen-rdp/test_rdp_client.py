@@ -47,7 +47,9 @@ def main():
     try:
         pid, _ = check_port_owner(args.port, args.profile_marker)
         checks.append(f"port-owner pid={pid} marker ok")
-        c = RDPClient(args.port)
+        # Throwaway self-test: explicit unscoped opt-in (gate tool).
+        c = RDPClient(args.port, unscoped_test=True,
+                      denylist_patterns=[], warn_unscoped=False)
         c.attach()
         checks.append(f"attach ok desc={c.desc_actor} console={c.console_actor}")
         v = c.evaluate("1+1")
