@@ -50,21 +50,35 @@ class RecordingResult(unittest.TextTestResult):
         super().__init__(*a, **kw)
         self.outcomes = {}
 
+    @staticmethod
+    def qualified_id(test):
+        tid = test.id()
+        if "." not in tid:
+            # FunctionTestCase ids are bare function names; two
+            # modules can define the same name (test_cli_exit_codes
+            # exists in both test_phase3_brief and
+            # test_phase3_cleanup). Qualify with the function module.
+            func = getattr(test, "_testFunc", None)
+            module = getattr(func, "__module__", None) or \
+                type(test).__module__
+            tid = module + "." + tid
+        return tid
+
     def addSuccess(self, test):
         super().addSuccess(test)
-        self.outcomes[test.id()] = "ok"
+        self.outcomes[self.qualified_id(test)] = "ok"
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
-        self.outcomes[test.id()] = "fail"
+        self.outcomes[self.qualified_id(test)] = "fail"
 
     def addError(self, test, err):
         super().addError(test, err)
-        self.outcomes[test.id()] = "error"
+        self.outcomes[self.qualified_id(test)] = "error"
 
     def addSkip(self, test, reason):
         super().addSkip(test, reason)
-        self.outcomes[test.id()] = "skip"
+        self.outcomes[self.qualified_id(test)] = "skip"
 
 
 def run_suite(suite):
@@ -137,9 +151,11 @@ def run_subprocess(args, env=None, timeout=1800):
     outcomes = {}
     for line in proc.stdout.splitlines():
         if line.startswith("@@RESULT@@ "):
-            parts = line.split(" ", 2)
-            if len(parts) == 3:
-                outcomes[parts[1]] = parts[2]
+            # Status is the last word; a test id may itself contain
+            # spaces (str()-format ids), so split from the right.
+            tid, sep, status = line[len("@@RESULT@@ "):].rpartition(" ")
+            if sep:
+                outcomes[tid] = status
     return outcomes, wall, proc
 
 
@@ -231,9 +247,10 @@ def cmd_shard(args):
         out, _ = p.communicate(timeout=args.timeout)
         for line in out.splitlines():
             if line.startswith("@@RESULT@@ "):
-                parts = line.split(" ", 2)
-                if len(parts) == 3:
-                    outcomes[parts[1]] = parts[2]
+                tid, sep, status = \
+                    line[len("@@RESULT@@ "):].rpartition(" ")
+                if sep:
+                    outcomes[tid] = status
     if serial_only:
         extra, _wall, _proc = run_subprocess(
             ["run", "--start-dir", args.start_dir,
