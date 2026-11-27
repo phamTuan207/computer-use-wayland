@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LEDGER = Path(__file__).resolve().parent / "ledger.jsonl"
+LEDGER = (Path(sys.argv[1]) if len(sys.argv) > 1
+          else Path(__file__).resolve().parent / "ledger.jsonl")
 REQUIRED = ("date", "probe", "question", "result", "output", "verdict")
 
 

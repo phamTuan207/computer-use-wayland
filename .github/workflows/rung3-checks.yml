@@ -24,3 +24,5 @@ jobs:
         run: python3 rung3-ci/arch-guard.py
       - name: Hermetic suite gate (no stripped-env-only failures)
         run: python3 rung3-ci/test-discover.py hermetic --timeout 1800
+      - name: M14 probe gate (frozen Y1b suite + ledger row, ledger mode)
+        run: python3 probes/probe-gate.py
