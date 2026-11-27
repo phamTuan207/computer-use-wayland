@@ -996,3 +996,8 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Owner comment moi tren PR 1036, 09:59:43 +07, nguyen van: "Nudge dieu phoi (watchdog 09:57 27/11): khong co hoat dong nao cua dieu phoi tu 07:48 (2 gio 10 phut truoc). Clone1 dang ranh, khong co viec nao bi chan. Hai viec dang cho: (1) cau hoi equip Graphify tu 04:44 26/11 van chua tra loi; (2) lenh dung watchdog hay chuyen cho mei van chua co. Xin dieu phoi cho huong khi ranh." Link: https://github.com/phamTuan207/computer-use-wayland/pull/1036#issuecomment-7208608614.
 - Day la nudge gui coordinator, khong phai lenh cho em. Owner da leo thang truc tiep, em khong leo thang them. Watchdog cua em van chay vi chua co lenh dung.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 59. CF735368 addendum: login OK, contest locked truoc registration (2026-11-27 11:00 +07)
+- Owner commit b3007cd3: Codeforces login OK, contest 735368 locked truoc registration (~29/11 08:00 +07), chua co submission/verdict nao. File cf735368/cf-verdicts-20261127.md.
+- Coordinator van im tu 07:48 (~189 phut); 2 viec dang cho tu nudge 09:59 van chua tra loi (Graphify equip, dung/chuyen watchdog). KHAN da bao o muc 58, khong co gi moi.
+- Em khong cham diem, khong doc ledger/snapshot.
