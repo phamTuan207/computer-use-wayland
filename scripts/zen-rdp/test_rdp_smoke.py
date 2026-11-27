@@ -47,6 +47,7 @@ def main():
     assert len(codes) == len(set(codes)), f"exit codes not distinct: {EXIT}"
     assert 0 not in codes, "0 is reserved for PASS"
     assert EXIT.get("h_navigate") == 16, f"navigate check code: {EXIT}"
+    assert EXIT.get("i_pinned_methods") == 17, f"pinned check code: {EXIT}"
     print("test_rdp_smoke: PASS (5 bind cases, distinct exit codes)")
     return 0
 
