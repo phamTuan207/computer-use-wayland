@@ -985,3 +985,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Ratings (AI-estimated): Giai Cuu Jerry Thong hieu (Drive Van dung), Rut Gon Phan So Thong hieu (Drive VDC), Chuoi Melodic VDC (Drive VDC, agree), Tin Nhan To Tinh Nhan biet (Drive Thong hieu). Anchors ca 3 Nhan biet.
 - Disclosure: luc 07:18, truoc khi co assignment, em co chay grep qua Clone2 review round 2 trong luc watchdog check, thay 2 dong ngan ve rut-gon-phan-so. Rating cua em suy tu statement; da ghi ro trong file de coordinator can nhac.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 57. CF735368 final report da land, 10 fix cho Hieu truoc exam Chu nhat 29/11 (2026-11-27 08:55 +07)
+- Final report commit 9f3dfc8f, file cf735368/report-final-20261127.md. Ca 15 bai da check local, 14 PASS, oan-tu-ti Codex FAIL da duoc FCC re-solve VALID 81/81, bai dung, loi chi o lane. Khong co CF verdict nao, access failed, chua login. Exam Chu nhat 29/11, con 2 ngay.
+- Fix uu tien cho Hieu: 1, keo-con solution.c khong compile, bien a khai bao trung, 2, oan-tu-ti can special judge, khong diff literal, 3, ung-dung-hen-ho Note i<=j sua thanh i<j, 4, bao-nhieu-bi sua j range va them sample, 5, giai-cuu-jerry them canh bao 64-bit, 21/81 test vuot int32, 6, rut-gon-phan-so nen refile Thong hieu vi ca 3 lane deu duoi VDC. Ratings cua mei, cc22d8aa, da dua vao bao cao.
+- Cung batch co R10 A5 gate report, 454237d4, shim pass CF panel nhu flag-free, Google entry van flagged-only block. Mei van standby second reviewer, chi khi Clone2 flag disagreement, chua co assignment moi. Coordinator hoat dong, khong KHAN.
+- Em khong cham diem, khong doc ledger/snapshot.
