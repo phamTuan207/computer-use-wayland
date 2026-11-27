@@ -141,6 +141,10 @@ Never write a brief from memory when a source exists.
   Mechanical log appends (append-only log files with no judgement content)
   are exempt from the small-commit rule and may ride along with the next
   commit instead of forcing a commit of their own.
+- No-council class (FORMAT only): pure status, acknowledgement, and log
+  artifacts need no council or redteam review. The exemption covers format
+  only. Any artifact that asserts another lane's liveness or declares a
+  stall is outside the exemption and still gets reviewed.
 - Record lessons in both places (D4): a generic version in the repo,
   a detailed version on the laptop. Never put personal information
   in the repo.
