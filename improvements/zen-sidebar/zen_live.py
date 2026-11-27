@@ -59,6 +59,7 @@ import argparse
 import json
 import socket
 import sys
+import time
 
 # ---------- JS payloads (chrome context, system principal) ----------
 
@@ -218,6 +219,18 @@ JS_MOVE_TAB = _PRELUDE + """
 
 # ---------- minimal Marionette wire client (stdlib only) ----------
 
+# Largest legitimate frame is the `list` reply: roughly 200 bytes of
+# JSON per tab, so even 1000 tabs stay near 200 KB and introspect's
+# method lists are a few KB. 4 MiB leaves over 20x headroom over that
+# worst case while still bounding memory if a buggy server floods
+# bytes without ever completing a frame.
+MAX_FRAME_SIZE = 4 * 1024 * 1024
+
+# Slack for the "<size>:" prefix on top of a max-size payload when
+# capping the raw receive buffer.
+_PREFIX_SLACK = 64
+
+
 class MarionetteError(Exception):
     pass
 
@@ -226,17 +239,31 @@ class Marionette:
     """Marionette protocol 3: greeting JSON, then length-prefixed frames
     of [type, messageId, name, params] / [type, messageId, error, result]."""
 
-    def __init__(self, host="127.0.0.1", port=2828, timeout=30):
+    def __init__(self, host="127.0.0.1", port=2828, timeout=30,
+                 max_frame_size=MAX_FRAME_SIZE):
+        self.timeout = timeout
+        self.max_frame_size = max_frame_size
         self.sock = socket.create_connection((host, port), timeout=timeout)
         self.buf = b""
         self.msgid = 0
         self.greeting = self._read_greeting()
 
-    def _fill(self):
-        chunk = self.sock.recv(65536)
+    def _fill(self, deadline):
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise MarionetteError("timed out waiting for frame")
+            self.sock.settimeout(remaining)
+        try:
+            chunk = self.sock.recv(65536)
+        except socket.timeout as exc:
+            raise MarionetteError("timed out waiting for frame") from exc
         if not chunk:
             raise MarionetteError("connection closed by server")
         self.buf += chunk
+        if len(self.buf) > self.max_frame_size + _PREFIX_SLACK:
+            raise MarionetteError(
+                f"frame exceeds max size {self.max_frame_size} bytes")
 
     def _read_greeting(self):
         # The greeting is a length-prefixed frame like every other
@@ -246,15 +273,37 @@ class Marionette:
         return self._read_frame()
 
     def _read_frame(self):
+        # One overall deadline for the whole frame, derived from the
+        # configured timeout. A per-recv socket timeout alone lets a
+        # server that trickles bytes (never completing a frame) hang
+        # the client forever, since every recv succeeds in time.
+        deadline = None if self.timeout is None \
+            else time.monotonic() + self.timeout
         while b":" not in self.buf:
-            self._fill()
+            self._fill(deadline)
         size_raw, _, rest = self.buf.partition(b":")
-        size = int(size_raw)
+        try:
+            size = int(size_raw)
+        except ValueError as exc:
+            raise MarionetteError(
+                f"malformed frame size: {size_raw!r}") from exc
+        if size < 0 or size > self.max_frame_size:
+            raise MarionetteError(
+                f"frame size {size} out of range "
+                f"(max {self.max_frame_size} bytes)")
         while len(rest) < size:
-            self._fill()
+            self._fill(deadline)
             _, _, rest = self.buf.partition(b":")
         self.buf = rest[size:]
-        return json.loads(rest[:size].decode("utf-8"))
+        if self.timeout is not None:
+            # _fill narrowed the socket timeout to the time left on
+            # this frame's deadline; restore the full timeout so the
+            # next send/recv is not stuck with the leftover.
+            self.sock.settimeout(self.timeout)
+        try:
+            return json.loads(rest[:size].decode("utf-8"))
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise MarionetteError(f"malformed frame payload: {exc}") from exc
 
     def command(self, name, params=None):
         self.msgid += 1
