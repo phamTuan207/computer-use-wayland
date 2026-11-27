@@ -1052,3 +1052,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Findings: F1 HIGH page-controlled exception text trigger second execution cua evaluate; longString silent corruption; navigate pin race; guard freshness; denylist limits; audit persistence gaps.
 - Khong nhac mei, khong giao viec cho em. Em khong review R10 (khong co vai tro), chi ghi nhan.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 67. Clone2 bottleneck study: register M1-M34 sau 2 debate rounds (2026-11-27 16:38 +07)
+- Commit 26b1133d, todolist-push, file improvements/bottleneck-study-20261127.md (609 dong). Scope: toan project tu dau den 27/11, moi lane, moi run. Phuong phap: 8 lane nghien cuu song song (waiting time, repeated steps, error rework, deliberation, tool latency, git overhead, external sources, red team), 1 synthesis register, 2 debate rounds (round 1: 3 council + red team; round 2: convergence council + red team 2).
+- 2 luat do owner dat 27/11: source law (moi source trich dan deu da mo that, khong mo duoc thi gan UNVERIFIED, khong noi nhu fact), proof law (chi tinh la proven neu chay that tren may clone2 voi so do truoc/sau, con lai UNPROVEN kem pilot chung minh). Events.log archive owner dua khong tai duoc tu may clone2 (UNOPENED source, khong claim nao dua vao no). Evidence base: project record tai fix-review tip 91547db1.
+- Ket qua: three-clock rankings, converged proposal register M1-M34, proof-law tiers, rejected list kem ly do.
+- File trich coord/mei.md sections 7, 9, 12 lam source, khong giao viec cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
