@@ -5,6 +5,7 @@ is actually clean afterwards. Tests use a fake STATE dir and a fake
 proc list, so no Wayland and no live session are needed.
 """
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -83,15 +84,32 @@ def test_cli_exit_codes():
         ok = subprocess.run([sys.executable, SCRIPT, '--check',
                              '--state-dir', str(state),
                              '--procs-file', str(procs)],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True,
+                            env={**os.environ, 'CU_TEST_PROCS_FILE': '1'})
         assert ok.returncode == 0, ok.stdout
         (state / 'session.json').write_text('{}')
         dirty = subprocess.run([sys.executable, SCRIPT, '--check',
                                 '--state-dir', str(state),
                                 '--procs-file', str(procs)],
-                               capture_output=True, text=True)
+                               capture_output=True, text=True,
+                               env={**os.environ, 'CU_TEST_PROCS_FILE': '1'})
         assert dirty.returncode == 1
         assert 'snapshot' in dirty.stdout
+        refused = subprocess.run([sys.executable, SCRIPT, '--check',
+                                  '--state-dir', str(state),
+                                  '--procs-file', str(procs)],
+                                 capture_output=True, text=True,
+                                 env={k: v for k, v in os.environ.items()
+                                      if k != 'CU_TEST_PROCS_FILE'})
+        assert refused.returncode == 2
+        assert 'test-only' in refused.stderr
+        missing = subprocess.run([sys.executable, SCRIPT, '--check',
+                                  '--state-dir', str(state),
+                                  '--procs-file', str(procs) + '.missing'],
+                                 capture_output=True, text=True,
+                                 env={**os.environ, 'CU_TEST_PROCS_FILE': '1'})
+        assert missing.returncode == 2
+        assert 'cannot read procs file' in missing.stderr
 
 
 def load_tests(loader, standard_tests, pattern):

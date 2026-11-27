@@ -28,6 +28,7 @@ Exit 0 when clean, 1 when leftovers remain.
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -123,6 +124,9 @@ def main(argv):
                         help='read (pid, cmdline) pairs from this file '
                              'instead of /proc (test support)')
     args = parser.parse_args(argv)
+    if args.procs_file and os.environ.get('CU_TEST_PROCS_FILE') != '1':
+        print('--procs-file is test-only; set CU_TEST_PROCS_FILE=1 to use it', file=sys.stderr)
+        return 2
     if not (args.check or args.clean):
         print('usage: session_cleanup.py --check|--clean [--state-dir DIR]', file=sys.stderr)
         return 2
@@ -130,8 +134,12 @@ def main(argv):
     if args.clean:
         for line in clean_safe(state):
             print('cleaned: ' + line)
-    procs = _read_procs_file(args.procs_file) if args.procs_file else None
-    leftovers = find_leftovers(state, proc_cmdlines=procs)
+    try:
+        procs = _read_procs_file(args.procs_file) if args.procs_file else None
+        leftovers = find_leftovers(state, proc_cmdlines=procs)
+    except OSError as exc:
+        print(f'cannot read procs file {args.procs_file}: {exc}', file=sys.stderr)
+        return 2
     if not leftovers:
         print(f'desktop clean: no leftovers in {state}')
         return 0

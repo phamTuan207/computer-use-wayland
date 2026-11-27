@@ -32,12 +32,18 @@ class DomRectDebugTests(unittest.TestCase):
                 {"ref": "e2", "rect": {"x": 0, "y": 0,
                                        "width": 0, "height": 0}},
                 {"ref": "e3"},
+                None,
+                42,
+                {"ref": "e4", "rect": {"x": float("nan"), "y": 1,
+                                            "width": 5, "height": 5}},
+                {"ref": "e5", "rect": {"x": 1, "y": 1,
+                                            "width": float("inf"), "height": 5}},
             ]})
             result = drd.annotate(snap, shot, out)
             self.assertEqual(result["drawn"], 1)
             # Only the 0x0 rect counts as skipped; rect-less
             # elements are normal and simply not drawn.
-            self.assertEqual(result["skipped"], 1)
+            self.assertEqual(result["skipped"], 3)
             img = Image.open(out)
             # Top border of e1 at (35, 10) is red.
             self.assertEqual(img.getpixel((35, 10)), (255, 0, 0))
@@ -54,6 +60,13 @@ class DomRectDebugTests(unittest.TestCase):
             img = Image.open(out)
             # Scaled+offset left border at x=110, mid-height y=20.
             self.assertEqual(img.getpixel((110, 20)), (255, 0, 0))
+
+    def test_out_cannot_overwrite_screenshot(self):
+        with tempfile.TemporaryDirectory() as d:
+            snap, shot, _out = self.make_case(Path(d), {"elements": []})
+            with self.assertRaises(SystemExit):
+                drd.main(["--snapshot", str(snap), "--screenshot", str(shot),
+                          "--out", str(shot)])
 
 
 if __name__ == "__main__":
