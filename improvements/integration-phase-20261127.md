@@ -58,7 +58,7 @@ PILOT (running, unproven).
 | 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | IMPLEMENTED + LIVE-TESTED | 98c4243a; live: 22/30 real rects drawn; outputs stay local |
 | 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | IMPLEMENTED + LIVE-TESTED | 9df12d97; live matrix: all lanes true except zen_rdp (not installed on laptop yet, correctly reported) |
 | 16 | I15 root-level incomplete marking | agent-desktop I15 | DONE (merged) | d725684f int-i15; read_errors + incomplete root marking, ground/act surface it; 45 a11y tests OK; live on 6 AT-SPI apps |
-| 17 | I19-substitute: MCP drift test | agent-desktop I19 | IN PROGRESS | worker running |
+| 17 | I19-substitute: MCP drift test | agent-desktop I19 | DONE (merged) | acaa68ea int-i19; tests/test_mcp_drift.py 11 assertions over cu.py/mcp_bridge/session_driver surfaces; deliberate-drift proof (3 scratch breaks all FAIL); laptop run 11/11; note: report's mcp_server.py no longer exists, test targets the live mcp_bridge surface |
 | 18 | I20-substitute: RDP lock hardening + lock map doc | agent-desktop I20 | DONE (merged) | e1c52422 int-i20; 5 lock weaknesses fixed + LOCK-MAP.md; 63 zen-rdp tests OK; live lock refusal proven |
 | 19 | M14 adversarial probe gate (Y1b suite) | bottleneck M14 | DONE (merged) | c0b5d14b int-m14; frozen-hash gate v1 + fast-pass FLAG; 5 tests OK; live PASS VM+laptop |
 | 20 | M7 stall detector parts a+b (backtests required) | bottleneck M7 | DONE (merged) | f3033aa8 int-m7; union detector, backtest reproduces study numbers; proposed threshold 45min union silence; flag-only |
