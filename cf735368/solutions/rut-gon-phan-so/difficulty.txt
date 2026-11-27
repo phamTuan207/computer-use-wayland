@@ -1,0 +1,3 @@
+AI-estimated difficulty: Nhan biet
+
+The core idea is to count each letter in both strings and subtract the denominator counts from the numerator counts, then compare the remainder with exactly one each of s, i, and x. The constraints are small and require no advanced algorithm; the main edge case is respecting duplicate occurrences and ensuring every denominator letter can be canceled.

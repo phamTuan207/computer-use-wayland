@@ -1,0 +1,81 @@
+# Test log: rut-gon-phan-so
+
+- Testing started: 2026-11-27T07:32:10.388189+07:00
+- Testing ended: 2026-11-27T07:32:10.390781+07:00
+- Total elapsed: 0.003 s
+- Compile command: `g++ -O2 -std=c++17 -o ~/cf735368-work/rut-gon-phan-so/sol ~/cf735368-work/rut-gon-phan-so/sol.cpp`
+- Compile result: PASS (exit code 0)
+
+## Official sample (all 5 cases)
+
+- Start: 2026-11-27T07:32:10.388205+07:00
+- End: 2026-11-27T07:32:10.389467+07:00
+- Elapsed: 0.001 s
+- Input:
+```text
+5
+4 1
+sinx
+n
+6 7
+xixsms
+mixsxim
+8 5
+fixtures
+frute
+3 3
+abc
+def
+5 10
+sixty
+codeforces
+```
+- Hand-computed expected output:
+```text
+YES
+NO
+YES
+NO
+NO
+```
+- Actual output:
+```text
+YES
+NO
+YES
+NO
+NO
+```
+- Result: PASS (exit code 0)
+
+## Self-made edge cases (minimum lengths, maximum lengths, duplicate counts)
+
+- Start: 2026-11-27T07:32:10.389497+07:00
+- End: 2026-11-27T07:32:10.390743+07:00
+- Elapsed: 0.001 s
+- Input:
+```text
+3
+1 1
+a
+a
+100 97
+sixaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+4 2
+ssix
+ss
+```
+- Hand-computed expected output:
+```text
+NO
+YES
+NO
+```
+- Actual output:
+```text
+NO
+YES
+NO
+```
+- Result: PASS (exit code 0)
