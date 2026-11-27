@@ -253,24 +253,6 @@ foreign id refused. Owner Zen PID 807599 untouched. Test
 files removed. Pre-existing stale indicator socket from
 2026-11-21 left in place (not from this work).
 
-### Item 14: I16 DOM-rect debug artifact (2026-11-27)
-
-scripts/dom-rect-debug.py: draws rects from an existing DOM
-snapshot (observe elements shape) or harvest (items shape)
-onto a screenshot PNG with ref labels; --scale and
---origin-x/y map CSS px to screenshot px. Annotated outputs
-are machine-local debug artifacts, never committed (stated in
-the docstring). Tests: 2 synthetic (both shapes, scale/origin,
-pixel checks) OK. Live: read-only RDP eval harvested 30 real
-interactive-element rects from the owner's current Zen tab,
-grim screenshot, annotate drew 22 (8 zero-size skipped),
-734KB PNG; Zen untouched. Setup notes from the live run:
-rdp_client.py is not yet installed in the laptop scripts dir
-(copied to /tmp for the test); eval needs --unscoped-test +
---profile-marker (read from the live cmdline at runtime);
---legacy-output is a top-level flag. The a11y-rect version
-stays pilot-first after I14.
-
 ### Item 7: M2 one-pass seal wrapper (2026-11-27)
 
 rung3-ci/seal.py: runs collect-evidence.py, snapshot.py,
@@ -388,6 +370,24 @@ wall including subprocess start. The full actionability
 battery stays pilot-first (needs a proven hit-test signal;
 probe row belongs in probes/ledger.jsonl before any battery
 work).
+
+### Item 14: I16 DOM-rect debug artifact (2026-11-27)
+
+scripts/dom-rect-debug.py: draws rects from an existing DOM
+snapshot (observe elements shape) or harvest (items shape)
+onto a screenshot PNG with ref labels; --scale and
+--origin-x/y map CSS px to screenshot px. Annotated outputs
+are machine-local debug artifacts, never committed (stated in
+the docstring). Tests: 2 synthetic (both shapes, scale/origin,
+pixel checks) OK. Live: read-only RDP eval harvested 30 real
+interactive-element rects from the owner's current Zen tab,
+grim screenshot, annotate drew 22 (8 zero-size skipped),
+734KB PNG; Zen untouched. Setup notes from the live run:
+rdp_client.py is not yet installed in the laptop scripts dir
+(copied to /tmp for the test); eval needs --unscoped-test +
+--profile-marker (read from the live cmdline at runtime);
+--legacy-output is a top-level flag. The a11y-rect version
+stays pilot-first after I14.
 
 ## Sources cited during this phase
 
