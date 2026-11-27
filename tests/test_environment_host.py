@@ -398,7 +398,7 @@ class HostEnvironment(unittest.TestCase):
         self.assertNotIn('GTK_IM_MODULE', found)
 
     def test_home_change_that_moves_default_state_root_is_refused(self):
-        donor = self.session_environ(HOME='/home/different-gui-home')
+        donor = self.session_environ(HOME='/home/demo')
         self.make_instance(donor['HYPRLAND_INSTANCE_SIGNATURE'])
         self.add_donor(200, 'waybar', donor)
         base = {'HOME': str(pathlib.Path.home()), 'USER': 'testuser', 'LOGNAME': 'testuser',
