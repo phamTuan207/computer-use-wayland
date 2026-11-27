@@ -65,7 +65,7 @@ PILOT (running, unproven).
 | 21 | M11c Marionette pre-flight session check | bottleneck M11c | QUEUED | Detection + cheap recovery |
 | 22 | M11d pre-freeze triage (process + verify-list gate) | bottleneck M11d | QUEUED | |
 | 23 | M28a watchdog rolling branch (append-only) | bottleneck M28a | QUEUED | Needs coordinator approval recorded |
-| 24 | M18-reduced, M20, M23, M28d, M29, M34f (guidance/rules) | bottleneck | QUEUED | Docs/rules, low risk |
+| 24 | M18-reduced, M20, M23, M28d, M29, M34f (guidance/rules) | bottleneck | DONE (merged 1314b088) | 6 commits on int-guidance; pii clean, arch-guard PASS; rejected constant absent |
 | 25 | M10-reduced pre-calibrated spare scorer (process) | bottleneck M10 | QUEUED | |
 
 ### Pilots (UNPROVEN until they report)
