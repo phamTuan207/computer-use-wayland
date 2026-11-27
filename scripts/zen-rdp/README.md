@@ -151,9 +151,10 @@ runtime_error, unexpected), `message`, and the same
 `delivered_verified`. Retry vocabulary: `safe` (nothing was
 sent), `unsafe` (input may have landed; never replay),
 `not_applicable`. Per command: reads (probe/tabs/report)
-succeed as delivered_verified; eval/peval succeed as
-delivered_unverified (JS ran, page effect not verified by the
-tool); navigate/bench succeed as delivered_verified (navigate
+succeed as delivered_verified; eval/peval/navigate succeed as
+delivered_unverified (JS ran / navigate sent, page effect not
+verified by the tool, including whether a navigate actually
+changed the page); bench succeeds as delivered_verified (it
 polls to load). Refusals and pre-send failures are
 not_delivered/safe; post-send action failures are
 delivery_uncertain/unsafe.
