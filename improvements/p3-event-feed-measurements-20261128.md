@@ -269,6 +269,52 @@ build can proceed immediately once that go-ahead is given.
 No code was changed; the shipped lane is exactly as landed in
 PR #1187.
 
+### Update 2026-11-28: F11 fix LANDED
+
+Pham Tuan gave the go-ahead 2026-11-28 06:29. The narrow F11
+fix landed on main as PR #1225 (merge 6dfa99c5, branch
+f11-terminal-flag-20261128):
+
+- Implementation per the specification above: terminal flag
+  set in the request()/_evaluate_once() skip paths on
+  descriptor-destroyed for the pinned descriptor;
+  wait_for/wait_load fail fast with a tab-destroyed
+  classification; evaluate(replay=True) never replays past
+  the flag; flag cleared on successful attach (positional
+  descriptor-id reuse guard). No log, no cursor, no public
+  API, no URL handling, no actuation from events.
+- Unit tests: 12 new fake-transport tests
+  (test_f11_terminal.py); zen-rdp suite 174 OK vs 162
+  baseline, independently re-run by the reviewer.
+- Live M8 replication (dedicated session port 9243,
+  test_f11_live.py): pre-fix client burned the full 8078 ms
+  budget with a plain wait_for timeout; fixed client failed
+  17.3 ms after the close with tab-destroyed. Storm pairing
+  held (10 open/close interleaved, flag stayed unset when
+  only other tabs died).
+- Shipped wait_load path (M1 caveat closed): median 53.8 ms
+  fixed vs 54.0 ms pre-fix, 5 reps each.
+- Full shard (tests/ tree): 1785 tests, counts identical to
+  the PR #1187 landing baseline (ok=1708 error=54 fail=5
+  skip=18).
+- Independent review: MAY LAND, no BLOCKING, no MAJOR; 8
+  MINOR follow-ups recorded (classifier substring collision
+  on "tab destroyed" inside timeout messages; unobserved
+  parent_evaluate demux loop; event consumed as response
+  when expect_from equals the destroyed descriptor; navigate
+  does not consult the flag; pre-send disposition label;
+  weak reconnect assertion; same-URL reopen in wait_load;
+  desc_actor vs _pinned_tab_id wording).
+- Machine layer refreshed on the laptop (previous copy
+  backed up to /tmp/machine-rdp_client-backup-20261128.py);
+  rdp_smoke PASS on a dedicated session (port 9244) incl.
+  z_deployed_hash (deployed == landed), 142.9 ms, attach
+  30.1 ms, evaluate median 0.5 ms. Owner Zen untouched.
+
+P3 as a general event feed remains CLOSED. P6 zen_ask remains
+REJECTED. P3 reopens only under the conditions in point 5 of
+the specification above.
+
 ## Sources
 
 All accessed 2026-11-28.
