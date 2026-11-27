@@ -250,8 +250,11 @@ def wait_actionable(root,item,cap_ms=1000):
     """Auto-wait (I10): poll until the element is enabled, visible
     (when the state exists), and its extents are stable across
     two reads, up to cap_ms. First check is immediate, so a
-    ready element costs one extra extents read. Raises the last
-    failing reason on expiry; a stale tree raises at once."""
+    ready element costs one extra extents read. Disabled and
+    stale elements fail fast: resolve() raises at once, before
+    the cap applies, so the cap only absorbs invisible and
+    extents-unstable states. Raises the last failing reason on
+    expiry."""
     deadline=time.monotonic()+cap_ms/1000.0
     last_reason='not actionable'
     prev_extents=None

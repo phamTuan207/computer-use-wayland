@@ -20,9 +20,13 @@ import subprocess
 import sys
 import unittest
 from contextlib import redirect_stderr
+from pathlib import Path
 
 from rdp_client import (DEFAULT_CREDENTIAL_DENYLIST, LAZY_TAB_PATTERN,
                         RDPClient, RDPError, Scope, _build_scope, bench)
+
+# Resolve the client next to this file so the CLI tests work from any cwd.
+RDP_CLIENT = str(Path(__file__).resolve().parent / "rdp_client.py")
 
 TAB_A = "server1.conn0.tabDescriptor1"   # http://localhost/page-a.html
 TAB_B = "server1.conn0.tabDescriptor2"   # http://localhost/page-b.html
@@ -284,7 +288,7 @@ class TestScope(unittest.TestCase):
 
     def test_cli_approval_pair_validation(self):
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1",
+            [sys.executable, RDP_CLIENT, "--port", "1",
              "--allow-credential-tab", "x", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)
@@ -293,7 +297,7 @@ class TestScope(unittest.TestCase):
     def test_cli_unscoped_warning_and_error_exit(self):
         # No scope, no --unscoped-test: refused before any connection.
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1", "probe"],
+            [sys.executable, RDP_CLIENT, "--port", "1", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)
         self.assertIn("UNSCOPED REFUSED", r.stderr)
@@ -301,7 +305,7 @@ class TestScope(unittest.TestCase):
         # With --unscoped-test: warns loudly, then fails on dead port.
         # I1: runtime errors exit 1 (was 2 for everything).
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1",
+            [sys.executable, RDP_CLIENT, "--port", "1",
              "--unscoped-test", "--allow-unmarked-test-attach", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 1)
@@ -312,7 +316,7 @@ class TestScope(unittest.TestCase):
         # No marker and no test escape: refused before any connection.
         # (--unscoped-test passed so the marker check is what fires.)
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1",
+            [sys.executable, RDP_CLIENT, "--port", "1",
              "--unscoped-test", "probe"],
             capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)
@@ -321,7 +325,7 @@ class TestScope(unittest.TestCase):
         # Test-only escape: warns loudly, then fails on the dead port.
         # I1: runtime errors exit 1 (was 2 for everything).
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1",
+            [sys.executable, RDP_CLIENT, "--port", "1",
              "--unscoped-test",
              "--allow-unmarked-test-attach", "probe"],
             capture_output=True, text=True, timeout=30)
@@ -331,7 +335,7 @@ class TestScope(unittest.TestCase):
 
     def test_cli_bench_refused_without_unscoped_test(self):
         r = subprocess.run(
-            [sys.executable, "rdp_client.py", "--port", "1",
+            [sys.executable, RDP_CLIENT, "--port", "1",
              "--allow-unmarked-test-attach", "bench",
              "--local-url", "http://localhost/slice.html"],
             capture_output=True, text=True, timeout=30)
