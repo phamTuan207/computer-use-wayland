@@ -1,0 +1,68 @@
+Bubble Sort test log
+Started: 2026-11-27 07:02:50 Asia/Ho_Chi_Minh
+Compile: g++ -O2 -std=c++17 -o ~/cf735368-work/bubble-sort/sol ~/cf735368-work/bubble-sort/sol.cpp
+Compile result: PASS (exit code 0; no diagnostics)
+Compile command completed before the first test; observed by 2026-11-27 07:03:40 +07 (elapsed 50.5s).
+
+[Sample] 2026-11-27 07:03:40 +07 (elapsed 50.5s)
+Input:
+6
+4 2 1 3 5 0
+Expected output:
+2 1 3 4 0 5
+1 2 3 0 4 5
+1 2 0 3 4 5
+1 0 2 3 4 5
+0 1 2 3 4 5
+
+Actual output:
+2 1 3 4 0 5
+1 2 3 0 4 5
+1 2 0 3 4 5
+1 0 2 3 4 5
+0 1 2 3 4 5
+
+Result: PASS (exit code 0)
+
+[Self-made 1: minimum N (degenerate)] 2026-11-27 07:03:40 +07 (elapsed 50.5s)
+Input:
+1
+0
+Expected output:
+(empty output)
+Actual output:
+(empty output)
+Result: PASS (exit code 0)
+
+[Self-made 2: N=2, maximum allowed value and swap] 2026-11-27 07:03:40 +07 (elapsed 50.5s)
+Input:
+2
+1 0
+Expected output:
+0 1
+
+Actual output:
+0 1
+
+Result: PASS (exit code 0)
+
+[Self-made 3: reverse order, multiple passes] 2026-11-27 07:03:40 +07 (elapsed 50.5s)
+Input:
+4
+3 2 1 0
+Expected output:
+2 1 0 3
+1 0 2 3
+0 1 2 3
+
+Actual output:
+2 1 0 3
+1 0 2 3
+0 1 2 3
+
+Result: PASS (exit code 0)
+
+Test run ended: 2026-11-27 07:03:40 +07 (elapsed 50.5s)
+
+Overlay release and final check: 2026-11-27 07:04:17 +07 (elapsed 87.3s). Codex holder released with PID 79946. Status still has Muse holder; visible=true, so holders are not empty.
+Task finished: 2026-11-27 07:04:17 +07 (elapsed 87.3s).

@@ -1,0 +1,3 @@
+AI-estimated: Nhan biet
+
+The task asks for a direct simulation of bubble sort and printing the array after each of its N−1 passes. The key detail is to process adjacent pairs from left to right on every pass; with N ≤ 2000, the O(N²) work is small, and N=1 naturally produces no output lines.
