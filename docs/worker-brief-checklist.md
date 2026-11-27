@@ -157,6 +157,10 @@ Never write a brief from memory when a source exists.
   screen reads as doing nothing. Acquire the overlay first
   (`scripts/overlay.py acquire --agent <name> --method <method>`)
   so the user sees who is driving, and release it when done.
+- Price deliberation on two clocks: every deliberation proposal and every
+  parallel-lane plan states its expected cost in wall time AND in tokens
+  before it runs. No imported exchange-rate constant is used; each plan
+  carries its own measured or estimated figures for both clocks.
 
 ## Ban list (in EVERY brief, no exceptions)
 
