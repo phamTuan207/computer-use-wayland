@@ -18,3 +18,9 @@ jobs:
         run: python3 rung3-ci/check-key-hash.py
       - name: Ledger schema validation
         run: python3 rung3-ci/validate-ledger.py rung3-run-log/R3-L1-grades.jsonl
+      - name: Lineage check (required content markers present)
+        run: python3 rung3-ci/lineage-check.py
+      - name: Architecture guard (import map + machine-value denylist)
+        run: python3 rung3-ci/arch-guard.py
+      - name: Hermetic suite gate (no stripped-env-only failures)
+        run: python3 rung3-ci/test-discover.py hermetic --timeout 1800
