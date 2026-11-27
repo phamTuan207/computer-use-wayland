@@ -1007,3 +1007,12 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Clone2 watchdog PR 1049 (10:58): noi coordinator hoat dong lai vi commit b3007cd3 luc 10:48, ket thuc 3h im lang.
 - Em xac minh: b3007cd3 la commit cua owner (addendum CF login, muc 59), khong phai hoat dong cua coordinator. Metadata author/committer cua b3007cd3 va 9f3dfc8f giong nhau nen khong phan biet duoc bang metadata; noi dung commit + nudge 09:59 cua owner cho thay day la viec cua owner. Clone1 dung, Clone2 sai. Coordinator van im ~199 phut, KHAN tu muc 58 van dung, khong leo thang them vi owner da tu leo thang.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 61. CF735368 QUAN TRONG: 10 bai thi that khac han 15 bai Drive, ca 10 Perfect 4350 diem (2026-11-27 11:29 +07)
+- Commit 04cffbf4, branch fix-review-20261127 (khong phai todolist-push), file cf735368/cf-verdicts-20261127.md + fresh-solutions-20261127/A-J/sol.cpp. Owner vao contest bang manager entry (checkbox Manager tren group contests list), mo dashboard som ~11:02.
+- 10 bai thi that (all 1s/256MB): A Keo mut, B Diem tot bung, C Chia qua tong ket, D Tong hop protein, E Tam Linh, F KPI, G Slogan, H Keo mut Fibonacci, I Chien Than, J Kiem tra Toan roi rac. Them 1 muc KPI trung an (khong phai bai thi).
+- KHONG TRUNG bai nao voi 15 bai Drive da review trong report-final. Solution da commit khong submit duoc vao contest nay. Fresh solutions A-J viet moi, check sample local, submit 11:11-11:21 +07, GNU G++23, ca 10 Perfect result, tong 4350 diem (A/B/C 450, D/E/F 500, G/H 400, I/J 350; submission ID 399960801-399961242). G lan dau bi anti-bot verification, verify lai thi submit duoc.
+- Loi de bai cho nguoi ra de: E Note copy tu F, mo ta sai bai; I Note mau thuan sample (sample dung, solution theo sample va duoc chap nhan).
+- He qua: report-final + ratings cua em chi review bo Drive, khong phai bo thi that. 15 bai Drive khong co CF verdict trong contest nay. Clone2 da tu sua bat dong ve coordinator trong PR 1053.
+- Coordinator van im ~219 phut tu 07:48; 2 viec dang cho chua tra loi; KHAN da bao, khong leo thang them.
+- Em khong cham diem, khong doc ledger/snapshot.
