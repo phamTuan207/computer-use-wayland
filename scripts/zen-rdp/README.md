@@ -70,6 +70,19 @@ repo default.
   fake transport, no browser): happy paths, create fire+poll,
   validation before any evaluate, gate refusal, audit shape,
   pinned set, removal absence.
+  Two opt-in checks: `--deployed-client <path>` byte-compares the
+  deployed (machine-layer) `rdp_client.py` against the landed copy
+  next to the smoke script and fails loud on drift (exit 17);
+  `--bench-local-url <url>` runs the bench instrument (runs=1)
+  against that local URL as a self-test (exit 18 on failure).
+- `launch_dedicated.py` - one-command launcher for dedicated
+  throwaway RDP sessions (D3): creates a fresh profile under the
+  temp dir, writes the devtools `user.js` prefs, starts Zen with
+  `--start-debugger-server`, waits for the port, and records a
+  session file (pid + profile + port + nonce). Fail closed: it
+  only uses marker-carrying profiles it created, refuses anything
+  outside the temp dir (the owner's profile by construction), and
+  `stop` kills only the recorded pid after a cmdline check.
 - `test_scope_unittest.py` - unit tests (fake transport, no browser):
   scoping, denylist + approvals, drive-report diff, fail-closed
   marker, noSuchActor retry pinning.
