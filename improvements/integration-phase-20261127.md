@@ -482,6 +482,13 @@ unified lane interface stays pilot-first after I23.
   test_core 41 ran / 1 pre-existing wtype error,
   arch-guard PASS. Still out: redteam 1-15,
   int-fix-archguard, int-fix-discover, FCC council-fixes.
+- FCC council-fixes DONE+MERGED (e427ef09): first laptop-CLI
+  routed task end-to-end (brief file -> fcc-claude -p
+  detached -> commit ade8f113 + push -> coordinator merge +
+  verify). zen-rdp 63 tests now pass from repo root;
+  wait_actionable docstring tightened; a11y 45 OK;
+  arch-guard PASS. Council 1-15 fixes 2+3 closed; fix 1
+  (shard exit) still with int-fix-discover worker.
 
 ## Sources cited during this phase
 
