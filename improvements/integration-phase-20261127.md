@@ -52,7 +52,7 @@ PILOT (running, unproven).
 | 8 | I8 probes/ + probe ledger | agent-desktop I8 | IMPLEMENTED | probes/ + ledger.jsonl (11 rows, validator OK); mandatory A/B gate half stays rejected |
 | 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | IMPLEMENTED + LIVE-TESTED | 5313179d; live on owner Zen 6021: tabs/probe/eval envelopes, unscoped exit 2, legacy bare; 38 tests OK |
 | 10 | I17 post-action wait flags (after I1, no default timeout) | agent-desktop I17 | IMPLEMENTED + LIVE-TESTED | ad6476f0 + 5ea67253; live: satisfied + timeout preserves action outcome |
-| 11 | I22 secure-field redaction, DOM/RDP only | agent-desktop I22 | QUEUED | |
+| 11 | I22 secure-field redaction, DOM/RDP only | agent-desktop I22 | IMPLEMENTED | d1b67da4; field_value sentinel + URL query redaction + AX protected; 49 zen-rdp tests OK, zen_dom back to 4 pre-existing errors |
 | 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | QUEUED | |
 | 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | QUEUED | |
 | 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | QUEUED | |
@@ -321,6 +321,26 @@ total OK). Live (owner Zen 6021, read-only evals):
 readyState wait satisfied (action result 2); false-predicate
 wait timed out at 1s with action result {"result": 4}
 preserved, delivery delivered_unverified. Zen untouched.
+
+### Item 11: I22 secure-field redaction (2026-11-27)
+
+Narrow contract, three tool-controlled byte paths:
+(1) zen_dom.field_value returns SECURE_REDACTED for
+password-type/autocomplete-password inputs; internal
+comparisons stay consistent (every read redacts the same
+way), verify_typed keeps its raw internal read and returns
+only a bool. (2) rdp_client: _redact_url strips sensitive
+query-param values (token/code/password/secret/...) in tab
+snapshots and across the whole drive report; scope matching
+keeps raw URLs internally. (3) cdp.mjs AX tree: protected
+nodes report '[redacted]' (DOM snapshot already redacted all
+values). evaluate() documented out of scope; skill rule 10 in
+skill/cli-anything/zen.md. Tests: test_redaction.py (5) +
+field_value fake test; zen-rdp 49 OK; test_zen_dom back to
+its 4 pre-existing VM errors. Live: tabs listing on owner
+Zen intact with redaction active (contents not recorded
+here). A live password-field proof needs a throwaway-profile
+session; deferred, unit+fake proof recorded honestly.
 
 ## Sources cited during this phase
 
