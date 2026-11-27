@@ -62,9 +62,20 @@ Scout lane files (full evidence, same directory):
     verbatim by the owner 27/11): ~/workspace/custom-skills/ponytail/SKILL.md,
     52 lines, upstream commit ebd8654c, verified byte-for-byte by
     mochi. It is the only custom skill on mochi's account.
-  - mei: UNKNOWN (asked directly 26/11 via daemon run 34; no reply
-    found in mei's chat transcript or coord/mei.md as of 27/11;
-    questions re-posed 27/11 in this registry, awaiting reply).
+  - mei: INSTALLED (self-verified by mei; not independently
+    verified by the scout) (coord/mei item 70, PR #805, verified
+    by mei 18:19-18:20 27/11; first answered 26/11 04:55 in coord PR #720,
+    which was never merged, so main coord/mei.md held no reply):
+    ~/workspace/custom-skills/ponytail/ (SKILL.md 41 lines,
+    skill.yaml 10 lines, AGENTS.md 32 lines, total 83). Upstream
+    commit ebd8654c2c627f721eb8f9c0d1bd4090a29f9e10 (2026-11-22),
+    recorded in skill.yaml. Installed 26/11, discoverable via
+    skill_search (verified by mei 26/11). It is the only custom skill on
+    mei's account. Layout difference from mochi (SKILL.md 52
+    lines): per mei, her frontmatter lives in a separate
+    skill.yaml, not in SKILL.md. Her SKILL.md + skill.yaml total
+    51 lines against mochi's single-file 52; the 1-line residual is
+    unexplained and is not treated as a conflict.
   - Codex (laptop): INSTALLED as skill folder in ~/.codex/skills/ (verified
     read-only 26/11 by ecosystem scout; 70 skills incl. ponytail). The Codex
     PLUGIN route is not installed; the skill folder covers the discipline.
@@ -124,7 +135,10 @@ Scout lane files (full evidence, same directory):
     is usable via the custom-connector flow, not a raw config file.
     Mochi's promptfoo/CLI install status itself is still UNKNOWN
     (mochi's reply covered MCP only).
-  - mei: UNKNOWN MCP/CLI capability; asked 26/11, awaiting reply.
+  - mei: MCP capability ANSWERED 27/11 (see open unknown 1): MCP
+    is usable via the custom-connector flow, not a raw config file.
+    Mei's promptfoo/CLI install status itself is still UNKNOWN
+    (mei's reply covered MCP only).
     PROPOSED: encode 3-5 past R3-L3 rubrics (incl. one fabricated case),
     run against stored snapshots, compare with mochi verdicts.
   - Codex, FCC, opencode, agy: NOT INSTALLED; not needed there now.
@@ -185,9 +199,14 @@ Scout lane files (full evidence, same directory):
     skills, or workspace. The "last30days crawl" on mochi's side was
     a deep-research run with a date window (27 Oct-26 Nov 2026), not
     a versioned tool.
-  - mei: asked 26/11 (daemon run 34); no reply found in mei's chat
-    transcript or coord/mei.md as of 27/11; questions re-posed
-    27/11 in this registry, awaiting reply.
+  - mei: NOT INSTALLED, and no version exists to report (coord/mei
+    item 70, PR #805, verified 18:19-18:20 27/11): nothing named
+    last30days in the skill catalog, custom skills, or workspace
+    (grep found the name only in mei's own memory/note files). The
+    name appears in mei's work as a RESEARCH RUN, not a tool: the
+    Council-2 last30days crawl 26/11 was time-limited research
+    (browser search/deep research, window 27 Oct-26 Nov 2026), not
+    a versioned skill.
   - Warning from upstream README: marketplace + npx copies do not dedupe;
     pick one install method per machine.
 
@@ -431,7 +450,9 @@ Scout lane files (full evidence, same directory):
   see open unknown 1), so the research bake-off vs current search can
   be proposed for mochi, with the caveat that the route is end-to-end
   UNPROVEN and the first connection through the flow would be part
-  of the bake-off setup. Mei still pending.
+  of the bake-off setup. MEI ALSO ANSWERED YES 27/11 (coord/mei item
+  70, PR #805): same route, same UNPROVEN caveat, so the bake-off
+  can be proposed for mei too.
 - **Firecrawl MCP** (firecrawl/firecrawl-mcp-server, license NOT
   verified): hosted scraping, credit cost, token-blowup risk, feedback-
   tool telemetry pattern. Deferred until a concrete JS-heavy research
@@ -467,9 +488,20 @@ Scout lane files (full evidence, same directory):
    custom-connector skill and the two template files it names are
    present (mochi's check on its own VM), but no MCP server has
    actually been connected through the flow yet, so end-to-end use
-   is UNPROVEN. MEI: still awaiting reply (no reply
-   in mei's chat transcript or coord/mei.md as of 27/11; questions
-   re-posed 27/11). clone1/clone2 not asked yet (clone1 token-capped;
+   is UNPROVEN. MEI ALSO ANSWERED 27/11 (coord/mei item 70, PR #805;
+   verified by mei 18:19-18:20 27/11, re-verified by mei 18:30
+   item 71 with identical results; first answered 26/11 04:55 in
+   coord PR #720,
+   which was never merged, so the reply was absent from main
+   coord/mei.md): yes, via the same custom-connector flow, not a
+   raw config file. The custom_connector_setup skill is present on
+   mei's VM (/opt/muse/skills/custom-connector-setup/, templates/
+   with connector, mcp_client.py, skill). No MCP config file on
+   mei's machine (find ~ maxdepth 3 found no *mcp* files other than
+   the skill's templates) and ~/workspace/custom-connectors/ is
+   empty (0 entries); no custom connector installed. End-to-end MCP
+   use UNPROVEN on mei's VM as well. clone1/clone2 not asked yet
+   (clone1 token-capped;
    ask when a concrete need appears). clone2 note: the
    custom-connector skill and template are present in clone2's own
    environment, so the same route is available to clone2 by
@@ -487,8 +519,12 @@ Scout lane files (full evidence, same directory):
    section 1); caveman NOT INSTALLED (per mochi's own check: no
    file, no skill, no match anywhere in system skills or custom
    skills on mochi's account; a self-reported negative, not
-   scout-verified). MEI: still open, awaiting
-   reply.
+   scout-verified). MEI ALSO ANSWERED 27/11 (coord/mei item 70,
+   PR #805): ponytail INSTALLED (self-verified by mei; see section
+   1, including the 41-line SKILL.md layout note); caveman NOT
+   INSTALLED (per mei's own check, grepped /opt/muse/skills/ +
+   ~/workspace/custom-skills/ 18:20 27/11: no file, skill, or match
+   named caveman; a self-reported negative, not scout-verified).
 
 ## First-pass summary (2026-11-26)
 
@@ -506,13 +542,24 @@ Scout lane files (full evidence, same directory):
   skill-creator single-folder installs; caveman skill-only for FCC+VM;
   Context7 for Codex; ponytail skill folder for FCC.
 
-## Update 2026-11-27: mochi consolidated, mei outstanding
+## Update 2026-11-27: mochi and mei consolidated (task 2 closed)
 
 - Mochi's capability answers (daemon run 235) were relayed verbatim
   by the owner on 27/11 and are consolidated above: MCP servers YES
   via the custom-connector flow (open unknown 1), ponytail INSTALLED
   (section 1), caveman NOT INSTALLED (open unknown 6), last30days
   NOT INSTALLED and not a versioned tool (section 5).
+- Mei's capability answers (daemon run 34) arrived 27/11 18:19-18:20
+  and are consolidated above: MCP servers YES via the
+  custom-connector flow (open unknown 1), ponytail INSTALLED
+  (section 1), caveman NOT INSTALLED (open unknown 6), last30days
+  NOT INSTALLED and not a versioned tool (section 5). Correction to
+  the record: mei had in fact answered on 26/11 04:55 in coord PR
+  #720, which was never merged, so main coord/mei.md held no reply
+  and the owner's search of the transcript and coord/mei.md found
+  none. Mei re-verified on her VM at 18:19-18:20 27/11 (coord/mei
+  item 70, PR #805) and again at 18:30 (item 71, after the owner's
+  direct ask) with identical results.
 - Proven-by-use marking for mochi's claims: ponytail's presence is
   self-reported as verified byte-for-byte by mochi against upstream
   ebd8654c; the scout did not independently verify it. The MCP route
@@ -521,12 +568,17 @@ Scout lane files (full evidence, same directory):
   server has been connected through
   it yet, so end-to-end MCP use is UNPROVEN. Caveman and last30days
   absences are self-reported negative checks.
-- Mei's answers (daemon run 34) are still outstanding. The owner
-  searched mei's full chat transcript and coord/mei.md on 27/11: no
-  skill-scout reply exists in either. The four questions were
-  re-posed on 27/11, recorded here in the same form mochi answered,
-  for relay to mei through the coordinator (clone2 has no direct
-  channel to mei):
+- Proven-by-use marking for mei's claims: ponytail's presence is
+  self-reported by mei (upstream commit recorded in skill.yaml;
+  discoverable via skill_search); the scout did not independently
+  verify it. The MCP route is documented
+  and its template files are present on mei's VM (checked by mei),
+  but no MCP server has been connected through it, so end-to-end
+  use is UNPROVEN. Caveman and last30days absences are self-reported
+  negative checks.
+- Task 2 is CLOSED with this update: both staff answers are in the
+  registry. The four questions below are kept for the record; they
+  were asked of both mei and mochi and answered by both:
   (1) MCP servers: can you run them, and by what route (raw config
   file, custom-connector flow, or not at all)? Is any MCP config or
   custom connector present on your machine?
@@ -535,5 +587,3 @@ Scout lane files (full evidence, same directory):
   (3) Caveman: installed anywhere (system skills or custom skills)?
   (4) last30days: installed? If yes, what version; if the name
   appears in your work, is it a tool or a research run?
-  Mei's answers must not be guessed; this section is updated when
-  the reply arrives.
