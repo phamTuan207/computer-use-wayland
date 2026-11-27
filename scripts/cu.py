@@ -106,24 +106,30 @@ def key_names(keys):
 # Verified against the live Hyprland binds on the reference laptop
 # 2026-11-27: Ctrl+Alt+Delete = close all windows, Super+Q = close
 # window, Super+Ctrl+P and XF86PowerOff = power menu. VT-switch and
-# SysRq are kernel-level. Refusals raise ValueError so they surface
-# in the action result (logged), never silently dropped.
+# SysRq are kernel-level. All checks use subset semantics (refuse
+# when the dangerous modset is contained in the pressed modset) so
+# extra modifiers cannot bypass the refusal; AltGr counts as Alt.
+# The power/sleep keysyms are refused even where Hyprland has no
+# bind for them, because logind/ACPI may act on them directly.
+# Refusals raise ValueError so they surface in the action result
+# (logged), never silently dropped.
 def _reject_blocked_combo(mods,regular):
     modset=set(mods)
+    if 'altgr' in modset:modset=(modset-{'altgr'})|{'alt'}
     for k in regular:
         ku=k.upper()
         if {'ctrl','alt'}<=modset and re.fullmatch(r'F\d{1,2}',ku):
             raise ValueError('blocked key combo: ctrl+alt+'+k+' (VT switch)')
-        if {'ctrl','alt'}<=modset and ku in ('BACKSPACE','DELETE'):
+        if {'ctrl','alt'}<=modset and ku in ('BACKSPACE','DELETE','KP_DELETE'):
             raise ValueError('blocked key combo: ctrl+alt+'+k+' (session/window kill)')
         if ku in ('PRINT','SYS_REQ') and modset&{'alt','ctrl'}:
             raise ValueError('blocked key combo: SysRq with modifier ('+k+')')
-        if modset=={'logo'} and ku=='Q':
+        if {'logo'}<=modset and ku=='Q':
             raise ValueError('blocked key combo: super+q (close window)')
-        if modset=={'logo','ctrl'} and ku=='P':
+        if {'logo','ctrl'}<=modset and ku=='P':
             raise ValueError('blocked key combo: super+ctrl+p (power menu)')
-        if ku=='XF86POWEROFF':
-            raise ValueError('blocked key combo: XF86PowerOff (power menu)')
+        if ku in ('XF86POWEROFF','XF86POWERDOWN','XF86SLEEP','XF86SUSPEND','XF86HIBERNATE'):
+            raise ValueError('blocked key combo: '+k+' (power/sleep key)')
 
 def _wtype_executable():
     helper = ROOT / 'native' / 'wtype'

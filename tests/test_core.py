@@ -277,15 +277,26 @@ class Coordinates(IsolatedCuState):
     def test_blocked_key_combos_refused(self):
         for keys in (['ctrl','alt','F1'],['ctrl','alt','f12'],
                      ['ctrl','alt','BackSpace'],['ctrl','alt','Delete'],
+                     ['ctrl','alt','KP_Delete'],
+                     ['ctrl','altgr','Delete'],['ctrl','altgr','F2'],
                      ['alt','PrintScreen'],['ctrl','Sys_Req'],
-                     ['super','q'],['super','ctrl','p'],['XF86PowerOff']):
+                     ['super','q'],['super','shift','q'],['super','alt','q'],
+                     ['super','ctrl','p'],['super','ctrl','shift','p'],
+                     ['XF86PowerOff'],['XF86PowerDown'],['XF86Sleep'],
+                     ['XF86Suspend'],['XF86Hibernate']):
             with self.assertRaisesRegex(ValueError,'blocked key combo'):
                 cu.key_names(keys)
         # Neighbours that must stay allowed: Zen workspace switch,
-        # plain F-keys, screenshot without SysRq modifiers.
+        # plain F-keys, screenshot without SysRq modifiers, Super+P
+        # variants without Ctrl, plain KP_Delete, AltGr alone.
         self.assertEqual(cu.key_names(['ctrl','alt','Left']),(['ctrl','alt'],['Left']))
+        self.assertEqual(cu.key_names(['ctrl','alt','Right']),(['ctrl','alt'],['Right']))
         self.assertEqual(cu.key_names(['F5']),([],['F5']))
         self.assertEqual(cu.key_names(['PrintScreen']),([],['Print']))
+        self.assertEqual(cu.key_names(['super','p']),(['logo'],['p']))
+        self.assertEqual(cu.key_names(['super','shift','p']),(['logo','shift'],['p']))
+        self.assertEqual(cu.key_names(['KP_Delete']),([],['KP_Delete']))
+        self.assertEqual(cu.key_names(['altgr','Delete']),(['altgr'],['Delete']))
     def test_capability_matrix_shape(self):
         matrix=cu.capability_matrix()
         self.assertEqual(set(matrix),{'a11y','cdp','zen_rdp','vision',
