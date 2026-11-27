@@ -1,0 +1,2 @@
+AI-estimated difficulty: Van dung
+The solution applies a small state model: each pair of yellow balls creates an orange ball, and each pair of orange balls creates a red ball; red balls remain separate. Keeping the three color counts while processing each prefix answers all queries in O(n + q) time and O(n) memory, within the stated limits.

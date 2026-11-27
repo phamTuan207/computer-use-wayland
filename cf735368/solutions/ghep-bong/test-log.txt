@@ -1,0 +1,68 @@
+Ghep Bong - test log
+Timezone: Asia/Ho_Chi_Minh (UTC+07:00)
+Task start: 2026-11-27 07:24:57 +07
+
+Step timeline (wall clock; elapsed from task start)
+- 07:24:57 (+00:00): Task started; located long-lived Codex PID 117488.
+- 07:25:01 (+00:04): Acquired overlay for Codex PID 117488. Status showed label "Computer use active" and visible=true.
+- 07:25:13 (+00:16): Read ponytail instructions and inspected target directory; it was empty.
+- 07:25:28 (+00:31): Wrote sol.cpp with prefix simulation and stored counts.
+- 07:25:43 (+00:46): Compiled successfully (command and result below).
+- 07:26:05 (+01:08): Ran initial sample and self-made cases; one hand-computed expected output was wrong (details below).
+- 07:26:25 (+01:28): Corrected the hand computation and reran all cases successfully. A typo in the first rerun harness caused a Python syntax error before tests ran; corrected the harness and reran.
+- 2026-11-27 07:27:17 +07 (+02:20): Test log and difficulty assessment recorded.
+
+Compile
+Command: g++ -O2 -std=c++17 -o ~/cf735368-work/ghep-bong/sol ~/cf735368-work/ghep-bong/sol.cpp
+Result: success (exit code 0; no compiler diagnostics).
+
+Tests
+1) Statement sample — PASS
+Input:
+10 5
+1 2 3 1 2 1 3 2 1 1
+3
+5
+6
+8
+10
+Hand-computed expected output: 3 3 4 5 6
+Actual output:                 3 3 4 5 6
+
+2) Minimum input — PASS
+Input:
+1 1
+3
+1
+Hand-computed expected output: 1
+Actual output:                 1
+
+3) Yellow cascade (checks repeated yellow-to-orange-to-red conversion) — PASS on rerun
+Input:
+12 8
+1 1 1 1 1 1 1 1 1 1 1 1
+1
+2
+3
+4
+7
+8
+9
+12
+Hand-computed expected output after correction: 1 1 2 1 3 2 3 3
+Actual output:                                  1 1 2 1 3 2 3 3
+
+4) Maximum n and whitespace handling — PASS
+Input generator (full input is exactly described here): n=100000, q=3; first line contains 100000 values, with the first 10 values `3 ` on one line and each of the remaining 99990 values `3` on its own line; query lines are 1, 50000, 100000.
+Hand-computed expected output: 1 50000 100000
+Actual output:                 1 50000 100000
+
+Failure/debug chain
+- Initial cascade case output differed from my expected `1 1 2 1 3 1 2 3` at the 8th and 9th prefixes.
+- Rechecked the rules: red balls do not merge with each other. Eight yellow balls reduce to two red balls (count 2); nine yellow balls reduce to two red and one yellow (count 3).
+- Decision: fix the hand-computed expected output; no source change was indicated by the state simulation.
+- The first rerun attempt hit a syntax error in the temporary Python harness before launching any tests. Fixed the missing string terminator and reran the complete test set.
+- Result: sample, minimum input, cascade case, and maximum-n whitespace case all passed. No unresolved failing test.
+
+Overlay release
+- 07:27:22 (+02:25): Released Codex holder with the same PID 117488. Status confirms the Codex holder is gone, but the global overlay is still visible=true because a separate Muse holder remains. I left that holder untouched.
