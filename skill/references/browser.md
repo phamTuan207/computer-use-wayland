@@ -88,6 +88,13 @@ address anything on the page, and every action guard is unchanged. This is worth
 using when the page carries many irrelevant controls, because the observation is
 what you have to read.
 
+Coding rule for new DOM-reading code: harvest the needed element set in one
+scoped observation or one batched read, never one round trip per element.
+Per-message round trips dominate browser-automation latency, so batching is
+the mitigation. Cap the element set returned per harvest (scope first, and
+bound the payload per call site); an unbounded whole-page harvest is not an
+acceptable default for new code.
+
 ### Scope the successful after-snapshot
 
 When the next browser step is still in one panel, ask `act` for its new refs there:
