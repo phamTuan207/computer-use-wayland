@@ -111,11 +111,16 @@ def list_folders(client):
 
 def create_space(client, name="Space", timeout=10.0):
     """Create a space without switching to it (dontChange=true).
+    The no-switch property is VERIFIED, not assumed: the active
+    workspace is captured before the create and asserted unchanged
+    after it settles (the dontChange argument position is a Zen
+    internal; a silent switch would mutate visible owner state).
     Returns {"uuid": ..., "name": ...}. Raises RDPError on JS
-    failure or when the async create does not settle in time."""
+    failure, on timeout, or if the active workspace changed."""
     _require_nonempty_str(name, "name")
     if not (isinstance(timeout, (int, float)) and timeout > 0):
         raise ValueError(f"timeout must be > 0, got {timeout!r}")
+    active_before = list_spaces(client).get("activeWorkspace")
     slot_key = secrets.token_hex(8)
     slot = f"globalThis.__zenSpacesPending[{json.dumps(slot_key)}]"
     fire = (
@@ -130,23 +135,33 @@ def create_space(client, name="Space", timeout=10.0):
         "error: String(e)}; });"
         f"{json.dumps(slot_key)}"
     )
-    client.parent_evaluate(fire)
-    poll = f"JSON.stringify({slot} || null)"
-    deadline = time.monotonic() + timeout
-    while True:
-        state = _parse_json_result(client.parent_evaluate(poll),
-                                   "create_space poll")
-        if isinstance(state, dict) and state.get("done"):
-            break
-        if time.monotonic() >= deadline:
-            raise RDPError(
-                f"create_space: createAndSaveWorkspace did not settle "
-                f"within {timeout}s (name={name!r})")
-        time.sleep(0.05)
+    state = None
     try:
-        client.parent_evaluate(f"{slot} = undefined; true")
-    except Exception:
-        pass  # slot cleanup is best-effort; the create already settled
+        client.parent_evaluate(fire)
+        poll = f"JSON.stringify({slot} || null)"
+        deadline = time.monotonic() + timeout
+        while True:
+            state = _parse_json_result(client.parent_evaluate(poll),
+                                       "create_space poll")
+            if isinstance(state, dict) and state.get("done"):
+                break
+            if time.monotonic() >= deadline:
+                raise RDPError(
+                    f"create_space: createAndSaveWorkspace did not "
+                    f"settle within {timeout}s (name={name!r})")
+            time.sleep(0.05)
+    finally:
+        # Slot cleanup on every path (timeout included), best-effort.
+        try:
+            client.parent_evaluate(f"{slot} = undefined; true")
+        except Exception:
+            pass
+    active_after = list_spaces(client).get("activeWorkspace")
+    if active_after != active_before:
+        raise RDPError(
+            f"create_space: active workspace changed "
+            f"{active_before!r} -> {active_after!r} despite "
+            "dontChange=true; the no-switch contract is broken")
     if not state.get("ok"):
         raise RDPError(
             f"create_space: createAndSaveWorkspace failed: "

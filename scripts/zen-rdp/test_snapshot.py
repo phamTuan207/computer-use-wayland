@@ -57,6 +57,7 @@ def canned_payload(total=3, returned=None, planted=None):
         tok, akey, atok = "to" + "ken", "api" + "_key", "access_" + "to" + "ken"
         payload["url"] = f"http://localhost/cb?{tok}={planted}&next=/home"
         payload["textPreview"] = f"see http://localhost/x?{akey}={planted} end"
+        payload["textLength"] = len(payload["textPreview"])
         payload["elements"] = [
             {"tag": "a", "name": "go",
              "href": f"http://localhost/y?{atok}={planted}"}]
@@ -207,6 +208,208 @@ class SnapshotCliTests(unittest.TestCase):
         self.assertEqual(p.returncode, 2)
         env = json.loads(p.stdout)
         self.assertEqual(env["error"]["code"], "load_timeout_invalid")
+
+
+class GateFixSnapshotTests(unittest.TestCase):
+    """Clone2 P1 review fixes C-M1..C-M4 + minors (2026-11-27)."""
+
+    def test_cm2_missing_accounting_keys_refused(self):
+        payload = canned_payload()
+        del payload["totalElements"]
+        del payload["elementsTruncated"]
+        c = make_client(payload)
+        c.attach()
+        with self.assertRaises(RDPError) as cm:
+            c.snapshot()
+        self.assertIn("missing accounting keys", str(cm.exception))
+        c.close()
+
+    def test_cm2_inconsistent_truncation_flag_refused(self):
+        payload = canned_payload(total=300, returned=200)
+        payload["elementsTruncated"] = False  # lies about the totals
+        c = make_client(payload)
+        c.attach()
+        with self.assertRaises(RDPError) as cm:
+            c.snapshot()
+        self.assertIn("inconsistent", str(cm.exception))
+        c.close()
+
+    def test_cm2_returned_elements_recomputed(self):
+        payload = canned_payload()
+        payload["returnedElements"] = 999  # page-authored lie
+        c = make_client(payload)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertEqual(snap["returnedElements"], 3)
+
+    def test_cm3_byte_cap_enforced(self):
+        els = [{"tag": "a", "name": "N" * 60,
+                "href": "http://localhost/" + "p" * 180}
+               for _ in range(200)]
+        payload = canned_payload(total=200, returned=200)
+        payload["elements"] = els
+        payload["textPreview"] = "x" * 1500
+        payload["textLength"] = 1500
+        c = make_client(payload)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        blob = json.dumps(snap, indent=1).encode()
+        self.assertLessEqual(len(blob), rc.SNAPSHOT_BYTE_CAP)
+        self.assertTrue(snap["bytesTruncated"])
+        self.assertLess(snap["returnedElements"], 200)
+        self.assertTrue(snap["elementsTruncated"])
+        self.assertFalse(snap["complete"])
+
+    def test_cm3_caps_pinned_in_js(self):
+        js = rc.SNAPSHOT_JS
+        self.assertIn(f"const CAP = {rc.SNAPSHOT_ELEMENT_CAP}", js)
+        self.assertIn(f"TEXT_CAP = {rc.SNAPSHOT_TEXT_CAP}", js)
+        self.assertIn(f"NAME_CAP = {rc.SNAPSHOT_NAME_CAP}", js)
+        self.assertIn(f"ROLE_CAP = {rc.SNAPSHOT_ROLE_CAP}", js)
+        self.assertIn(f"TITLE_CAP = {rc.SNAPSHOT_TITLE_CAP}", js)
+        self.assertIn(f"URL_CAP = {rc.SNAPSHOT_URL_CAP}", js)
+
+    def test_cm1_js_excludes_field_content(self):
+        js = rc.SNAPSHOT_JS
+        # Name fallback skips innerText for fields/editables, and
+        # the preview walks text nodes skipping form subtrees.
+        self.assertIn("isContentEditable", js)
+        self.assertIn("TreeWalker", js)
+        self.assertNotIn("document.body.innerText", js)
+
+    def test_m1_bare_secrets_in_preview_and_title_redacted(self):
+        planted = "sk-" + "live" + "key" + "1234567890"
+        payload = canned_payload()
+        payload["title"] = f"key {planted}"
+        payload["textPreview"] = (
+            "to" + "ken=" + planted + " and "
+            + "a1b2c3d4" * 5 + " end")
+        payload["textLength"] = len(payload["textPreview"])
+        c = make_client(payload)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        blob = json.dumps(snap)
+        self.assertNotIn(planted, blob)
+        self.assertNotIn("a1b2c3d4" * 5, blob)
+        self.assertIn("REDACTED", blob)
+
+    def test_snapshot_id_unique_across_calls(self):
+        c = make_client(canned_payload())
+        c.attach()
+        first = c.snapshot()["snapshotId"]
+        second = c.snapshot()["snapshotId"]
+        c.close()
+        self.assertNotEqual(first, second)
+
+    def test_zero_element_page(self):
+        payload = canned_payload(total=0, returned=0)
+        payload["elements"] = []
+        payload["textPreview"] = ""
+        payload["textLength"] = 0
+        c = make_client(payload)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertEqual(snap["returnedElements"], 0)
+        self.assertTrue(snap["complete"])
+
+    def test_m5_denylist_refusal_is_fast(self):
+        import time
+        c = make_client(canned_payload())
+        c.attach()
+        c.denylist_patterns = ["page-a"]
+        t0 = time.monotonic()
+        with self.assertRaises(RDPError) as cm:
+            c.snapshot()  # default load_timeout=10 must NOT be burned
+        elapsed = time.monotonic() - t0
+        self.assertIn("CREDENTIAL TAB REFUSED", str(cm.exception))
+        self.assertLess(elapsed, 5.0,
+                        f"denylist refusal took {elapsed:.1f}s")
+        c.close()
+
+
+class LongStringSnapshotTransport(SnapshotTransport):
+    """Serves the snapshot payload as a longString grip, chunked
+    through substring replies (the real big-page transport path).
+    chunk_error=True makes substring replies carry an error."""
+
+    def __init__(self, payload, chunk_error=False, chunk_size=8000):
+        super().__init__(payload)
+        self.payload_text = json.dumps(payload)
+        self.chunk_error = chunk_error
+        self.chunk_size = chunk_size
+        self.substring_calls = 0
+
+    def _eval(self, expr):
+        if expr == rc.SNAPSHOT_JS:
+            return {"type": "longString",
+                    "actor": "server1.conn0.longString9",
+                    "length": len(self.payload_text), "initial": ""}
+        return super()._eval(expr)
+
+    def _handle(self, req):
+        if req.get("type") == "substring":
+            self.substring_calls += 1
+            if self.chunk_error:
+                self._reply({"from": req.get("to"),
+                             "error": "noSuchActor"})
+                return
+            start = int(req.get("start", 0))
+            end = min(int(req.get("end", 0)),
+                      start + self.chunk_size)
+            self._reply({"from": req.get("to"),
+                         "substring": self.payload_text[start:end]})
+            return
+        super()._handle(req)
+
+
+class LongStringTests(unittest.TestCase):
+    """C-M4 / F2: longString reassembly for snapshot payloads."""
+
+    def _big_payload(self):
+        payload = canned_payload(total=200, returned=200)
+        payload["elements"] = [
+            {"tag": "button", "name": f"Action {i} " + "x" * 30}
+            for i in range(200)]
+        payload["textPreview"] = "y" * 1500
+        payload["textLength"] = 1500
+        return payload
+
+    def test_longstring_snapshot_reassembles(self):
+        transport = LongStringSnapshotTransport(self._big_payload(),
+                                                chunk_size=3000)
+        c = make_client(self._big_payload(), transport=transport)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertEqual(snap["returnedElements"],
+                         len(snap["elements"]))
+        self.assertGreater(transport.substring_calls, 1,
+                           "payload must arrive in multiple chunks")
+
+    def test_longstring_short_chunks_advance_by_actual(self):
+        # Server returns shorter chunks than requested: assembly
+        # must still be exact (advance by actual length).
+        transport = LongStringSnapshotTransport(self._big_payload(),
+                                                chunk_size=1000)
+        c = make_client(self._big_payload(), transport=transport)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertEqual(snap["totalElements"], 200)
+
+    def test_longstring_chunk_error_refused(self):
+        transport = LongStringSnapshotTransport(self._big_payload(),
+                                                chunk_error=True)
+        c = make_client(self._big_payload(), transport=transport)
+        c.attach()
+        with self.assertRaises(RDPError) as cm:
+            c.snapshot()
+        self.assertIn("substring error", str(cm.exception))
+        c.close()
 
 
 if __name__ == "__main__":

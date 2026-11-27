@@ -51,6 +51,63 @@ def main():
         expect_refused(lambda: ld.validate_profile_dir(Path(td) / "nope"),
                        "does not exist")
 
+    # C1: the temp dir itself is not a profile
+    expect_refused(
+        lambda: ld.validate_profile_dir(
+            tempfile.gettempdir(), create=True, port=9231),
+        "REFUSED")
+
+    # B4: forged session.json naming a foreign pid is refused by
+    # stop() before any signal (nonce mismatch, then cmdline check).
+    import json as _json
+    import os as _os
+    with tempfile.TemporaryDirectory() as td:
+        prof = Path(td) / "prof"
+        ld.validate_profile_dir(prof, create=True, port=9231)
+        marker = ld.read_marker(prof)
+        forged = {"pid": _os.getpid(), "profile": str(prof.resolve()),
+                  "port": 9231, "nonce": "forged-nonce"}
+        ld.session_path(prof).write_text(_json.dumps(forged))
+        expect_refused(lambda: ld.stop(prof), "nonce")
+        # Correct nonce, but the pid is this test process whose
+        # cmdline carries no profile argument; still refused.
+        forged["nonce"] = marker["nonce"]
+        ld.session_path(prof).write_text(_json.dumps(forged))
+        expect_refused(lambda: ld.stop(prof), "profile token")
+        # Dead pid with valid files: already-dead, no signal sent.
+        import subprocess as _sp
+        _dead = _sp.Popen(["/bin/true"])
+        _dead.wait()
+        forged["pid"] = _dead.pid
+        ld.session_path(prof).write_text(_json.dumps(forged))
+        out = ld.stop(prof)
+        assert out["result"] == "already dead", out
+
+    # C1: launch kills the launched process when the port never
+    # listens (no orphan Zen without a session file).
+    class FakeProc:
+        pid = 424242
+
+        def wait(self, timeout=None):
+            return 0
+
+    killed = []
+    real_popen, real_wait = ld.subprocess.Popen, ld.wait_for_port
+    real_killpg = ld.os.killpg
+    ld.subprocess.Popen = lambda *a, **k: FakeProc()
+    ld.wait_for_port = lambda *a, **k: False
+    ld.os.killpg = lambda pid, sig: killed.append((pid, sig))
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            expect_refused(
+                lambda: ld.launch(9239, Path(td) / "p",
+                                  zen_bin="/bin/true", timeout=1),
+                "did not listen")
+    finally:
+        ld.subprocess.Popen, ld.wait_for_port = real_popen, real_wait
+        ld.os.killpg = real_killpg
+    assert killed and killed[0][0] == FakeProc.pid, killed
+
     # outside the temp dir refused (owner profile shape)
     expect_refused(
         lambda: ld.validate_profile_dir(Path.home() / "zen-rdp-test-prof",

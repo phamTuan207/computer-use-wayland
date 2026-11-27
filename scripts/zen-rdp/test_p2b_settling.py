@@ -58,6 +58,24 @@ from rdp_client import RDPClient, RDPError, Scope, check_port_owner
 # role, type, label, placeholder, href, disabled, checked, readOnly,
 # sensitive, editable. Value is NEVER part of the digest (value-presence
 # metadata only). Digest is a hash of the canonical field tuple.
+#
+# Mapping to the shipped SNAPSHOT_JS element record (rdp_client.py),
+# which emits {tag, name, type, hasValue, href, role}:
+#   tag         <-> tag            (same)
+#   role        <-> role           (same; snapshot omits when absent)
+#   type        <-> type           (same; form controls only)
+#   label       <-> name           (snapshot name = aria-label, else
+#                                   visible text, else placeholder,
+#                                   else name attr; the digest label
+#                                   is the accessible-name analogue)
+#   placeholder <-> (folded into snapshot name fallback; not separate)
+#   href        <-> href           (same; anchors only, capped)
+#   disabled / checked / readOnly / sensitive / editable
+#               <-> NOT emitted by SNAPSHOT_JS today (the digest is a
+#                   superset proposal for the P2b registry; a future
+#                   snapshot revision would add them, presence-only)
+#   hasValue    <-> NOT in the digest (value-presence metadata;
+#                   a value change must not look like identity change)
 # ---------------------------------------------------------------------------
 DESCRIPTOR_FIELDS = (
     "tag", "role", "type", "label", "placeholder", "href",
@@ -143,11 +161,18 @@ class DroppingProxy:
     AFTER the click already fired in-page, simulating a lost response
     on a delivered action (delivery_uncertain)."""
 
-    def __init__(self, server_host, server_port, drop_predicate):
+    def __init__(self, server_host, server_port, drop_predicate,
+                 mutate=None):
         self.server_host = server_host
         self.server_port = server_port
         self.drop_predicate = drop_predicate
+        # Optional packet transform: mutate(pkt) -> replacement pkt,
+        # or None to forward unchanged. Used to turn a delivered
+        # act result into a noSuchActor error (actor died after the
+        # click fired) for the B2 no-replay variant.
+        self.mutate = mutate
         self.dropped = 0
+        self.mutated = 0
         self.forwarded = 0
         self._stop = threading.Event()
         self._listener = None
@@ -227,6 +252,12 @@ class DroppingProxy:
                     if self.drop_predicate(pkt):
                         self.dropped += 1
                         continue
+                    if self.mutate is not None:
+                        replacement = self.mutate(pkt)
+                        if replacement is not None:
+                            self.mutated += 1
+                            dst.sendall(_frame(replacement))
+                            continue
                     self.forwarded += 1
                     dst.sendall(_frame(pkt))
         except OSError:
@@ -378,83 +409,125 @@ class DeliveryClassificationUnitTests(unittest.TestCase):
         self.assertEqual(
             rc._classify_error("evaluate exception: boom", "eval"),
             ("evaluate_failed", "delivery_uncertain", "unsafe"))
+        # The shipped act path classifies the same way (M8).
+        self.assertEqual(
+            rc._classify_error("RDP socket closed by server", "act"),
+            ("transport_error", "delivery_uncertain", "unsafe"))
 
 
 # ---------------------------------------------------------------------------
 # Live settling tests (skip without a dedicated session).
 # ---------------------------------------------------------------------------
-class FaultInjectionDeliveryTests(unittest.TestCase):
-    """(a) Drop the RDP response after the click fires in-page; the
-    submit counter must stay 1 and the failure must be retry=unsafe.
-    Proves: no automatic replay of a delivery_uncertain act eval."""
+def _is_act_result(pkt):
+    """True for the evaluationResult carrying an act verdict with
+    acted=true (the click already fired in-page by then)."""
+    if pkt.get("type") != "evaluationResult":
+        return False
+    res = pkt.get("result")
+    value = res.get("value") if isinstance(res, dict) else res
+    return isinstance(value, str) and '"acted": true' in value
 
-    def test_dropped_click_response_no_double_submit(self):
+
+class FaultInjectionDeliveryTests(unittest.TestCase):
+    """(a) Drive the SHIPPED RDPClient.act() through the dropping
+    proxy (gate fix M8: not a raw evaluate). Drop the act response
+    after the click fires in-page; the submit counter must stay 1
+    and the failure must classify retry=unsafe. Proves: no
+    automatic replay of a delivery_uncertain act, through the real
+    act path. The noSuchActor variant proves B2: act executes
+    exactly once even when its actor dies after firing."""
+
+    def _setup_fixture(self, port, http_port):
+        url = f"http://127.0.0.1:{http_port}/submit.html"
+        setup = _make_live_client(port)
+        setup.attach()
+        setup.navigate(url)
+        setup.wait_load("submit", timeout=20)
+        self.assertEqual(setup.evaluate("window.__submitCount"), 0)
+        setup.close()
+        return url
+
+    def _verify_counter(self, port, expected):
+        verify = _make_live_client(port)
+        verify.attach()
+        count = verify.evaluate("window.__submitCount")
+        verify.close()
+        self.assertEqual(
+            count, expected,
+            f"submit counter must stay {expected} (no replay); "
+            f"got {count!r}")
+
+    def test_dropped_act_response_no_double_submit(self):
         port, _marker = _live_session_or_skip(self)
         srv, http_port = _start_fixture_server()
         proxy = None
         try:
-            url = f"http://127.0.0.1:{http_port}/submit.html"
-            # Setup client: load the fixture and confirm counter is 0.
-            setup = _make_live_client(port)
-            setup.attach()
-            setup.navigate(url)
-            setup.wait_load("submit", timeout=20)
-            self.assertEqual(
-                setup.evaluate("window.__submitCount"), 0)
-            setup.close()
-
-            # Fault-injection client: route through the dropping proxy.
-            # Drop exactly the evaluationResult whose result value is 1
-            # (the click eval returns the new counter). All other
-            # packets (greeting, listTabs, getTarget) pass through.
-            def drop_click_result(pkt):
-                if pkt.get("type") != "evaluationResult":
-                    return False
-                res = pkt.get("result")
-                # Grip dict {"type": "number", "value": 1} or a bare
-                # value, depending on build; accept both.
-                if isinstance(res, dict):
-                    return res.get("value") == 1
-                return res == 1
-
-            proxy = DroppingProxy("127.0.0.1", port, drop_click_result)
+            self._setup_fixture(port, http_port)
+            proxy = DroppingProxy("127.0.0.1", port, _is_act_result)
             proxy_port = proxy.start()
             victim = RDPClient(proxy_port, unscoped_test=True,
                                denylist_patterns=[], warn_unscoped=False,
                                timeout=5)
             victim.attach()
-            # A dropped response surfaces as a socket timeout (the
-            # current client lets TimeoutError bubble from _fill) or
-            # as an RDPError; both must classify delivery_uncertain /
-            # unsafe. Catch both shapes.
             with self.assertRaises((RDPError, TimeoutError, OSError)) as cm:
-                victim.evaluate(
-                    "document.getElementById('submit').click();"
-                    " window.__submitCount", timeout=5)
+                victim.act({"role": "button", "name": "Submit"},
+                           "click", timeout=5)
             msg = str(cm.exception) or type(cm.exception).__name__
-            code, delivery, retry = rc._classify_error(msg, "eval")
+            code, delivery, retry = rc._classify_error(msg, "act")
             self.assertEqual(
                 (delivery, retry), ("delivery_uncertain", "unsafe"),
-                f"dropped click response must be delivery_uncertain/"
+                f"dropped act response must be delivery_uncertain/"
                 f"unsafe, got code={code} msg={msg!r}")
             self.assertGreaterEqual(
                 proxy.dropped, 1,
-                "proxy must have dropped the click evaluationResult")
+                "proxy must have dropped the act evaluationResult")
             try:
                 victim.close()
             except Exception:
                 pass
+            self._verify_counter(port, 1)
+        finally:
+            if proxy is not None:
+                proxy.stop()
+            srv.shutdown()
+            srv.server_close()
 
-            # Verify with a fresh direct client: the click fired once
-            # in-page and was NOT replayed. Counter must be exactly 1.
-            verify = _make_live_client(port)
-            verify.attach()
-            count = verify.evaluate("window.__submitCount")
-            verify.close()
-            self.assertEqual(
-                count, 1,
-                f"submit counter must stay 1 after a dropped response "
-                f"(no replay); got {count!r}")
+    def test_no_such_actor_after_act_no_replay(self):
+        # B2 variant: the act result is replaced by a noSuchActor
+        # error (actor died after the click fired). evaluate()'s
+        # RT-06 retry must NOT replay the act script.
+        port, _marker = _live_session_or_skip(self)
+        srv, http_port = _start_fixture_server()
+        proxy = None
+        try:
+            self._setup_fixture(port, http_port)
+
+            def to_no_such_actor(pkt):
+                if _is_act_result(pkt):
+                    return {"from": pkt.get("from"),
+                            "error": "noSuchActor"}
+                return None
+
+            proxy = DroppingProxy("127.0.0.1", port,
+                                  lambda pkt: False,
+                                  mutate=to_no_such_actor)
+            proxy_port = proxy.start()
+            victim = RDPClient(proxy_port, unscoped_test=True,
+                               denylist_patterns=[], warn_unscoped=False,
+                               timeout=5)
+            victim.attach()
+            with self.assertRaises(RDPError) as cm:
+                victim.act({"role": "button", "name": "Submit"},
+                           "click", timeout=5)
+            self.assertIn("noSuchActor", str(cm.exception))
+            self.assertEqual(proxy.mutated, 1)
+            self.assertEqual(victim._retries, 0,
+                             "act must not take the RT-06 retry")
+            try:
+                victim.close()
+            except Exception:
+                pass
+            self._verify_counter(port, 1)
         finally:
             if proxy is not None:
                 proxy.stop()

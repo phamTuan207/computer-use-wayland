@@ -28,7 +28,10 @@ Checks:
   j  bench self-test (only when --bench-local-url is given): the
      bench instrument completes with a timed result on the given
      local URL (runs=1; bench navigates destructively, throwaway
-     sessions only)
+     sessions only). Requires dedicated-session proof:
+     --bench-profile-dir (launch_dedicated marker + session for
+     this port) or the explicit --bench-allow-any-session flag;
+     refused otherwise, before any attach
 
 Exit codes: 0 pass, 2 setup/usage, 10 owner, 11 attach, 12 probe,
 13 evaluate, 14 parent target, 15 bind, 16 navigate,
@@ -65,7 +68,7 @@ except ImportError as e:
 
 EXIT = {"setup": 2, "a_port_owner": 10, "b_attach": 11, "c_webdriver": 12,
         "d_evaluate": 13, "e_parent_target": 14, "f_bind": 15,
-        "h_navigate": 16, "z_deployed_hash": 17, "i_bench": 18,
+        "h_navigate": 16, "z_deployed_hash": 17, "j_bench": 18,
         "i_pinned_methods": 19}
 
 PARENT_GLOBALS = ("gZenWorkspaces", "gBrowser", "gZenFolders")
@@ -114,6 +117,28 @@ def parse_bind(ss_text, port):
     return True, {"local_addrs": locals_}
 
 
+def bench_dedicated_proof(port, profile_dir):
+    """(ok, detail): dedicated-session proof for the bench leg.
+    The profile dir must carry a launch_dedicated marker + session
+    whose recorded port is this smoke port (verified session, live
+    pid). Anything else is not proof."""
+    if not profile_dir:
+        return False, {"reason": "no --bench-profile-dir given"}
+    try:
+        import launch_dedicated
+        record = launch_dedicated.verify_session(profile_dir)
+    except Exception as e:
+        return False, {"reason": f"dedicated session not verified: {e}",
+                       "profile_dir": str(profile_dir)}
+    if int(record.get("port", -1)) != int(port):
+        return False, {"reason": "dedicated session port "
+                                 f"{record.get('port')} != smoke "
+                                 f"port {port}",
+                       "profile_dir": str(profile_dir)}
+    return True, {"profile_dir": str(profile_dir),
+                  "pid": record.get("pid")}
+
+
 def parent_evaluate(client, expr, timeout=10):
     """Evaluate in the parent-process (chrome) target via the landed
     client API (gated by allow_parent, recorded in the drive report).
@@ -123,7 +148,8 @@ def parent_evaluate(client, expr, timeout=10):
 
 
 def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10,
-              deployed_client=None, bench_local_url=None):
+              deployed_client=None, bench_local_url=None,
+              bench_profile_dir=None, bench_allow_any_session=False):
     """Returns (report_dict, exit_code). Stops at first failed check."""
     t_start = time.monotonic()
     report = {
@@ -149,6 +175,21 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10,
                         "deployed rdp_client.py drifted from the landed "
                         f"copy: {detail}", detail)
         report["checks"]["z_deployed_hash"] = {"status": "PASS", **detail}
+
+    # (j) gate, checked before any attach: bench navigates
+    # destructively, so it runs only on a proven dedicated session
+    # (launch_dedicated marker + session for this port) or under
+    # the explicit any-session opt-in. Never on an owner session
+    # by construction.
+    if bench_local_url and not bench_allow_any_session:
+        ok, detail = bench_dedicated_proof(port, bench_profile_dir)
+        if not ok:
+            return fail("j_bench",
+                        "BENCH REFUSED: bench self-test requires "
+                        "dedicated-session proof (--bench-profile-dir "
+                        "with a launch_dedicated session for this "
+                        "port) or --bench-allow-any-session; "
+                        f"{detail}", detail)
 
     # (a) port owner pid + cmdline matches marker
     try:
@@ -266,14 +307,14 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10,
         try:
             result = bench(port, marker, bench_local_url, bench_local_url,
                            runs=1, unscoped_test=True)
-            report["checks"]["i_bench"] = {
+            report["checks"]["j_bench"] = {
                 "status": "PASS",
                 "navigate_local_median_ms":
                     result["navigate_local"]["median_ms"],
                 "attach_median_ms":
                     result["attach_to_first_evaluate"]["median_ms"]}
         except Exception as e:
-            return fail("i_bench", e)
+            return fail("j_bench", e)
 
     report["overall"] = "PASS"
     report["elapsed_ms"] = ms(time.monotonic() - t_start)
@@ -298,12 +339,23 @@ def main():
                     help="run the bench self-test (runs=1) against "
                          "this local URL after the other checks; "
                          "bench navigates destructively, throwaway "
-                         "sessions only")
+                         "sessions only (requires dedicated proof)")
+    ap.add_argument("--bench-profile-dir", default=None, metavar="PATH",
+                    help="launch_dedicated profile dir proving the "
+                         "bench target is a dedicated session on "
+                         "this port (marker + session verified)")
+    ap.add_argument("--bench-allow-any-session", action="store_true",
+                    help="EXPLICIT opt-in: run the bench self-test "
+                         "without dedicated-session proof (never on "
+                         "an owner session)")
     args = ap.parse_args()
     report, code = run_smoke(args.port, args.profile_marker, host=args.host,
                              timeout=args.timeout, eval_runs=args.eval_runs,
                              deployed_client=args.deployed_client,
-                             bench_local_url=args.bench_local_url)
+                             bench_local_url=args.bench_local_url,
+                             bench_profile_dir=args.bench_profile_dir,
+                             bench_allow_any_session=
+                             args.bench_allow_any_session)
     print(json.dumps(report, indent=1))
     return code
 

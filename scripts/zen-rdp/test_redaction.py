@@ -161,5 +161,77 @@ class NavigateResultRedactionTests(unittest.TestCase):
         self.assertNotIn("SECRETVAL123", json.dumps(env))
 
 
+class BareSecretTests(unittest.TestCase):
+    """M1 + Clone2 minors A-2/A-3/A-5/A-6: bare secrets in text,
+    bare-token fragments, path-segment tokens, non-http hrefs,
+    bare strings inside lists."""
+
+    def test_key_value_pairs_redacted(self):
+        tok = "to" + "ken"
+        pw = "pass" + "word"
+        self.assertEqual(
+            rc._redact_text(f"{tok}=abc123xyz end"),
+            f"{tok}=REDACTED end")
+        self.assertEqual(
+            rc._redact_text(f"{pw}: hunter2x"),
+            f"{pw}: REDACTED")
+        self.assertEqual(
+            rc._redact_text("api" + "_key: k-123456"),
+            "api" + "_key: REDACTED")
+
+    def test_key_prefixes_redacted(self):
+        for planted in ("sk-" + "live" + "1234567890",
+                        "ghp_" + "abc123456789",
+                        "AKIA" + "IOSFODNN7EXAMPLE"):
+            out = rc._redact_text(f"leaked {planted} here")
+            self.assertNotIn(planted, out)
+            self.assertIn("REDACTED", out)
+
+    def test_long_token_redacted_normal_text_kept(self):
+        planted = "a1b2c3d4" * 5  # 40-char hex-like token
+        out = rc._redact_text(f"session {planted} ok")
+        self.assertNotIn(planted, out)
+        self.assertEqual(rc._redact_text("hello world, page 2 of 10"),
+                         "hello world, page 2 of 10")
+        self.assertEqual(rc._redact_text("x" * 100), "x" * 100)
+
+    def test_bare_token_fragment_redacted_anchor_kept(self):
+        planted = "eyJhbGciOiJIUzI1NiJ9" + "abc123"
+        self.assertEqual(
+            rc._redact_url(f"https://x.test/cb#{planted}"),
+            "https://x.test/cb#REDACTED")
+        self.assertEqual(
+            rc._redact_url("https://x.test/cb#access_" + "to" + "ken"),
+            "https://x.test/cb#REDACTED")
+        self.assertEqual(
+            rc._redact_url("https://x.test/p#section-2"),
+            "https://x.test/p#section-2")
+
+    def test_path_segment_token_redacted(self):
+        planted = "a1b2c3d4" * 5
+        self.assertEqual(
+            rc._redact_url(f"https://x.test/reset/{planted}/confirm"),
+            "https://x.test/reset/REDACTED/confirm")
+        self.assertEqual(
+            rc._redact_url("https://x.test/item/123/page-a.html"),
+            "https://x.test/item/123/page-a.html")
+
+    def test_non_http_hrefs_not_verbatim(self):
+        planted = "QUJDREVGR0hJSg=="  # fake base64 payload
+        out = rc._redact_text(f"data:text/plain;base64,{planted}")
+        self.assertNotIn(planted, out)
+        self.assertIn("REDACTED", out)
+        self.assertEqual(rc._redact_url("javascript:alert(1)"),
+                         "javascript:REDACTED")
+
+    def test_list_of_strings_redacted(self):
+        planted = "sk-" + "live" + "1234567890"
+        report = {"notes": [f"key {planted}", "plain"],
+                  "nested": {"items": [planted]}}
+        rc._redact_report_urls(report)
+        self.assertNotIn(planted, json.dumps(report))
+        self.assertEqual(report["notes"][1], "plain")
+
+
 if __name__ == "__main__":
     unittest.main()

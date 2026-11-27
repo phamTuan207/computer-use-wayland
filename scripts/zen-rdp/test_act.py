@@ -39,8 +39,11 @@ def make_client(verdict):
     client._act_refusals = []
     client.scripts = []
 
-    def fake_evaluate(expr, timeout=20):
+    client.replays = []
+
+    def fake_evaluate(expr, timeout=20, replay=True):
         client.scripts.append(expr)
+        client.replays.append(replay)
         client._actions["evaluate"] += 1
         return verdict if isinstance(verdict, str) else json.dumps(verdict)
 
@@ -164,7 +167,8 @@ class ActVerdictTests(unittest.TestCase):
 
     def test_non_string_verdict_is_contract_error(self):
         client = make_client({"acted": True})
-        client.evaluate = lambda expr, timeout=20: {"type": "object"}
+        client.evaluate = lambda expr, timeout=20, replay=True: {
+            "type": "object"}
         with self.assertRaisesRegex(rc.RDPError, "not a string"):
             client.act({"text": "Go"}, "click")
 
@@ -219,6 +223,125 @@ class EnvelopeTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         env = json.loads(proc.stdout)
         self.assertEqual(env["error"]["code"], "act_value_unexpected")
+
+
+class GateFixTests(unittest.TestCase):
+    """Council+redteam gate fixes B1/B2/M3/M4 (2026-11-27)."""
+
+    def test_b1_script_refuses_on_truncated_scan_before_click(self):
+        script = rc._act_script({"text": "Action"}, "click")
+        # The truncated refusal returns before any click/type.
+        self.assertIn("scan_truncated", script)
+        self.assertLess(script.index("scan_truncated"),
+                        script.index(".click()"))
+
+    def test_b1_truncated_count_one_refuses_python_side(self):
+        # Even if a script revision acted on a truncated scan,
+        # act() converts it to the scan_truncated refusal.
+        client = make_client({"acted": True, "action": "click",
+                              "count": 1, "candidatesTruncated": True,
+                              "target": {"tag": "button"}})
+        with self.assertRaises(rc.ActRefusal) as ctx:
+            client.act({"text": "Action"}, "click")
+        self.assertEqual(ctx.exception.code, "target_scan_truncated")
+        self.assertEqual(ctx.exception.refusal["count"], 1)
+        self.assertEqual(client._actions["act"], 0)
+
+    def test_b1_truncated_refusal_reason_code(self):
+        client = make_client({"acted": False, "reason": "scan_truncated",
+                              "count": 1, "candidatesTruncated": True,
+                              "candidates": []})
+        with self.assertRaises(rc.ActRefusal) as ctx:
+            client.act({"text": "Action"}, "click")
+        self.assertEqual(ctx.exception.code, "target_scan_truncated")
+
+    def test_b2_act_uses_no_replay_evaluate(self):
+        client = make_client({"acted": True, "action": "click",
+                              "count": 1, "candidatesTruncated": False,
+                              "target": {"tag": "button"}})
+        client.act({"text": "Go"}, "click")
+        self.assertEqual(client.replays, [False],
+                         "act must go through evaluate(replay=False)")
+
+    def test_b2_no_such_actor_after_fire_executes_exactly_once(self):
+        # Real client on the fake transport: the first (and only)
+        # act eval replies noSuchActor (actor died after the click
+        # fired in-page). act must raise after ONE send, with no
+        # pinned re-attach retry; a read evaluate still retries.
+        from test_scope_unittest import FakeRDPTransport, TAB_A
+
+        class ActTransport(FakeRDPTransport):
+            def __init__(self):
+                super().__init__()
+                self.eval_sends = 0
+
+            def _handle(self, req):
+                if req.get("type") == "evaluateJSAsync":
+                    self.eval_sends += 1
+                super()._handle(req)
+
+            @staticmethod
+            def _eval(expr):
+                if "SCAN_CAP" in expr:
+                    return {"type": "string", "value": json.dumps(
+                        {"acted": True, "action": "click", "count": 1,
+                         "candidatesTruncated": False,
+                         "target": {"tag": "button"}})}
+                return FakeRDPTransport._eval(expr)
+
+        fake = ActTransport()
+        c = rc.RDPClient(0, transport=fake,
+                         scope=rc.Scope(tab_ids=[TAB_A]))
+        c.attach(TAB_A)
+        fake.fail_evals = 1  # act eval: actor dies, noSuchActor
+        with self.assertRaises(rc.RDPError) as ctx:
+            c.act({"text": "Go"}, "click")
+        self.assertIn("noSuchActor", str(ctx.exception))
+        self.assertEqual(fake.eval_sends, 1,
+                         "act script must execute exactly once")
+        self.assertEqual(c._retries, 0)
+        # Read path keeps the RT-06 retry.
+        fake.fail_evals = 1
+        self.assertEqual(c.evaluate("1+1"), 2)
+        self.assertEqual(c._retries, 1)
+        c.close()
+
+    def test_m3_script_skips_invisible_and_disabled(self):
+        script = rc._act_script({"text": "Go"}, "click")
+        self.assertIn("getComputedStyle", script)
+        self.assertIn("visibility", script)
+        self.assertIn("opacity", script)
+        self.assertIn("isDisabled", script)
+        self.assertIn("target_disabled", script)
+        self.assertIn("target_readonly", script)
+
+    def test_m3_disabled_readonly_refusal_codes(self):
+        for reason in ("target_disabled", "target_readonly"):
+            client = make_client({"acted": False, "reason": reason,
+                                  "count": 1,
+                                  "candidatesTruncated": False,
+                                  "candidates": []})
+            with self.assertRaises(rc.ActRefusal) as ctx:
+                client.act({"label": "Name"}, "type", "x")
+            self.assertEqual(ctx.exception.code, reason)
+
+    def test_m4_type_verdict_never_echoes_value(self):
+        script = rc._act_script({"label": "Pw"}, "type", "s3cret")
+        self.assertNotIn("value: el.value", script)
+        self.assertIn("hasValue", script)
+        self.assertIn("valueLength", script)
+        # Python side strips a value key even if one arrives.
+        planted = "PLANTED" + "PW" + "VALUE"
+        client = make_client({"acted": True, "action": "type",
+                              "count": 1, "candidatesTruncated": False,
+                              "target": {"tag": "input"},
+                              "value": planted, "hasValue": True,
+                              "valueLength": len(planted)})
+        verdict = client.act({"label": "Pw"}, "type", planted)
+        self.assertNotIn("value", verdict)
+        self.assertNotIn(planted, json.dumps(verdict))
+        self.assertTrue(verdict["hasValue"])
+        self.assertEqual(verdict["valueLength"], len(planted))
 
 
 if __name__ == "__main__":

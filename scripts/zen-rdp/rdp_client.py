@@ -99,14 +99,27 @@ _GUARDED_PACKET_TYPES = ("evaluateJSAsync", "navigateTo")
 
 # P1 snapshot: ONE fixed, client-owned read script (never caller
 # supplied). Compact DOM walk in our shape: interactive elements and
-# headings, capped, with completeness accounting done client-side in
-# snapshot(). Field VALUES are never read into the output: inputs
-# report hasValue (presence only). The element cap mirrors the
-# historical cap-200 agent walk; the fixture acceptance budget is
-# 25,919 B on the 300-control page (see test_snapshot.py).
+# headings, capped, with completeness accounting validated client-side
+# in snapshot(). Field VALUES are never read into the output: inputs
+# report hasValue (presence only); form-field and contenteditable
+# content is excluded from the name fallback AND from the text
+# preview (the preview walks text nodes and skips form/editable
+# subtrees, so typed content cannot ride out as page text). The
+# element cap mirrors the historical cap-200 agent walk. The byte
+# cap is enforced in snapshot() (elements truncated from the end,
+# bytesTruncated flag); 25,919 B is the enforced cap, and the
+# 300-control fixture measures below it (see test_snapshot.py).
 SNAPSHOT_ELEMENT_CAP = 200
+SNAPSHOT_TEXT_CAP = 1500
+SNAPSHOT_NAME_CAP = 60
+SNAPSHOT_ROLE_CAP = 60
+SNAPSHOT_TITLE_CAP = 200
+SNAPSHOT_URL_CAP = 500
+SNAPSHOT_HREF_CAP = 200
+SNAPSHOT_BYTE_CAP = 25919
 SNAPSHOT_JS = """(() => {
-  const CAP = 200, TEXT_CAP = 1500, NAME_CAP = 60;
+  const CAP = %d, TEXT_CAP = %d, NAME_CAP = %d;
+  const ROLE_CAP = %d, TITLE_CAP = %d, URL_CAP = %d, HREF_CAP = %d;
   const sel = 'a,button,input,select,textarea,h1,h2,h3,h4,h5,h6,[role]';
   const all = document.querySelectorAll(sel);
   const els = [];
@@ -114,30 +127,57 @@ SNAPSHOT_JS = """(() => {
   for (let i = 0; i < n; i++) {
     const e = all[i];
     const r = {tag: e.tagName.toLowerCase()};
-    const name = (e.getAttribute('aria-label') || e.innerText ||
-      e.placeholder || e.name || '').trim().replace(/\\s+/g, ' ')
-      .slice(0, NAME_CAP);
+    const isField = e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' ||
+      e.tagName === 'SELECT' || e.isContentEditable;
+    const name = (isField
+      ? (e.getAttribute('aria-label') || e.placeholder || e.name || '')
+      : (e.getAttribute('aria-label') || e.innerText ||
+         e.placeholder || e.name || ''))
+      .trim().replace(/\\s+/g, ' ').slice(0, NAME_CAP);
     if (name) r.name = name;
     if (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' ||
         e.tagName === 'SELECT') {
       if (e.type) r.type = e.type;
       r.hasValue = !!e.value;
     }
-    if (e.tagName === 'A' && e.href) r.href = e.href.slice(0, 200);
+    if (e.tagName === 'A' && e.href) r.href = e.href.slice(0, HREF_CAP);
     const role = e.getAttribute('role');
-    if (role) r.role = role;
+    if (role) r.role = role.slice(0, ROLE_CAP);
     els.push(r);
   }
-  const text = (document.body ? document.body.innerText : '') || '';
+  let text = '';
+  if (document.body) {
+    const skip = new Set(['TEXTAREA', 'SELECT', 'INPUT', 'SCRIPT',
+                          'STYLE', 'NOSCRIPT']);
+    const walker = document.createTreeWalker(
+      document.body, NodeFilter.SHOW_TEXT);
+    const parts = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      let excluded = false;
+      for (let a = node.parentElement; a && a !== document.body;
+           a = a.parentElement) {
+        if (skip.has(a.tagName) || a.isContentEditable) {
+          excluded = true;
+          break;
+        }
+      }
+      if (!excluded && node.nodeValue.trim()) parts.push(node.nodeValue);
+    }
+    text = parts.join(' ').replace(/\\s+/g, ' ').trim();
+  }
   return JSON.stringify({
-    url: location.href, title: document.title,
+    url: location.href.slice(0, URL_CAP),
+    title: (document.title || '').slice(0, TITLE_CAP),
     readyState: document.readyState,
     totalElements: all.length, returnedElements: els.length,
     elementsTruncated: all.length > els.length,
     textPreview: text.slice(0, TEXT_CAP),
     textTruncated: text.length > TEXT_CAP, textLength: text.length,
     elements: els});
-})()"""
+})()""" % (SNAPSHOT_ELEMENT_CAP, SNAPSHOT_TEXT_CAP, SNAPSHOT_NAME_CAP,
+           SNAPSHOT_ROLE_CAP, SNAPSHOT_TITLE_CAP, SNAPSHOT_URL_CAP,
+           SNAPSHOT_HREF_CAP)
 
 
 def median(xs):
@@ -425,7 +465,13 @@ _ACT_JS = r"""
         ['submit', 'button', 'reset', 'image'].includes((el.type || '').toLowerCase())) {
       return el.value || '';
     }
-    const txt = el.textContent || '';
+    // Field content is a value, never a name: a textarea/select's
+    // textContent is its default value / option text, and a
+    // contenteditable's text is typed content. Skip the text
+    // fallback for those (labels/aria/placeholder still apply).
+    const isField = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ||
+      el.tagName === 'SELECT' || el.isContentEditable;
+    const txt = isField ? '' : (el.textContent || '');
     if (norm(txt)) return txt;
     const ph = el.getAttribute && el.getAttribute('placeholder');
     if (ph) return ph;
@@ -464,10 +510,26 @@ _ACT_JS = r"""
     }
     return '';
   }
+  function isFieldEl(el) {
+    return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ||
+      el.tagName === 'SELECT' || el.isContentEditable;
+  }
   function summary(el) {
     return {tag: el.tagName.toLowerCase(), role: roleOf(el),
             name: norm(accName(el)).slice(0, 120),
-            text: norm(el.textContent).slice(0, 120)};
+            text: isFieldEl(el) ? '' : norm(el.textContent).slice(0, 120)};
+  }
+  function isVisible(el) {
+    if (el.getClientRects().length === 0) return false;
+    const st = getComputedStyle(el);
+    if (st.display === 'none' || st.visibility === 'hidden' ||
+        st.visibility === 'collapse') return false;
+    if (!(parseFloat(st.opacity) > 0)) return false;
+    return true;
+  }
+  function isDisabled(el) {
+    return el.disabled === true ||
+      (el.getAttribute && el.getAttribute('aria-disabled') === 'true');
   }
   let pool;
   try {
@@ -486,7 +548,11 @@ _ACT_JS = r"""
   const matches = [];
   for (let i = 0; i < examined; i++) {
     const el = pool[i];
-    if (el.getClientRects().length === 0) continue;
+    if (!isVisible(el)) continue;
+    // A disabled target cannot be clicked: exclude it from the
+    // click pool (for type it stays a match so the refusal below
+    // can name the real reason instead of a bare not_found).
+    if (spec.action === 'click' && isDisabled(el)) continue;
     if (spec.role && !eq(roleOf(el), spec.role)) continue;
     if (spec.name && !eq(accName(el), spec.name)) continue;
     if (spec.text && !eq(el.textContent, spec.text)) continue;
@@ -494,30 +560,48 @@ _ACT_JS = r"""
     matches.push(el);
   }
   const count = matches.length;
+  // A truncated scan proves nothing about uniqueness: an unexamined
+  // element could be a second match. Refuse even when the examined
+  // count is exactly 1 (or 0).
+  if (truncated) {
+    return JSON.stringify({acted: false, reason: 'scan_truncated',
+      count: count, candidatesTruncated: true,
+      candidates: matches.slice(0, CANDIDATE_CAP).map(summary)});
+  }
   if (count !== 1) {
     return JSON.stringify({acted: false,
       reason: count === 0 ? 'not_found' : 'ambiguous', count: count,
-      candidatesTruncated: truncated,
+      candidatesTruncated: false,
       candidates: matches.slice(0, CANDIDATE_CAP).map(summary)});
   }
   const el = matches[0];
   if (spec.action === 'click') {
     el.click();
     return JSON.stringify({acted: true, action: 'click', count: 1,
-      candidatesTruncated: truncated, target: summary(el)});
+      candidatesTruncated: false, target: summary(el)});
   }
   const tag = el.tagName;
   if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
     return JSON.stringify({acted: false, reason: 'not_editable', count: 1,
-      candidatesTruncated: truncated, candidates: [summary(el)]});
+      candidatesTruncated: false, candidates: [summary(el)]});
+  }
+  if (isDisabled(el)) {
+    return JSON.stringify({acted: false, reason: 'target_disabled',
+      count: 1, candidatesTruncated: false, candidates: [summary(el)]});
+  }
+  if (el.readOnly) {
+    return JSON.stringify({acted: false, reason: 'target_readonly',
+      count: 1, candidatesTruncated: false, candidates: [summary(el)]});
   }
   const proto = tag === 'TEXTAREA'
     ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, spec.value);
   el.dispatchEvent(new Event('input', {bubbles: true}));
   el.dispatchEvent(new Event('change', {bubbles: true}));
+  // Never echo the typed value: presence + length only.
   return JSON.stringify({acted: true, action: 'type', count: 1,
-    candidatesTruncated: truncated, target: summary(el), value: el.value});
+    candidatesTruncated: false, target: summary(el),
+    hasValue: !!el.value, valueLength: el.value.length});
 })()
 """.strip()
 
@@ -566,7 +650,10 @@ class ActRefusal(RDPError):
     _CODES = {"ambiguous": "target_ambiguous",
               "not_found": "target_not_found",
               "not_editable": "target_not_editable",
-              "bad_selector": "bad_selector"}
+              "bad_selector": "bad_selector",
+              "scan_truncated": "target_scan_truncated",
+              "target_disabled": "target_disabled",
+              "target_readonly": "target_readonly"}
 
     def __init__(self, refusal):
         self.refusal = refusal
@@ -682,7 +769,8 @@ def check_port_owner(port, marker):
 
 def _tab_snapshot(tabs):
     return [{"actor": t.get("actor"), "tab_id": _canon_tab_id(t.get("actor")),
-             "url": _redact_url(t.get("url", "")), "title": t.get("title", ""),
+             "url": _redact_url(t.get("url", "")),
+             "title": _redact_text(t.get("title", "")),
              "selected": bool(t.get("selected"))} for t in tabs]
 
 
@@ -713,8 +801,37 @@ _SENSITIVE_NAMES = frozenset(
 
 _REDACTED = "REDACTED"
 
-# http(s) URLs embedded in text (e.g. inside error/prose strings).
-_URL_TEXT_RE = re.compile(r"https?://[^\s'\"<>]+", re.IGNORECASE)
+# http(s)/file URLs embedded in text (e.g. inside error/prose strings).
+_URL_TEXT_RE = re.compile(r"(?:https?|file)://[^\s'\"<>]+", re.IGNORECASE)
+
+# Bare-secret patterns for page text (snapshot previews/titles/names).
+# Conservative and pattern-based: key=value / key: value for sensitive
+# keys, well-known key prefixes, Bearer credentials, and long
+# token-like strings (hex/base64, >= 32 chars, letter+digit mix).
+# This is a safety net over output bytes, not a guarantee: a secret
+# in an unrecognized shape still passes (see README).
+_BARE_KV_RE = re.compile(
+    r"(?i)\b(access[-_ ]?token|refresh[-_ ]?token|id[-_ ]?token|"
+    r"api[-_ ]?key|apikey|token|password|passwd|pwd|secret|auth|"
+    r"session|credential|private[-_ ]?key)\b(\s*[:=]\s*)"
+    r"([^\s,;\"'<>]+)")
+_BEARER_RE = re.compile(r"(?i)\b(Bearer\s+)([^\s,;\"'<>]+)")
+_KEY_PREFIX_RE = re.compile(
+    r"\b(?:sk-[A-Za-z0-9_-]{8,}|ghp_[A-Za-z0-9]{8,}|gho_[A-Za-z0-9]{8,}|"
+    r"github_pat_[A-Za-z0-9_]{8,}|AKIA[A-Z0-9]{12,})\b")
+_LONG_TOKEN_RE = re.compile(
+    r"(?<![A-Za-z0-9+/=_-])"
+    r"(?=[A-Za-z0-9+/=_-]*\d)(?=[A-Za-z0-9+/=_-]*[A-Za-z])"
+    r"[A-Za-z0-9+/=_-]{32,}"
+    r"(?![A-Za-z0-9+/=_-])")
+# Path-segment tokens: shorter than the text threshold, but still
+# letter+digit mixes no normal slug has (page-a.html, item/123 safe).
+_PATH_TOKEN_RE = re.compile(
+    r"^(?=[A-Za-z0-9+/=_-]*\d)(?=[A-Za-z0-9+/=_-]*[A-Za-z])"
+    r"[A-Za-z0-9+/=_-]{20,}$")
+_PATH_SECRET_LEADERS = frozenset((
+    "reset", "token", "auth", "verify", "password", "secret", "key",
+    "confirm-token", "magic-link", "invite"))
 
 
 def _is_sensitive_param(name):
@@ -772,19 +889,39 @@ def _redact_query_pairs(query):
 
 
 def _redact_path(path):
-    """Redact ;-separated path parameters (e.g. /app;jsessionid=ABC)."""
-    if ";" not in path:
+    """Redact ;-separated path parameters (e.g. /app;jsessionid=ABC)
+    and token-shaped path segments (/reset/<token>/confirm): a
+    segment that is a long letter+digit token, or that follows a
+    sensitive leader segment, never reaches output."""
+    if ";" in path:
+        path = ";".join(_redact_pair(s) if "=" in s else s
+                        for s in path.split(";"))
+    if "/" not in path:
         return path
-    return ";".join(_redact_pair(s) if "=" in s else s
-                    for s in path.split(";"))
+    segments = path.split("/")
+    for i, seg in enumerate(segments):
+        if not seg:
+            continue
+        lead = segments[i - 1].lower() if i > 0 else ""
+        if _PATH_TOKEN_RE.match(seg) or lead in _PATH_SECRET_LEADERS:
+            segments[i] = _REDACTED
+    return "/".join(segments)
 
 
 def _redact_url(url):
     """Redact sensitive query/fragment params, userinfo passwords and
     path params from a URL. Non-URL text passes through unchanged;
-    only URL-shaped strings are redacted."""
+    only URL-shaped strings are redacted. data:/javascript: payloads
+    are never passed verbatim (a data: href can carry a base64
+    secret)."""
     if not url:
         return url
+    low = url.lower()
+    if low.startswith("data:"):
+        head, sep, _payload = url.partition(",")
+        return f"{head},REDACTED" if sep else "data:REDACTED"
+    if low.startswith("javascript:"):
+        return "javascript:REDACTED"
     m = re.match(r"^([A-Za-z][A-Za-z0-9+.\-]*://)([^/?#]*)", url)
     if not m:
         return url
@@ -804,17 +941,43 @@ def _redact_url(url):
     if sep:
         out += "?" + (_redact_query_pairs(query) if query else "")
     if frag:
-        out += "#" + (_redact_query_pairs(frag) if ("=" in frag or "&" in frag) else frag)
+        if "=" in frag or "&" in frag:
+            frag = _redact_query_pairs(frag)
+        elif _is_sensitive_param(frag) or _LONG_TOKEN_RE.search(frag) \
+                or _PATH_TOKEN_RE.match(frag):
+            # Bare-token fragment (#<jwt>, #access_token): the whole
+            # fragment is the credential. Short anchors (#section)
+            # pass through.
+            frag = _REDACTED
+        out += "#" + frag
     return out
 
 
+def _redact_bare_secrets(s):
+    """Redact bare secrets in non-URL text: sensitive key=value /
+    key: value pairs, Bearer credentials, known key prefixes
+    (sk-, ghp_, AKIA, ...), and long token-like strings. Runs after
+    URL redaction so URL internals are handled by the URL rules."""
+    s = _BARE_KV_RE.sub(lambda m: f"{m.group(1)}{m.group(2)}{_REDACTED}", s)
+    s = _BEARER_RE.sub(lambda m: f"{m.group(1)}{_REDACTED}", s)
+    s = _KEY_PREFIX_RE.sub(_REDACTED, s)
+    s = _LONG_TOKEN_RE.sub(_REDACTED, s)
+    return s
+
+
 def _redact_text(s):
-    """Redact http(s) URL substrings inside arbitrary text
-    (error/prose strings included). Conservative: only URL text is
-    redacted, non-URL text is never mangled."""
-    if not isinstance(s, str) or not _URL_TEXT_RE.search(s):
+    """Redact secrets inside arbitrary text (error/prose strings,
+    snapshot previews/titles/names included): URL substrings via
+    the URL rules, data:/javascript: values wholesale, then bare
+    secrets via _redact_bare_secrets. Pattern-based, not a
+    guarantee (see README)."""
+    if not isinstance(s, str) or not s:
         return s
-    return _URL_TEXT_RE.sub(lambda m: _redact_url(m.group(0)), s)
+    if s.lower().startswith(("data:", "javascript:")):
+        return _redact_url(s)
+    if _URL_TEXT_RE.search(s):
+        s = _URL_TEXT_RE.sub(lambda m: _redact_url(m.group(0)), s)
+    return _redact_bare_secrets(s)
 
 
 def _redact_report_urls(node):
@@ -829,8 +992,11 @@ def _redact_report_urls(node):
             else:
                 _redact_report_urls(value)
     elif isinstance(node, list):
-        for item in node:
-            _redact_report_urls(item)
+        for i, item in enumerate(node):
+            if isinstance(item, str):
+                node[i] = _redact_text(item)
+            else:
+                _redact_report_urls(item)
     elif isinstance(node, str):
         return _redact_text(node)
     return node
@@ -1281,9 +1447,16 @@ class RDPClient:
     def _fetch_long_string(self, grip):
         """Fetch full text of an RDP longString grip via substring
         requests (ported from L1 l1_parent.py). Large evaluate results
-        (innerText/outerHTML) arrive as longString grips, not text."""
+        (innerText/outerHTML) arrive as longString grips, not text.
+        F2-hardened: position advances by the ACTUAL substring length
+        (a short chunk must not skip bytes), an error packet is
+        rejected wherever it arrives (never consumed as content),
+        an empty chunk fails loud instead of looping, and the
+        assembled length is verified against the declared length."""
         actor = grip.get("actor")
         length = grip.get("length", 0)
+        if not isinstance(length, int) or length < 0:
+            raise RDPError(f"longString grip has bad length {length!r}")
         parts = []
         pos = 0
         while pos < length:
@@ -1292,16 +1465,26 @@ class RDPClient:
                         "start": pos, "end": end})
             while True:
                 m = self._recv()
-                if m.get("from") == actor:
-                    break
                 if m.get("error"):
                     raise RDPError(f"substring error: {str(m)[:400]}")
+                if m.get("from") == actor:
+                    break
             sub = m.get("substring", "")
             if isinstance(sub, dict):
                 sub = sub.get("value", "")
+            if not isinstance(sub, str) or not sub:
+                raise RDPError(
+                    f"substring chunk at {pos} returned no text "
+                    f"(declared length {length}); refusing to "
+                    "assemble a short longString")
             parts.append(sub)
-            pos = end
-        return "".join(parts)
+            pos += len(sub)
+        text = "".join(parts)
+        if len(text) != length:
+            raise RDPError(
+                f"longString length mismatch: declared {length}, "
+                f"assembled {len(text)}")
+        return text
 
     def _unwrap_full(self, grip):
         """_unwrap plus longString fetching (needs the live socket)."""
@@ -1309,14 +1492,20 @@ class RDPClient:
             return self._fetch_long_string(grip)
         return self._unwrap(grip)
 
-    def evaluate(self, expr, timeout=20):
+    def evaluate(self, expr, timeout=20, replay=True):
+        """Evaluate JS on the attached tab (guarded). On a dead actor
+        (noSuchActor, RT-06 target swap) re-attach pinned and retry
+        ONCE - but only when replay=True (read paths). Callers whose
+        script has side effects (act) pass replay=False: a click that
+        fired and then lost its actor must never be replayed, so the
+        error propagates after exactly one execution."""
         if not self.console_actor:
             raise RDPError("evaluate before attach (no console actor)")
         self._guard_current("evaluate")
         try:
             return self._evaluate_once(expr, timeout)
         except RDPError as e:
-            if not _is_no_such_actor(str(e)):
+            if not replay or not _is_no_such_actor(str(e)):
                 raise
             # Target swap killed the held consoleActor (RT-06): re-attach
             # pinned to the same tab and retry the evaluate once.
@@ -1347,13 +1536,14 @@ class RDPClient:
         candidatesTruncated, candidate summaries) when the script
         refuses. Transport failures propagate as RDPError (the click
         may have landed; callers must not replay). Goes through
-        evaluate(), so tab scope/denylist and the RT-06 pinned
-        re-attach apply unchanged."""
+        evaluate() with replay=False, so tab scope/denylist apply
+        but the RT-06 noSuchActor retry never replays the act
+        script: it executes exactly once."""
         err = _act_usage_error(descriptor, action, text)
         if err is not None:
             raise RDPError(err[1])
         raw = self.evaluate(_act_script(descriptor, action, text),
-                            timeout=timeout)
+                            timeout=timeout, replay=False)
         if not isinstance(raw, str):
             raise RDPError(
                 f"act verdict is not a string (got {type(raw).__name__}); "
@@ -1364,8 +1554,19 @@ class RDPClient:
             raise RDPError(f"act verdict is not valid JSON: {e}")
         if not isinstance(verdict, dict) or "acted" not in verdict:
             raise RDPError(f"act verdict has no 'acted' field: {raw[:200]!r}")
+        # Defence in depth: the typed value never rides out in a
+        # verdict, even if a future script revision echoes it.
+        verdict.pop("value", None)
         verdict["descriptor"] = _normalize_descriptor(descriptor)
         verdict["action"] = action
+        if verdict["acted"] and verdict.get("candidatesTruncated"):
+            # The script acted on a truncated scan (contract breach:
+            # uniqueness was never proven). Surface it as the
+            # refusal it should have been; the action may have
+            # landed, which the refusal envelope's retry=unsafe
+            # already states.
+            verdict = dict(verdict, acted=False,
+                           reason="scan_truncated")
         if verdict["acted"]:
             self._actions["act"] += 1
             return verdict
@@ -1490,21 +1691,37 @@ class RDPClient:
         except Exception:
             pass  # wait_load re-attaches as needed
 
+    # Guard refusals are pre-send and permanent for this session:
+    # polling through them only burns the caller's budget (a
+    # snapshot on a denylisted tab used to burn the full 10 s load
+    # wait before the read-stage evaluate refused).
+    _REFUSAL_MARKERS = ("SCOPE REFUSED", "CREDENTIAL TAB REFUSED",
+                        "UNSCOPED REFUSED", "RAW PACKET REFUSED",
+                        "PARENT EVALUATE REFUSED")
+
+    @classmethod
+    def _is_guard_refusal(cls, exc):
+        msg = str(exc)
+        return any(m in msg for m in cls._REFUSAL_MARKERS)
+
     def wait_for(self, expr, timeout, poll_interval=0.1):
         """Poll evaluate(expr) until truthy or timeout (I17).
 
         No default timeout at the CLI layer: the caller names the
         budget. Transient evaluate errors (context destroyed
-        mid-navigation) count as not-yet. Returns the truthy
-        value. On expiry raises RDPError carrying the last
-        observed value so the caller can report what the page
-        actually showed."""
+        mid-navigation) count as not-yet, but scope/denylist guard
+        refusals re-raise immediately (they never become true).
+        Returns the truthy value. On expiry raises RDPError
+        carrying the last observed value so the caller can report
+        what the page actually showed."""
         deadline = time.monotonic() + timeout
         last = None
         while True:
             try:
                 last = self.evaluate(expr, timeout=5)
-            except Exception:
+            except Exception as e:
+                if self._is_guard_refusal(e):
+                    raise
                 last = None
             if last:
                 return last
@@ -1521,7 +1738,9 @@ class RDPClient:
             try:
                 v = self.evaluate(
                     "document.readyState + '|' + location.href", timeout=5)
-            except Exception:
+            except Exception as e:
+                if self._is_guard_refusal(e):
+                    raise
                 v = None
             if isinstance(v, str) and v.startswith("complete|") \
                     and url_substr in v:
@@ -1541,22 +1760,86 @@ class RDPClient:
             time.sleep(0.05)
         raise RDPError(f"wait_load timeout for {url_substr!r}")
 
+    # Accounting keys the fixed SNAPSHOT_JS must report. The payload
+    # is page-authored, so snapshot() validates it client-side
+    # before trusting any flag (that validation is what earns the
+    # delivered_verified label; without it a payload missing its
+    # accounting keys would roll up complete=true).
+    _SNAPSHOT_REQUIRED = ("url", "title", "readyState", "totalElements",
+                          "returnedElements", "elementsTruncated",
+                          "textPreview", "textTruncated", "textLength",
+                          "elements")
+
+    @classmethod
+    def _validate_snapshot(cls, data):
+        """Validate + normalize a raw SNAPSHOT_JS payload in place.
+        Recomputes returnedElements from the elements array and
+        checks the truncation flags against the totals; malformed
+        accounting raises RDPError (never a silent complete=true)."""
+        missing = [k for k in cls._SNAPSHOT_REQUIRED if k not in data]
+        if missing:
+            raise RDPError(
+                f"snapshot: payload missing accounting keys {missing}")
+        elements = data["elements"]
+        if not isinstance(elements, list) or not all(
+                isinstance(e, dict) and isinstance(e.get("tag"), str)
+                for e in elements):
+            raise RDPError("snapshot: elements is not a list of "
+                           "tag-carrying records")
+        for key in ("totalElements", "returnedElements", "textLength"):
+            if not isinstance(data[key], int) or data[key] < 0:
+                raise RDPError(
+                    f"snapshot: {key} is not a non-negative int "
+                    f"({data[key]!r})")
+        for key in ("url", "title", "readyState", "textPreview"):
+            if not isinstance(data[key], str):
+                raise RDPError(f"snapshot: {key} is not a string")
+        returned = len(elements)
+        if data["totalElements"] < returned:
+            raise RDPError(
+                f"snapshot: totalElements {data['totalElements']} < "
+                f"returned {returned} (inconsistent accounting)")
+        if bool(data["elementsTruncated"]) != \
+                (data["totalElements"] > returned):
+            raise RDPError(
+                "snapshot: elementsTruncated inconsistent with "
+                f"total={data['totalElements']} returned={returned}")
+        if bool(data["textTruncated"]) != \
+                (data["textLength"] > SNAPSHOT_TEXT_CAP):
+            raise RDPError(
+                "snapshot: textTruncated inconsistent with "
+                f"textLength={data['textLength']}")
+        if len(data["textPreview"]) != min(data["textLength"],
+                                           SNAPSHOT_TEXT_CAP):
+            raise RDPError(
+                "snapshot: textPreview length "
+                f"{len(data['textPreview'])} inconsistent with "
+                f"textLength={data['textLength']}")
+        data["returnedElements"] = returned
+        return data
+
     def snapshot(self, load_timeout=10.0):
         """P1: bounded page snapshot via the fixed SNAPSHOT_JS script.
 
         I17 load wait first (readyState complete) so a still-loading
         page is never mistaken for a complete read; a wait timeout is
         recorded as loadComplete=False and the read still happens
-        (completeness accounting, not silent truncation). The read
+        (completeness accounting, not silent truncation). Guard
+        refusals from the wait propagate immediately. The read
         itself goes through guarded evaluate(), so tab scope and the
-        credential denylist apply exactly as for eval. I22 redaction
-        runs over the full output (url, hrefs, text preview). Adds
-        snapshotId and the rolled-up `complete` flag client-side."""
+        credential denylist apply exactly as for eval. The payload
+        is validated client-side (_validate_snapshot), I22 redaction
+        runs over the full output (url, hrefs, titles, text preview,
+        bare secrets), and SNAPSHOT_BYTE_CAP is enforced by
+        truncating elements from the end (bytesTruncated flag).
+        Adds snapshotId and the rolled-up `complete` flag."""
         load_complete = True
         try:
             self.wait_for("document.readyState === 'complete'",
                           load_timeout)
-        except RDPError:
+        except RDPError as e:
+            if self._is_guard_refusal(e):
+                raise
             load_complete = False
         raw = self.evaluate(SNAPSHOT_JS)
         if not isinstance(raw, str):
@@ -1569,13 +1852,27 @@ class RDPClient:
             raise RDPError(f"snapshot: evaluate result is not JSON: {e}")
         if not isinstance(data, dict):
             raise RDPError("snapshot: evaluate result is not an object")
+        self._validate_snapshot(data)
+        # I22: no sensitive values anywhere in snapshot bytes.
+        # Redact BEFORE minting snapshotId (a 32-char hex id would
+        # match the long-token bare-secret pattern).
+        _redact_report_urls(data)
         data["snapshotId"] = uuid.uuid4().hex
         data["loadComplete"] = load_complete
+        data["bytesTruncated"] = False
+        # Enforce the byte cap on the exact serialization consumers
+        # see (indent=1, as _emit prints). Truncate from the end so
+        # document order of the survivors is preserved.
+        while len(json.dumps(data, indent=1).encode()) > \
+                SNAPSHOT_BYTE_CAP and data["elements"]:
+            data["elements"].pop()
+            data["bytesTruncated"] = True
+            data["returnedElements"] = len(data["elements"])
+            data["elementsTruncated"] = \
+                data["totalElements"] > data["returnedElements"]
         data["complete"] = bool(
-            load_complete and not data.get("elementsTruncated")
-            and not data.get("textTruncated"))
-        # I22: no sensitive URL values anywhere in snapshot bytes.
-        _redact_report_urls(data)
+            load_complete and not data["elementsTruncated"]
+            and not data["textTruncated"] and not data["bytesTruncated"])
         return data
 
     def probe_webdriver(self):

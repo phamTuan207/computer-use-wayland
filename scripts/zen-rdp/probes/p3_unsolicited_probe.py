@@ -28,9 +28,16 @@ Discipline (from the decision doc spike scope):
 
 Usage (dedicated throwaway session only, never the owner's Zen):
   python3 p3_unsolicited_probe.py --port 9235 \
-      --profile-marker <profile-dir-substr> \
+      --profile-marker <dedicated-profile-dir> \
       [--fixture-url http://127.0.0.1:<port>/page.html] \
       [--storm-tabs 12] [--out probe-log.json]
+
+Fail-closed (gate fix B3): --profile-marker is REQUIRED and must
+name a launch_dedicated profile directory (marker file present,
+marker port == --port, session verified, port-owner cmdline
+check). The storm phase tags every tab it opens with a unique
+attribute and closes ONLY those tabs; pre-existing tabs are
+never closed (no index-based close-all).
 
 Output: JSON with packet-class inventory, demux proof result, and the
 bounded event log. Exit 0 on completion (evidence, not pass/fail);
@@ -41,11 +48,34 @@ import json
 import socket
 import sys
 import time
+import uuid
 from collections import Counter, deque
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rdp_client import _redact_text, _redact_url, check_port_owner
+
+
+def verify_dedicated_profile(port, profile_marker):
+    """Prove the target is a launch_dedicated session: the marker
+    argument must be a profile directory carrying the dedicated
+    marker for this port, with a verified session, and the port
+    owner cmdline must contain it. Raises SystemExit(2) with a
+    refusal otherwise (fail closed, before any connection)."""
+    import launch_dedicated
+    try:
+        path = launch_dedicated.validate_profile_dir(profile_marker)
+        marker = launch_dedicated.read_marker(path)
+        if marker is None or marker.get("port") != int(port):
+            raise launch_dedicated.LaunchError(
+                f"marker in {path} is not for port {port}")
+        launch_dedicated.verify_session(path)
+        pid, _cmd = check_port_owner(port, str(path))
+    except Exception as e:
+        print(f"REFUSED: dedicated-session proof failed: {e}",
+              file=sys.stderr)
+        raise SystemExit(2)
+    return pid
 
 MAX_LOG = 200
 
@@ -313,17 +343,25 @@ def run_probe(port, fixture_url, storm_tabs):
 
         # Phase 3: tab-restore storm shape. Open many tabs rapidly via
         # parent JS while interleaving requests; demux must keep
-        # request/response pairing correct throughout.
+        # request/response pairing correct throughout. Every tab the
+        # probe opens is tagged with a unique attribute; cleanup
+        # closes ONLY tagged tabs (never index-based close-all), and
+        # the pre-storm tab set is asserted intact afterwards.
         pconsole = c.parent_console("phase3-parent")
         phases.append({"phase": "parent-console", "ok": bool(pconsole)})
         opened = 0
         if pconsole:
+            pre_storm = c.list_tabs("phase3-pre-storm-listTabs")
+            pre_actors = {t.get("actor") for t in pre_storm}
+            storm_token = uuid.uuid4().hex
             for i in range(storm_tabs):
                 url = fixture_url or "about:blank"
                 c.evaluate(
                     pconsole,
-                    "gBrowser.addTrustedTab("
-                    + json.dumps(url) + "); 'opened'",
+                    "(function(){var t=gBrowser.addTrustedTab("
+                    + json.dumps(url)
+                    + "); t.setAttribute('data-p3-probe', "
+                    + json.dumps(storm_token) + "); return 'opened';})()",
                     f"phase3-open-{i}")
                 opened += 1
                 # Interleave a request while tab churn is in flight.
@@ -333,18 +371,23 @@ def run_probe(port, fixture_url, storm_tabs):
             tabs3 = c.list_tabs("phase3-final-listTabs")
             phases.append({"phase": "storm-final-tabs",
                            "tabs": len(tabs3)})
-            # Close the storm tabs (keep the first two: fresh profile
-            # starts with 2). Close from the end backwards.
-            c.evaluate(
+            closed = c.evaluate(
                 pconsole,
-                "(function(){var t=gBrowser.tabs;"
-                "for(var i=t.length-1;i>=2;i--){gBrowser.removeTab(t[i]);}"
-                "return gBrowser.tabs.length;})()",
+                "(function(){var mine=[...gBrowser.tabs].filter("
+                "function(t){return t.getAttribute('data-p3-probe')"
+                " === " + json.dumps(storm_token) + ";});"
+                "mine.forEach(function(t){gBrowser.removeTab(t);});"
+                "return mine.length;})()",
                 "phase3-close-storm")
+            phases.append({"phase": "storm-close-tagged",
+                           "closed": closed})
             c.drain_idle(1.0, "phase3-idle-after-close")
             tabs4 = c.list_tabs("phase3-after-close-listTabs")
+            post_actors = {t.get("actor") for t in tabs4}
             phases.append({"phase": "after-close-tabs",
-                           "tabs": len(tabs4)})
+                           "tabs": len(tabs4),
+                           "pre_storm_tabs_intact":
+                               pre_actors <= post_actors})
     finally:
         c.close()
 
@@ -372,16 +415,17 @@ def run_probe(port, fixture_url, storm_tabs):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--port", type=int, required=True)
-    ap.add_argument("--profile-marker", default=None,
-                    help="substring required in listening pid cmdline "
-                         "(fail-closed; dedicated session only)")
+    ap.add_argument("--profile-marker", required=True,
+                    help="launch_dedicated profile directory for this "
+                         "port (REQUIRED, fail-closed; dedicated "
+                         "session only, never the owner's Zen)")
     ap.add_argument("--fixture-url", default=None)
     ap.add_argument("--storm-tabs", type=int, default=12)
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
-    if args.profile_marker:
-        pid, _ = check_port_owner(args.port, args.profile_marker)
-        print(f"port-owner pid={pid} marker ok", file=sys.stderr)
+    pid = verify_dedicated_profile(args.port, args.profile_marker)
+    print(f"dedicated session verified: port-owner pid={pid}",
+          file=sys.stderr)
     result = run_probe(args.port, args.fixture_url, args.storm_tabs)
     text = json.dumps(result, indent=1)
     if args.out:
