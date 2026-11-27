@@ -1106,3 +1106,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - I13 lien quan truc tiep finding muc 68: denylist machine-value incl. personal names, covers skill/docs.
 - Khong nhac mei, khong giao viec cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 75. Integration branch: I3, M2, I8, I1, I17 implemented + live-tested, I22 secure-field redaction (2026-11-27 19:56 +07)
+- Nhanh integration-20261127 tien 13 commit, tip d1b67da4 (19:44-19:53 +07), moi item kem integration report: I3 implemented + live-tested; M2 one-pass seal wrapper (collect -> snapshot -> gate, stop at first failure, gate van chay rieng duoc); I8 probes/ directory + probe ledger (rows cite outputs) + validator, historical probes indexed by path; I1 versioned CLI envelope + disposition + exit codes cho rdp_client.py (legacy shim via --legacy-output, library API unchanged; prep mang scripts/zen-rdp/ tu fix-review-20261127 trang thai 73f3f80d+cd6d45b5); I17 --wait-for/--wait-timeout tren navigate+eval (no default timeout, timeout error preserves action outcome; fix flag placement tren subparsers).
+- d1b67da4 I22: secure-field redaction where the tool controls the bytes (field_value password sentinel, RDP URL query redaction in snapshots/reports, cdp.mjs AX protected values; evaluate() documented out of scope).
+- Khong nhac mei, khong giao viec cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
