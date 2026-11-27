@@ -413,6 +413,23 @@ unified lane interface stays pilot-first after I23.
   but their full reports were lost in a context compaction
   (only previews survive). The gate is re-run as a combined
   items 1-15 council+redteam gate before any main landing.
+  UPDATE 20:2x: the original reports were delivered after all
+  (delayed, not lost). Council: items 1-5 + CI wiring all
+  PASS-WITH-NITS, 0 blockers, 1 major (hermetic silent-crash
+  hole), 1 watch item (first full CI hermetic run). Redteam:
+  no destructive blockers; 5 majors, all assurance failures:
+  (1) hermetic vacuous pass + stripped-crash fail-open,
+  (2) arch-guard evasions (case-sensitive name, home-path
+  gaps, UTF-8 skip, unscanned types/trees, dynamic imports,
+  SyntaxError fail-open), (3) key blocklist exact-match
+  fragility + unverified power keysyms/AltGr/KP_Delete,
+  (4) shard silent test drop without --compare-serial,
+  (5) CI does not run the guards' own tests. Minors: lineage
+  comment-marker, zen_live slow-drip hang/unbounded buffer,
+  CDP lane has no key blocklist (page-level only). Decision:
+  fix all 5 majors + cheap minors before landing items 1-5
+  to main (5 parallel fix workers). The combined items 1-15
+  gate still runs for items 6-15 coverage.
 - Parallel wave: remaining first-batch items run as parallel
   workers, each on its own branch off integration-20261127;
   coordinator merges, gates, lands. Quality gates unchanged
