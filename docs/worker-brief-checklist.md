@@ -118,6 +118,10 @@ Never write a brief from memory when a source exists.
   a fresh observation before acting.
 - JSONL appends go through `scripts/jsonlutil.py`: check the file ends
   with a newline before appending, and parse-verify after a push.
+- Bound git output in scripts and briefs: prefer `git log -n <N>` and
+  pathspec-limited queries over unbounded `git log --all` or full-history
+  dumps, and batch repeated git calls instead of looping one call per item.
+  This is scripting hygiene only; it claims no measured saving.
 - Direct driving is logged to a file with wall-clock time
   (Asia/Ho_Chi_Minh) and elapsed time (`scripts/drive_log.py`), not only
   in chat history.
