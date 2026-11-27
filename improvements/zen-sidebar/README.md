@@ -16,6 +16,7 @@ a throwaway profile first (the report's section 5 protocol); live
 mutations have no rollback other than a closed-browser file backup.
 
 ```
+python3 zen_live.py preflight --profile <throwaway-profile-dir>  # before any launch
 python3 zen_live.py introspect        # always first on a new build
 python3 zen_live.py list
 python3 zen_live.py move-folder --tab-url example.com --to <folder-id>
@@ -52,10 +53,20 @@ python3 zen_sessions.py --profile <profile-dir> reorder-pins --order <id1,id2,..
 python3 -m unittest test_zen_sidebar -v
 ```
 
-20 tests: mozlz4 round-trip and corruption handling, integrity
+27 tests: mozlz4 round-trip and corruption handling, integrity
 validation (dangling ids, sibling cycles, workspace mismatch), the
 state operations and every refusal case, positional pin moves, CLI
 dry-run vs apply against a synthetic profile, the backup-restore path,
-the POSIX-lock refusal, JS payload contents, and the Marionette client
+the POSIX-lock refusal, JS payload contents, the Marionette client
 against an in-process fake server (including split frames, error
-frames, and mismatched response ids).
+frames, and mismatched response ids), and the M11c launch pre-flight
+(synthetic env, D-Bus socket, port and profile cases).
+
+## Pre-flight (M11c)
+
+`zen_live.py preflight` verifies the launch preconditions before any
+Zen launch attempt and fails fast with a named reason: the
+MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1 env gate, a reachable D-Bus session
+bus, a free Marionette port, and (with --profile) a sane throwaway
+profile dir outside the real profile home. Detection only: it never
+launches, restarts or kills anything.

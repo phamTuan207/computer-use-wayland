@@ -23,6 +23,7 @@ page of chrome JS so tab indexes never go stale between calls):
   move-folder-space --folder FOLDER_ID --to SPACE_UUID
   pin / unpin      --tab-url PART
   move-tab         --tab-url PART --index N          (pinned reorder)
+  preflight        [--profile DIR]  check launch preconditions, fail fast
 
 Every payload feature-detects the Zen API it needs and returns
 {error: ...} instead of guessing when a build differs; Zen renames
@@ -57,8 +58,10 @@ throwaway profile before touching a live one.
 
 import argparse
 import json
+import os
 import socket
 import sys
+from pathlib import Path
 
 # ---------- JS payloads (chrome context, system principal) ----------
 
@@ -296,6 +299,140 @@ class Marionette:
         self.sock.close()
 
 
+# ---------- Marionette launch pre-flight (M11c) ----------
+#
+# Verifies the known launch preconditions BEFORE any Zen launch
+# attempt, so a missing gate fails fast with a named reason instead
+# of a cryptic stall or a late setContext error:
+#   system_access_env  MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1 is set
+#   dbus_session_bus   DBUS_SESSION_BUS_ADDRESS is present and its
+#                      unix:path socket accepts a connection
+#   port_free          nothing is listening on host:port yet
+#   profile_dir        (when given) a sane throwaway profile dir:
+#                      outside the real profile home, a directory
+#                      or creatable under a writable parent
+# This is detection only (bottleneck study M11c, check half): it
+# never launches, restarts or kills anything. Restart decisions
+# stay with the caller and must follow an actual session-creation
+# failure, never an error-string match.
+
+def _check_system_access_env(env):
+    value = env.get("MOZ_REMOTE_ALLOW_SYSTEM_ACCESS")
+    if value == "1":
+        return {"name": "system_access_env", "ok": True,
+                "code": "ok",
+                "detail": "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1"}
+    return {"name": "system_access_env", "ok": False,
+            "code": "missing_system_access_env",
+            "detail": "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS is %r, need '1'; "
+                      "chrome-context work fails at setContext without it"
+                      % (value,)}
+
+
+def _check_dbus_session_bus(env):
+    address = env.get("DBUS_SESSION_BUS_ADDRESS", "")
+    if not address:
+        return {"name": "dbus_session_bus", "ok": False,
+                "code": "dbus_address_missing",
+                "detail": "DBUS_SESSION_BUS_ADDRESS is not set; Zen "
+                          "stalls before the Marionette listener opens "
+                          "without a session bus (use dbus-run-session)"}
+    path = None
+    for part in address.split(","):
+        part = part.strip()
+        if part.startswith("unix:path="):
+            path = part[len("unix:path="):]
+            break
+    if path is None:
+        # Non-path transports (abstract socket, tcp) are not probed;
+        # presence of an address is all this check can prove cheaply.
+        return {"name": "dbus_session_bus", "ok": True, "code": "ok",
+                "detail": "address present (non-path transport, not probed)"}
+    if not os.path.exists(path):
+        return {"name": "dbus_session_bus", "ok": False,
+                "code": "dbus_unreachable",
+                "detail": "session bus socket %s does not exist" % path}
+    try:
+        probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        probe.settimeout(2)
+        probe.connect(path)
+        probe.close()
+    except OSError as exc:
+        return {"name": "dbus_session_bus", "ok": False,
+                "code": "dbus_unreachable",
+                "detail": "session bus socket %s refuses connections: %s"
+                          % (path, exc)}
+    return {"name": "dbus_session_bus", "ok": True, "code": "ok",
+            "detail": "session bus socket %s accepts connections" % path}
+
+
+def _check_port_free(host, port):
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.bind((host, port))
+    except OSError as exc:
+        return {"name": "port_free", "ok": False, "code": "port_in_use",
+                "detail": "%s:%d cannot be bound (%s); another process "
+                          "holds the Marionette port" % (host, port, exc)}
+    finally:
+        probe.close()
+    return {"name": "port_free", "ok": True, "code": "ok",
+            "detail": "%s:%d is free" % (host, port)}
+
+
+def _check_profile_dir(profile):
+    path = Path(profile).expanduser()
+    real_home = Path.home() / ".config" / "zen"
+    try:
+        resolved = path.resolve()
+        real_resolved = real_home.resolve()
+    except OSError:
+        resolved, real_resolved = path, real_home
+    if resolved == real_resolved or real_resolved in resolved.parents:
+        return {"name": "profile_dir", "ok": False,
+                "code": "profile_in_real_home",
+                "detail": "profile %s is inside the real profile home; "
+                          "Marionette pre-flight only accepts throwaway "
+                          "profiles" % profile}
+    if path.exists():
+        if not path.is_dir():
+            return {"name": "profile_dir", "ok": False,
+                    "code": "profile_not_dir",
+                    "detail": "profile %s exists but is not a directory"
+                              % profile}
+        if not os.access(path, os.W_OK):
+            return {"name": "profile_dir", "ok": False,
+                    "code": "profile_not_writable",
+                    "detail": "profile %s is not writable" % profile}
+        return {"name": "profile_dir", "ok": True, "code": "ok",
+                "detail": "profile %s is a writable directory" % profile}
+    parent = path.parent
+    if not parent.is_dir() or not os.access(parent, os.W_OK):
+        return {"name": "profile_dir", "ok": False,
+                "code": "profile_parent_missing",
+                "detail": "profile %s does not exist and parent %s is "
+                          "missing or not writable" % (profile, parent)}
+    return {"name": "profile_dir", "ok": True, "code": "ok",
+            "detail": "profile %s is creatable under %s" % (profile, parent)}
+
+
+def marionette_preflight(env=None, host="127.0.0.1", port=2828,
+                         profile=None):
+    """Run all launch precondition checks; never raises for a failed
+    check. Returns {"ok": bool, "checks": [{name, ok, code, detail}]}.
+    env defaults to os.environ (injectable for tests)."""
+    if env is None:
+        env = os.environ
+    checks = [
+        _check_system_access_env(env),
+        _check_dbus_session_bus(env),
+        _check_port_free(host, port),
+    ]
+    if profile is not None:
+        checks.append(_check_profile_dir(profile))
+    return {"ok": all(c["ok"] for c in checks), "checks": checks}
+
+
 # ---------- CLI ----------
 
 def run_op(client, args):
@@ -348,8 +485,16 @@ def main(argv=None):
     p = sub.add_parser("move-tab")
     p.add_argument("--tab-url", required=True)
     p.add_argument("--index", type=int, required=True)
+    p = sub.add_parser("preflight")
+    p.add_argument("--profile", default=None,
+                   help="throwaway profile dir to sanity-check")
 
     args = ap.parse_args(argv)
+    if args.cmd == "preflight":
+        result = marionette_preflight(host=args.host, port=args.port,
+                                      profile=args.profile)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0 if result["ok"] else 1
     client = Marionette(args.host, args.port)
     try:
         result = run_op(client, args)

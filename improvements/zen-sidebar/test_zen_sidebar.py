@@ -364,5 +364,99 @@ class MarionetteClientTests(unittest.TestCase):
                           "WebDriver:ExecuteAsyncScript"])
 
 
+class PreflightTests(unittest.TestCase):
+    """M11c: synthetic env/port/profile cases for the launch
+    pre-flight. No real Zen is touched."""
+
+    def _free_port(self):
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+        probe.close()
+        return port
+
+    def _dbus_socket(self, directory):
+        path = os.path.join(directory, "bus")
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        listener.bind(path)
+        listener.listen(1)
+        self.addCleanup(listener.close)
+        return "unix:path=" + path
+
+    def _codes(self, result):
+        return {c["name"]: c["code"] for c in result["checks"]}
+
+    def test_all_pass(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                   "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            result = zen_live.marionette_preflight(
+                env=env, port=self._free_port(), profile=d)
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(set(self._codes(result).values()), {"ok"})
+
+    def test_missing_env_gate_fails_fast_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {"DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            result = zen_live.marionette_preflight(
+                env=env, port=self._free_port(), profile=d)
+            self.assertFalse(result["ok"])
+            self.assertEqual(self._codes(result)["system_access_env"],
+                             "missing_system_access_env")
+
+    def test_missing_dbus_address_fails_named(self):
+        env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1"}
+        result = zen_live.marionette_preflight(
+            env=env, port=self._free_port())
+        self.assertFalse(result["ok"])
+        self.assertEqual(self._codes(result)["dbus_session_bus"],
+                         "dbus_address_missing")
+
+    def test_port_in_use_fails_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            holder = socket.socket()
+            holder.bind(("127.0.0.1", 0))
+            holder.listen(1)
+            self.addCleanup(holder.close)
+            env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                   "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            result = zen_live.marionette_preflight(
+                env=env, port=holder.getsockname()[1], profile=d)
+            self.assertFalse(result["ok"])
+            self.assertEqual(self._codes(result)["port_free"], "port_in_use")
+
+    def test_profile_in_real_home_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                   "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            real = os.path.join(os.path.expanduser("~"), ".config", "zen",
+                                "throwaway")
+            result = zen_live.marionette_preflight(
+                env=env, port=self._free_port(), profile=real)
+            self.assertFalse(result["ok"])
+            self.assertEqual(self._codes(result)["profile_dir"],
+                             "profile_in_real_home")
+
+    def test_cli_exit_codes(self):
+        with tempfile.TemporaryDirectory() as d:
+            good = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                    "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            port = str(self._free_port())
+            old = dict(os.environ)
+            try:
+                os.environ.clear()
+                os.environ.update(good)
+                self.assertEqual(
+                    zen_live.main(["--port", port, "preflight",
+                                   "--profile", d]), 0)
+                del os.environ["MOZ_REMOTE_ALLOW_SYSTEM_ACCESS"]
+                self.assertEqual(
+                    zen_live.main(["--port", port, "preflight",
+                                   "--profile", d]), 1)
+            finally:
+                os.environ.clear()
+                os.environ.update(old)
+
+
 if __name__ == "__main__":
     unittest.main()
