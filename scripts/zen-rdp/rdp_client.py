@@ -59,6 +59,7 @@ import stat as _stat
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from urllib.parse import unquote
 
@@ -89,6 +90,48 @@ LAZY_TAB_PATTERN = "<empty-url-lazy-tab>"
 # Packet types that must go through the guarded methods, never raw
 # request() (see RDPClient.request).
 _GUARDED_PACKET_TYPES = ("evaluateJSAsync", "navigateTo")
+
+# P1 snapshot: ONE fixed, client-owned read script (never caller
+# supplied). Compact DOM walk in our shape: interactive elements and
+# headings, capped, with completeness accounting done client-side in
+# snapshot(). Field VALUES are never read into the output: inputs
+# report hasValue (presence only). The element cap mirrors the
+# historical cap-200 agent walk; the fixture acceptance budget is
+# 25,919 B on the 300-control page (see test_snapshot.py).
+SNAPSHOT_ELEMENT_CAP = 200
+SNAPSHOT_JS = """(() => {
+  const CAP = 200, TEXT_CAP = 1500, NAME_CAP = 60;
+  const sel = 'a,button,input,select,textarea,h1,h2,h3,h4,h5,h6,[role]';
+  const all = document.querySelectorAll(sel);
+  const els = [];
+  const n = Math.min(all.length, CAP);
+  for (let i = 0; i < n; i++) {
+    const e = all[i];
+    const r = {tag: e.tagName.toLowerCase()};
+    const name = (e.getAttribute('aria-label') || e.innerText ||
+      e.placeholder || e.name || '').trim().replace(/\\s+/g, ' ')
+      .slice(0, NAME_CAP);
+    if (name) r.name = name;
+    if (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' ||
+        e.tagName === 'SELECT') {
+      if (e.type) r.type = e.type;
+      r.hasValue = !!e.value;
+    }
+    if (e.tagName === 'A' && e.href) r.href = e.href.slice(0, 200);
+    const role = e.getAttribute('role');
+    if (role) r.role = role;
+    els.push(r);
+  }
+  const text = (document.body ? document.body.innerText : '') || '';
+  return JSON.stringify({
+    url: location.href, title: document.title,
+    readyState: document.readyState,
+    totalElements: all.length, returnedElements: els.length,
+    elementsTruncated: all.length > els.length,
+    textPreview: text.slice(0, TEXT_CAP),
+    textTruncated: text.length > TEXT_CAP, textLength: text.length,
+    elements: els});
+})()"""
 
 
 def median(xs):
@@ -248,7 +291,7 @@ class RDPError(Exception):
 # Retry vocabulary: safe (nothing was sent; fix and retry),
 # unsafe (input may have landed; never replay), not_applicable.
 ENVELOPE_VERSION = "1"
-_READ_COMMANDS = {"probe", "tabs", "report"}
+_READ_COMMANDS = {"probe", "tabs", "report", "snapshot"}
 
 # Ordered (message substring, code, delivery, retry) for errors
 # that are refusals or pre-send failures: nothing was delivered.
@@ -1260,6 +1303,43 @@ class RDPClient:
             time.sleep(0.05)
         raise RDPError(f"wait_load timeout for {url_substr!r}")
 
+    def snapshot(self, load_timeout=10.0):
+        """P1: bounded page snapshot via the fixed SNAPSHOT_JS script.
+
+        I17 load wait first (readyState complete) so a still-loading
+        page is never mistaken for a complete read; a wait timeout is
+        recorded as loadComplete=False and the read still happens
+        (completeness accounting, not silent truncation). The read
+        itself goes through guarded evaluate(), so tab scope and the
+        credential denylist apply exactly as for eval. I22 redaction
+        runs over the full output (url, hrefs, text preview). Adds
+        snapshotId and the rolled-up `complete` flag client-side."""
+        load_complete = True
+        try:
+            self.wait_for("document.readyState === 'complete'",
+                          load_timeout)
+        except RDPError:
+            load_complete = False
+        raw = self.evaluate(SNAPSHOT_JS)
+        if not isinstance(raw, str):
+            raise RDPError(
+                f"snapshot: unexpected evaluate result "
+                f"{type(raw).__name__} (expected JSON string)")
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise RDPError(f"snapshot: evaluate result is not JSON: {e}")
+        if not isinstance(data, dict):
+            raise RDPError("snapshot: evaluate result is not an object")
+        data["snapshotId"] = uuid.uuid4().hex
+        data["loadComplete"] = load_complete
+        data["complete"] = bool(
+            load_complete and not data.get("elementsTruncated")
+            and not data.get("textTruncated"))
+        # I22: no sensitive URL values anywhere in snapshot bytes.
+        _redact_report_urls(data)
+        return data
+
     def probe_webdriver(self):
         """Small evaluates (short grips). Raises RDPError unless native false."""
         wd = self.evaluate("navigator.webdriver")
@@ -1526,6 +1606,12 @@ def main():
     sub.add_parser("probe")
     sub.add_parser("tabs")
     sub.add_parser("report")
+    sn = sub.add_parser("snapshot")
+    sn.add_argument("--load-timeout", type=float, default=10.0,
+                    metavar="SECONDS",
+                    help="budget for the I17 readyState-complete wait "
+                         "before reading (default 10; on expiry the "
+                         "snapshot is flagged loadComplete=false)")
     e = sub.add_parser("eval")
     e.add_argument("expr")
     pe = sub.add_parser("peval")
@@ -1558,6 +1644,13 @@ def main():
         return _fail(args.cmd, "wait_timeout_invalid",
                      f"--wait-timeout must be > 0 (got {args.wait_timeout}); "
                      "the wait budget must be positive",
+                     "not_delivered", "safe", 2, legacy)
+    args.load_timeout = getattr(args, "load_timeout", 10.0)
+    if args.cmd == "snapshot" and args.load_timeout <= 0:
+        return _fail(args.cmd, "load_timeout_invalid",
+                     f"--load-timeout must be > 0 "
+                     f"(got {args.load_timeout}); the load-wait budget "
+                     "must be positive",
                      "not_delivered", "safe", 2, legacy)
     try:
         try:
@@ -1623,6 +1716,8 @@ def main():
             action_result = None
             if args.cmd == "probe":
                 _emit(args.cmd, c.probe_webdriver(), legacy)
+            elif args.cmd == "snapshot":
+                _emit(args.cmd, c.snapshot(args.load_timeout), legacy)
             elif args.cmd == "eval":
                 action_result = {"result": c.evaluate(args.expr)}
                 if not args.wait_for:
