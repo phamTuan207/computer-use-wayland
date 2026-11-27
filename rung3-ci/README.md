@@ -23,6 +23,7 @@ sides are required.
 | 7 | `liveness-check.py`, `liveness-config.json`, `liveness-report-*.md` | Runs the list section 8 service checks and writes a dated report: service reachability, sqliteonline app served (a real query run needs a browser on the laptop), R3-009 WAVE error counts (PENDING until a browser check), fixtures under ~/rung3, DP-03 port count from `ss -tlnp`, test accounts and ttsmp3 quota (SKIP until synthesis configures them; the script never logs in and never stores a password). |
 | 8 | `resume.py` | Run state is thu-tu-chay.txt plus the ledger. `resume.py next` lists the next ungraded task and its evidence state. `resume.py checkpoint <TASK>` verifies the ledger row and the manifest hash match. Checkpoint after every task: collect-evidence (writes the manifest) plus the ledger append. A restart is a new run code with old results preserved, never silently merged. |
 | 9 | `snapshot.py` | Copies an evidence folder to a snapshot directory with manifest.json and sha256 per file, verified after copy, for the scorer handoff. The scorer gets only the snapshot path. |
+| 10 | `spare-scorer.md`, `check-spare-scorer.py`, `test-check-spare-scorer.py` | M10 reduced: exactly one named spare scorer, pre-calibrated (sealed, blind, 4 of 4, independent sign-off) at run start, no standing warm seat, no cap-hours claims. The checker validates the run's spare record (one spare, session distinct from runners and seated scorers, sign-off file carries 4/4 and APPROVED, no warm seat, no assignment before sign-off). Coordinator-run at run start, like the other local tools; not a CI gate, since the record is per-run. |
 
 ## Quick commands (from the repo root)
 
@@ -35,6 +36,7 @@ python3 rung3-ci/tier-a-check.py --key rung3-ci/test-keys.json --evidence ~/rung
 python3 rung3-ci/liveness-check.py
 python3 rung3-ci/resume.py next
 python3 rung3-ci/snapshot.py ~/rung3-chung-cu/R3-007
+python3 rung3-ci/check-spare-scorer.py <spare-record.json>
 ```
 
 ## Still pending (not this package)
