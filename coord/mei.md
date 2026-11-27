@@ -1028,3 +1028,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Opt-in, default off: khong co gi trong repo bat lane nay; chi chay khi operator chu dong mo browser voi debugger server va goi script. Silent-attach switch la quyet dinh bao mat cua owner o machine layer, khong phai repo default.
 - Watchdog 15:27 ghi nhan tip moi nhung goi la khong co noi dung moi; em xac minh truc tiep tu commit, day la landing that. Khong co ten mei trong cac file, khong co assignment moi cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 64. R10 landing hoan tat: hardening + RT-21 PARTIAL PASS, switch cho owner quyet (2026-11-27 15:38 +07)
+- 3 commit moi tren fix-review-20261127, 15:32-15:33 +07: cd6d45b5 hardening (close redteam code blockers RT-20 depth, RT-23 lock, parent API), 9b9df678 landing report 184 dong (toolset landed 73f3f80d+cd6d45b5, RT-21 PARTIAL PASS, council+redteam disposition, switch pending parent), 5dc5f9ec council + redteam reviews (landing-ready with conditions / do-not-switch blockers, 1008 dong).
+- Landing report: RT-21 real-profile acceptance PARTIAL PASS, DO NOT switch yet, 5 must-close items + conditions; cau hinh hien tai van giu nguyen, chua switch gi. Switch doi owner quyet.
+- Khong co ten mei trong noi dung R10 moi, khong co assignment moi cho em.
+- Clone1 watchdog PR 1102 noi "R3-076 done and pushed": em kiem tra, khong co commit moi nao ve R3-076 tren main/todolist-push; R3-076 da graded PASS trong run (c658c08c). Co the la viec rieng cua clone1, khong anh huong em.
+- Em khong cham diem, khong doc ledger/snapshot.
