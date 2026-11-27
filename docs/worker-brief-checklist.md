@@ -138,6 +138,9 @@ Never write a brief from memory when a source exists.
   connectors only. Never open Messenger in the laptop browser.
 - Push to GitHub as you go (D3): every small piece of work is its
   own commit, pushed immediately. Never hold a push to batch it.
+  Mechanical log appends (append-only log files with no judgement content)
+  are exempt from the small-commit rule and may ride along with the next
+  commit instead of forcing a commit of their own.
 - Record lessons in both places (D4): a generic version in the repo,
   a detailed version on the laptop. Never put personal information
   in the repo.
