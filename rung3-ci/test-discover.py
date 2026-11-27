@@ -208,7 +208,14 @@ def cmd_shard(args):
         wanted = {m[len(prefix):] if m.startswith(prefix) else m
                   for m in args.modules}
         counts = {m: c for m, c in counts.items() if m in wanted}
-    shards = balance_shards(counts, args.shards)
+    # Load-sensitive modules run serially in the parent: their
+    # real-signal timing tests flake under parallel CPU load
+    # (measured 2026-11-27: test_ime_cleanup passes 3/3 serial,
+    # flakes under 4 shards on a 1.5-CPU VM).
+    serial_only = [m for m in counts if m in set(args.serial_only)]
+    shard_counts = {m: c for m, c in counts.items()
+                    if m not in set(args.serial_only)}
+    shards = balance_shards(shard_counts, args.shards)
     start = time.monotonic()
     procs = []
     for mods in shards:
@@ -227,6 +234,12 @@ def cmd_shard(args):
                 parts = line.split(" ", 2)
                 if len(parts) == 3:
                     outcomes[parts[1]] = parts[2]
+    if serial_only:
+        extra, _wall, _proc = run_subprocess(
+            ["run", "--start-dir", args.start_dir,
+             "--pattern", args.pattern, "--modules"] + serial_only,
+            timeout=args.timeout)
+        outcomes.update(extra)
     wall = time.monotonic() - start
     counts_out = {}
     for s in outcomes.values():
@@ -267,6 +280,9 @@ def main(argv=None):
     sub.choices["shard"].add_argument("--shards", type=int, default=4)
     sub.choices["shard"].add_argument("--compare-serial",
                                       action="store_true")
+    sub.choices["shard"].add_argument(
+        "--serial-only", nargs="*", default=["test_ime_cleanup"],
+        help="modules run serially in the parent (load-sensitive)")
     args = ap.parse_args(argv)
     return {"run": cmd_run, "hermetic": cmd_hermetic,
             "shard": cmd_shard}[args.cmd](args)
