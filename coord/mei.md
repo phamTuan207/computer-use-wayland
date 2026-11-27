@@ -1035,3 +1035,13 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Khong co ten mei trong noi dung R10 moi, khong co assignment moi cho em.
 - Clone1 watchdog PR 1102 noi "R3-076 done and pushed": em kiem tra, khong co commit moi nao ve R3-076 tren main/todolist-push; R3-076 da graded PASS trong run (c658c08c). Co the la viec rieng cua clone1, khong anh huong em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 65. R10 SWITCHED: RDP lane la operating config, 65 tab nguyen ven (2026-11-27 15:49 +07)
+- Commit 91547db1, branch fix-review-20261127, 15:43:09 +07, file improvements/r10-switch-report-20261127.md (103 dong), ky "Coordinator, 27/11/2026". Switch thuc hien 15:35-15:42 +07 theo landing report + decision 3c.
+- Owner accepted silent attach (RT-04) luc 14:00. RT-21 PARTIAL PASS, kill criterion 6 khong trigger, council LANDING-READY WITH CONDITIONS.
+- Truoc: Zen flag-free qua zen-human, 65 tab, khong RDP prefs, split 2 profile dang chay. Sau: user.js them RDP pref set (remote-enabled, chrome.enabled, prompt-connection=false, remote-host 127.0.0.1, remote-port); zen-human chay zen-bin voi --profile + --start-debugger-server, van flag-free (khong --remote-debugging-port, khong --marionette tren human path); registry chi 1 channel zen-rdp-owner; split giu lam fallback.
+- Restart + tab restore: 65 tab, hash identical, zero tab loss. Smoke rdp_smoke.py exit 0 all PASS (attach-to-first-evaluate 23.0 ms, evaluate median 0.5 ms). First supervised drive Example Domain: probe CLEAN, retries 0, pill hien "Computer use active"; 2 tool-guard corrections (Ctrl+T refused, act-now wait 3000 ms refused vuot limit 2000), khong cham tab cua owner; cuoi cung 65 tab nguyen ven.
+- R10 van OPEN den drill sau update dau tien (smoke + Google spot check truoc khi agent dung lai sau update Zen; FAIL thi lane ve split theo kill criterion 1). Rollback san sang (backup user.js, prefs.js, zen-human, registry, zen-profile-split.md), khong can dung.
+- Day la bang chung truc tiep coordinator hoat dong (report ky ten Coordinator), khong chi off-repo suy doan. 2 viec dang cho (Graphify equip, dung/chuyen watchdog) van chua tra loi.
+- Khong co ten mei trong report, khong co assignment moi cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
