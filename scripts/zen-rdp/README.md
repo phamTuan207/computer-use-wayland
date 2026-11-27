@@ -55,6 +55,21 @@ repo default.
   and `--profile-marker` as required arguments; it never guesses a
   port. The navigate check replaces the attached tab content: run
   smoke on a throwaway or tasked tab, never a valued owner tab.
+- `zen_spaces.py` - typed Spaces/Folders list+create wrappers (P4,
+  see `../../improvements/zen-mcp-adoption-decision-20261127.md`):
+  `list_spaces`, `list_folders`, `create_space` (no switch),
+  `create_folder`, owning the `gZenWorkspaces` / `gZenFolders` JS
+  strings behind the parent gate + audit. List+create only:
+  move/switch are a separate later decision and removal is
+  rejected by charter, absent by construction (no wrapper, no JS
+  string). `PINNED_METHODS` is the whole surface; the smoke test
+  asserts it after every Zen update. CLI: `spaces`, `folders`,
+  `space-create [--name NAME]`, `folder-create --label L
+  --tab-url PART [...]` (all require `--allow-parent`).
+- `test_zen_spaces.py` - unit tests for the P4 wrappers (stub +
+  fake transport, no browser): happy paths, create fire+poll,
+  validation before any evaluate, gate refusal, audit shape,
+  pinned set, removal absence.
 - `test_scope_unittest.py` - unit tests (fake transport, no browser):
   scoping, denylist + approvals, drive-report diff, fail-closed
   marker, noSuchActor retry pinning.
@@ -112,6 +127,7 @@ Unit tests (no browser):
 
 ```
 python3 -m unittest test_scope_unittest -v
+python3 -m unittest test_zen_spaces -v
 python3 test_rdp_smoke.py
 ```
 
@@ -145,7 +161,7 @@ raw_packet_refused, parent_evaluate_refused,
 port_owner_mismatch, scope_config_invalid,
 profile_marker_required, not_attached, tab_not_found,
 attach_failed, evaluate_failed, transport_error,
-runtime_error, unexpected), `message`, and the same
+runtime_error, invalid_argument, unexpected), `message`, and the same
 `disposition` object. Delivery vocabulary: `not_delivered`,
 `delivery_uncertain`, `delivered_unverified`,
 `delivered_verified`. Retry vocabulary: `safe` (nothing was

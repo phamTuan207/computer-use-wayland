@@ -15,6 +15,8 @@ Checks:
   d  evaluate round-trip (1+1 == 2, DOM read sane)
   e  parent-process target: typeof gZenWorkspaces / gBrowser /
      gZenFolders all "object" (landed client API, allow_parent gate)
+  i  pinned Spaces/Folders method set (P4, zen_spaces.PINNED_METHODS):
+     every typed list+create method is still a function
   f  bind is 127.0.0.1-only (ss)
   g  latency spot numbers (informational, never fails the run)
   h  navigate the attached tab to about:blank and wait-load
@@ -22,7 +24,8 @@ Checks:
      the attached tab content; run smoke on a throwaway/tasked tab.
 
 Exit codes: 0 pass, 2 setup/usage, 10 owner, 11 attach, 12 probe,
-13 evaluate, 14 parent target, 15 bind, 16 navigate.
+13 evaluate, 14 parent target, 15 bind, 16 navigate, 17 pinned
+methods.
 
 Stdlib only. Reuses rdp_client.py (same directory) for attach,
 evaluate, and the webdriver probe. Sends no OS input; ydotool is
@@ -42,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 try:
     from rdp_client import RDPClient, RDPError, check_port_owner, median, ms
+    from zen_spaces import assert_pinned_methods
 except ImportError as e:
     print(json.dumps({
         "smoke": "rdp_smoke", "overall": "FAIL", "failed_check": "setup",
@@ -52,7 +56,7 @@ except ImportError as e:
 
 EXIT = {"setup": 2, "a_port_owner": 10, "b_attach": 11, "c_webdriver": 12,
         "d_evaluate": 13, "e_parent_target": 14, "f_bind": 15,
-        "h_navigate": 16}
+        "h_navigate": 16, "i_pinned_methods": 17}
 
 PARENT_GLOBALS = ("gZenWorkspaces", "gBrowser", "gZenFolders")
 
@@ -165,6 +169,15 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
                 "status": "PASS", "typeof": types, "parent_url": purl}
         except Exception as e:
             return fail("e_parent_target", e)
+
+        # (i) pinned Spaces/Folders method set (P4): the whole typed
+        # list+create surface must still be functions post-update
+        try:
+            types = assert_pinned_methods(client)
+            report["checks"]["i_pinned_methods"] = {
+                "status": "PASS", "methods": types}
+        except Exception as e:
+            return fail("i_pinned_methods", e)
 
         # (f) bind is 127.0.0.1-only via ss
         try:

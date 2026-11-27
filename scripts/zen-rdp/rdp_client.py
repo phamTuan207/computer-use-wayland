@@ -291,7 +291,7 @@ class RDPError(Exception):
 # Retry vocabulary: safe (nothing was sent; fix and retry),
 # unsafe (input may have landed; never replay), not_applicable.
 ENVELOPE_VERSION = "1"
-_READ_COMMANDS = {"probe", "tabs", "report", "snapshot"}
+_READ_COMMANDS = {"probe", "tabs", "report", "snapshot", "spaces", "folders"}
 
 # Ordered (message substring, code, delivery, retry) for errors
 # that are refusals or pre-send failures: nothing was delivered.
@@ -344,7 +344,8 @@ def _classify_error(message, cmd):
 
 
 def _success_disposition(cmd):
-    if cmd in ("eval", "peval", "navigate"):
+    if cmd in ("eval", "peval", "navigate", "space-create",
+               "folder-create"):
         # JS executed (eval/peval) or navigateTo sent (navigate); the
         # tool does not verify page effect, including whether the
         # navigate URL actually changed.
@@ -1626,6 +1627,19 @@ def main():
         p.add_argument("--wait-timeout", type=float, default=None,
                        metavar="SECONDS",
                        help="budget for --wait-for (required with it)")
+    sub.add_parser("spaces")
+    sub.add_parser("folders")
+    sc = sub.add_parser("space-create")
+    sc.add_argument("--name", default="Space",
+                    help="new space name (created without switching "
+                         "to it; requires --allow-parent)")
+    fc = sub.add_parser("folder-create")
+    fc.add_argument("--label", required=True,
+                    help="folder label (requires --allow-parent)")
+    fc.add_argument("--tab-url", dest="folder_tab_url", action="append",
+                    required=True, metavar="PART",
+                    help="URL substring selecting exactly one tab to "
+                         "group (repeatable)")
     b = sub.add_parser("bench")
     b.add_argument("--local-url", required=True)
     b.add_argument("--real-url", default="https://example.com/")
@@ -1725,6 +1739,23 @@ def main():
             elif args.cmd == "peval":
                 _emit(args.cmd, {"result": c.parent_evaluate(args.expr)},
                       legacy)
+            elif args.cmd in ("spaces", "folders", "space-create",
+                              "folder-create"):
+                # P4 typed wrappers (zen_spaces.py): parent-gated and
+                # audited via parent_evaluate; list+create only.
+                import zen_spaces
+                if args.cmd == "spaces":
+                    _emit(args.cmd, zen_spaces.list_spaces(c), legacy)
+                elif args.cmd == "folders":
+                    _emit(args.cmd, zen_spaces.list_folders(c), legacy)
+                elif args.cmd == "space-create":
+                    _emit(args.cmd,
+                          zen_spaces.create_space(c, args.name), legacy)
+                else:
+                    _emit(args.cmd,
+                          zen_spaces.create_folder(
+                              c, args.label, args.folder_tab_url),
+                          legacy)
             elif args.cmd == "navigate":
                 c.navigate(args.url)
                 action_result = {"navigated": _redact_url(args.url)}
@@ -1759,6 +1790,11 @@ def main():
     except RDPError as e:
         code, delivery, retry = _classify_error(str(e), args.cmd)
         return _fail(args.cmd, code, str(e), delivery, retry, 1, legacy)
+    except ValueError as e:
+        # Argument validation in the typed wrappers (zen_spaces):
+        # nothing was sent, so this is a usage error.
+        return _fail(args.cmd, "invalid_argument", str(e),
+                     "not_delivered", "safe", 2, legacy)
     except Exception as e:
         action = args.cmd not in _READ_COMMANDS
         return _fail(args.cmd, "unexpected",
