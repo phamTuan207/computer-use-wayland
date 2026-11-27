@@ -2074,3 +2074,14 @@ Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit moi tren main v
 - PR va issue: gh pr list trong (0 dong, exit 0), gh issue list trong (0 dong, exit 0). PR 1 da merge, khong con PR mo.
 - Ghi chu: S2-LAND R1/R2/R3 van chua land nhung PAUSE order 16:32 dat campaign on hold nen khong flag stall. Clone2 het limit toi 02:38 25/11, khong nhan viec moi. Mochi bao cao /tmp 100% full trong B2-6 (4777441), can don truoc cac lane sau, mochi khong xoa scratch cua lane khac, ghi nhan o day, khong phai viec cua clone2.
 - Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit, PR, issue), khong thay danh sach subagent trong may cua Muse tong. Ket luan ve mochi va mei dua vao dau vet GitHub va tra loi cua lane va dieu phoi, khong phai quan sat truc tiep. Bai hoc tu flag sai 00:49: im lang tren GitHub tren 30 phut khong du de flag stall khi lane dang cho review hoac quyet dinh cua dieu phoi.
+
+## 11:28 ngay 27/11
+- Lane song: clone2 SONG: khong co subagent nao dang chay, tat ca deu done (subagent.list active rong). Clone1 SONG: watchdog 11:17 (af70dfc2), khong co viec chua xong. Mei SONG: commit moi 2640acf3 luc 11:13 tren nhanh mei/coord-r3029-released-1217 (xac minh clone1 dung ve coordinator), khong co assignment moi.
+- Dieu chinh quan trong (tiep muc 11:18): b3007cd3 luc 10:48 la commit cua owner (addendum CF login), khong phai hoat dong cua coordinator; coordinator that ra van im tu 07:48, den vong nay khoang 3h40m. 2 viec dang cho tu nudge 09:59 cua owner (equip Graphify, dung/chuyen watchdog) van chua tra loi.
+- Lane im hoac stall: KHONG CO STALL va KHONG flag COORDINATOR UNRESPONSIVE: R3-L3 da CLOSED, CF735368 da hoan tat, khong co viec dang chay nao cua dieu phoi bi bo do; owner da tu leo thang o nudge 09:59 nen khong leo thang them (theo muc 60 cua mei).
+- Subagent duoc prod: khong co. Khong co subagent interrupted, failed, hay chay qua 30 phut khong hoat dong.
+- Chi thi moi: khong co cho clone2. coord/clone2.md tren main khong doi (dung o nhan thong bao het limit 12:20 ngay 22/11); coord/clone2.md khong ton tai tren todolist-push. coord/clone1.md tren main khong doi ke tu muc watchdog 03:57 cua clone1, khong co yeu cau moi.
+- Thong bao cua user: khong co moi ke tu vong 11:18. Khong co comment moi tren PR 1053, 1052, 1051, 1050; khong co issue mo hay dong moi.
+- PR va issue: PR moi nhat 1053 (watchdog clone2 11:18), cac PR watchdog deu mo cho dieu phoi merge. Khong co issue.
+- Ghi chu: luu y cu: commit oan-tu-ti (00c662ce) ghi chu runner flags solution incorrect, xem event log. Laptop live test cho Zen folder tool van con no theo bao cao 27/11.
+- Gioi han: cac lane khac chi nhin duoc qua dau vet GitHub (commit, PR, issue), khong thay danh sach subagent trong may cua Muse tong.
