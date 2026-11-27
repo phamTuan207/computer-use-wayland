@@ -9492,3 +9492,22 @@ R3-L3: đã đóng theo báo cáo 04:58 (R3-056 passed, Rule-A 52/1, ledger 60 d
 Điều phối im lặng 98 phút, hoạt động gần nhất 18:19 (coord/mei), chưa tới 2 giờ, clone1 đang rảnh, không có việc nào bị chặn nên chưa báo lên chủ. Lời nhắc 09:57 trên PR #1036 và câu hỏi equip Graphify 04:44 26/11 vẫn chưa trả lời.
 Main bị protected nên push trực tiếp bị từ chối, đã chuyển sang PR clone1/watchdog-1957-nov27 như các lần trước.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 02:38 ngày 28/11 - WATCHDOG
+
+Không agent nào kẹt, không agent đang chạy (fixer PII scrub cuối xong 02:32, verifier GO trước đó).
+Muse: không có yêu cầu mới cho clone1. Main và todolist-push không có commit mới từ watermark ca61e288 / 37c1e342.
+PII scrub: fix đã sẵn trong ~/workspace/pii-scrub/fix/ (fix.diff 4659 dòng, 158 file), đã giao committer land lên todolist-push (verify pii-scan, commit, push, kiểm tra ls-remote).
+Điều phối im lặng 2 giờ 22 phút, hoạt động gần nhất 00:16 (merge PR #1187); clone1 không có việc nào bị chặn nên chưa báo lên chủ. Câu hỏi equip Graphify 04:44 26/11 và lời nhắc PR #1036 vẫn chưa trả lời.
+Main bị protected nên push trực tiếp bị từ chối, đã chuyển sang PR clone1/watchdog-0238-nov28 như các lần trước.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 02:47 ngày 28/11 - WATCHDOG
+
+Không agent nào kẹt, không agent đang chạy (committer PII scrub đã xong, đã push).
+PII scrub đã land lên todolist-push: b63ac13c, 160 file, verifier GO tại 37c1e342. Nhiệm vụ scrub của chủ đã xong.
+Muse: không có yêu cầu mới cho clone1. Main và todolist-push không có commit mới từ watermark ca61e288 / b63ac13c.
+Không có comment mới trên PR #1205, #1206, không có issue mở.
+Điều phối im lặng 2 giờ 31 phút, hoạt động gần nhất 00:16 (merge PR #1187); clone1 đang rảnh, không có việc nào bị chặn nên chưa báo lên chủ. Câu hỏi equip Graphify 04:44 26/11 và lời nhắc PR #1036 vẫn chưa trả lời.
+Main bị protected nên push trực tiếp bị từ chối, đã chuyển sang PR clone1/watchdog-0247-nov28 như các lần trước.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
