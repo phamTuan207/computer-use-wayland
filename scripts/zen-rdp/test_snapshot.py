@@ -490,6 +490,76 @@ class LongStringSnapshotTransport(SnapshotTransport):
         super()._handle(req)
 
 
+class Utf16ValidationTests(unittest.TestCase):
+    """Emoji UTF-16 validation fix (pain-point meeting 2026-11-28).
+
+    JS reports textLength and slices textPreview in UTF-16 code
+    units; Python len() counts code points. Before the fix every
+    snapshot of an emoji-bearing page was refused. The fix compares
+    in UTF-16 units at the validation boundary; the truncation
+    checks stay exactly as strict.
+    """
+
+    def _payload(self, text, text_length=None, truncated=False):
+        payload = canned_payload()
+        payload["textPreview"] = text
+        payload["textLength"] = (
+            rc._utf16_len(text) if text_length is None else text_length)
+        payload["textTruncated"] = truncated
+        return payload
+
+    def test_emoji_snapshot_validates(self):
+        # JS accounting: "Hello <emoji> world" is 13 code points but
+        # 14 UTF-16 units; the payload carries the JS number.
+        text = "Hello \U0001F600 world"
+        self.assertEqual(len(text), 13)
+        self.assertEqual(rc._utf16_len(text), 14)
+        c = make_client(self._payload(text))
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertEqual(snap["textPreview"], text)
+        self.assertEqual(snap["textLength"], 14)
+        self.assertTrue(snap["complete"])
+
+    def test_code_point_length_still_refused(self):
+        # Validation is not loosened: a payload whose textLength is
+        # the code-point count (not the JS UTF-16 count) is malformed
+        # accounting and must still be refused.
+        text = "Hello \U0001F600 world"
+        c = make_client(self._payload(text, text_length=len(text)))
+        c.attach()
+        with self.assertRaises(RDPError) as cm:
+            c.snapshot()
+        self.assertIn("textPreview length", str(cm.exception))
+        c.close()
+
+    def test_truncated_emoji_at_cap_validates(self):
+        # JS slice(0, CAP) cuts in UTF-16 units and can split a
+        # surrogate pair at the cap boundary: 1499 x's + emoji puts
+        # the emoji's high surrogate at unit 1500. textLength is the
+        # full JS length; textPreview carries the lone surrogate.
+        full = "x" * 1499 + "\U0001F600" + "y" * 100
+        preview = "x" * 1499 + "\ud83d"  # JS slice(0, 1500) result
+        self.assertEqual(rc._utf16_len(full), 1601)
+        self.assertEqual(rc._utf16_len(preview), rc.SNAPSHOT_TEXT_CAP)
+        c = make_client(self._payload(preview, text_length=1601,
+                                      truncated=True))
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertTrue(snap["textTruncated"])
+        self.assertFalse(snap["complete"])
+
+    def test_wrong_text_length_still_refused(self):
+        c = make_client(self._payload("abc", text_length=99))
+        c.attach()
+        with self.assertRaises(RDPError) as cm:
+            c.snapshot()
+        self.assertIn("textPreview length", str(cm.exception))
+        c.close()
+
+
 class LongStringTests(unittest.TestCase):
     """C-M4 / F2: longString reassembly for snapshot payloads."""
 

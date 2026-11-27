@@ -197,6 +197,16 @@ def median(xs):
     return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
 
 
+def _utf16_len(s):
+    """Length in UTF-16 code units, the unit JS String.length and
+    slice() count in. Python len() counts code points, so astral
+    characters (emoji) measure 1 here but 2 in JS; any comparison
+    against a JS-reported length must use this. surrogatepass keeps
+    a lone surrogate (JS slice can split a pair at a cap boundary)
+    countable as the 1 unit JS counts it as."""
+    return len(s.encode("utf-16-le", "surrogatepass")) // 2
+
+
 def ms(sec):
     return round(sec * 1000, 1)
 
@@ -1918,11 +1928,14 @@ class RDPClient:
             raise RDPError(
                 "snapshot: textTruncated inconsistent with "
                 f"textLength={data['textLength']}")
-        if len(data["textPreview"]) != min(data["textLength"],
-                                           SNAPSHOT_TEXT_CAP):
+        # textLength and the cap are JS numbers (UTF-16 units, and
+        # slice() cuts in UTF-16 units); compare in the same unit or
+        # every emoji-bearing page is refused (code points != units).
+        if _utf16_len(data["textPreview"]) != min(data["textLength"],
+                                                  SNAPSHOT_TEXT_CAP):
             raise RDPError(
                 "snapshot: textPreview length "
-                f"{len(data['textPreview'])} inconsistent with "
+                f"{_utf16_len(data['textPreview'])} inconsistent with "
                 f"textLength={data['textLength']}")
         data["returnedElements"] = returned
         return data
