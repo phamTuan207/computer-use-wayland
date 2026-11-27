@@ -1818,7 +1818,10 @@ class RDPClient:
         refusals re-raise immediately (they never become true).
         Returns the truthy value. On expiry raises RDPError
         carrying the last observed value so the caller can report
-        what the page actually showed."""
+        what the page actually showed. F1 contract: expr must be a
+        read-only predicate (it is re-evaluated on every poll tick
+        by design, so it is idempotent-by-contract and keeps the
+        RT-06 replay recovery)."""
         deadline = time.monotonic() + timeout
         last = None
         wait_desc = getattr(self, "desc_actor", None)
@@ -2426,7 +2429,14 @@ def main():
             elif args.cmd == "snapshot":
                 _emit(args.cmd, c.snapshot(args.load_timeout), legacy)
             elif args.cmd == "eval":
-                action_result = {"result": c.evaluate(args.expr)}
+                # F1: the caller's expression is arbitrary JS and may
+                # have side effects, so it is non-idempotent by
+                # definition. replay=False: a lost response after
+                # execution must never re-fire it (the RT-06
+                # noSuchActor retry stays on read paths only). The
+                # error classifies delivery_uncertain/unsafe.
+                action_result = {"result": c.evaluate(
+                    args.expr, replay=False)}
                 if not args.wait_for:
                     _emit(args.cmd, action_result, legacy)
             elif args.cmd == "peval":
