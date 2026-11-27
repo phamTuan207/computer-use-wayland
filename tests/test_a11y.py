@@ -23,7 +23,7 @@ ATspiStub = _types.SimpleNamespace(StateType=_types.SimpleNamespace(
 class A11yAdapterTests(unittest.TestCase):
     def setUp(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable', '_completeness')]
         self.element = mock.Mock()
         self.element.get_action_iface.return_value = self.element
         self.element.get_n_actions.return_value = 1
@@ -195,7 +195,7 @@ class ResolverTests(unittest.TestCase):
 
     def test_production_act_with_production_resolve_nameless(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable', '_completeness')]
         ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
@@ -217,7 +217,7 @@ class ResolverTests(unittest.TestCase):
 
     def test_name_changed_between_guards_sends_no_input(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable', '_completeness')]
         root = self.node(name='')
         root.get_name.side_effect = ['', 'changed']
         ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value={
@@ -236,7 +236,7 @@ class ResolverTests(unittest.TestCase):
 
     def test_stale_name_at_preflight_raises_before_input(self):
         nodes = [n for n in ast.parse(SOURCE).body
-                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable')]
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref', 'wait_actionable', '_completeness')]
         ns = dict(time=time, sys=sys, Atspi=ATspiStub, _component_extents=lambda e: [0, 0, 10, 10], read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
@@ -497,7 +497,7 @@ class QualifiedRefTests(unittest.TestCase):
     def setUp(self):
         nodes = [n for n in ast.parse(SOURCE).body
                  if isinstance(n, ast.FunctionDef)
-                 and n.name in ('parse_ref', 'act', 'wait_actionable')]
+                 and n.name in ('parse_ref', 'act', 'wait_actionable', '_completeness')]
         self.element = mock.Mock()
         self.element.get_action_iface.return_value = self.element
         self.element.get_n_actions.return_value = 1
@@ -543,6 +543,80 @@ class QualifiedRefTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'different snapshot'):
             self.ns['act']('snapshot', [{'type': 'click', 'ref': 'zzz999:e1'}])
         self.element.do_action.assert_not_called()
+
+
+class CompletenessTests(unittest.TestCase):
+    """I15: root-level incomplete marking and surfacing at ground/act."""
+
+    def setUp(self):
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef)
+                 and n.name in ('_completeness', 'parse_ref', 'act', 'ground',
+                                'wait_actionable')]
+        self.element = mock.Mock()
+        self.element.get_action_iface.return_value = self.element
+        self.element.get_n_actions.return_value = 1
+        self.element.get_action_name.return_value = 'click'
+        self.element.do_action.return_value = True
+        self.ns = dict(time=time, sys=sys, Atspi=ATspiStub,
+                       _component_extents=lambda e: [0, 0, 10, 10],
+                       _pick4=lambda: True,
+                       read_json_file=mock.Mock(),
+                       validate_actions=cu.validate_actions, app=mock.Mock(),
+                       resolve=mock.Mock(return_value=self.element),
+                       observe=mock.Mock(return_value={'ok': True}))
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), 'a11y.py', 'exec'), self.ns)
+
+    def snapshot(self, **extra):
+        base = {'backend': 'a11y', 'created': time.time(), 'pid': 1,
+                'snapshot_id': 'abc123',
+                'elements': [{'ref': 'e1', 'path': [], 'name': 'B',
+                              'role': 'button', 'editable': True,
+                              'actions': ['click']}]}
+        base.update(extra)
+        return base
+
+    def test_completeness_derivation_covers_legacy_shapes(self):
+        f = self.ns['_completeness']
+        self.assertEqual(f({'complete': True, 'incomplete': False, 'read_errors': 0}),
+                         (True, False, 0))
+        self.assertEqual(f({'complete': False, 'incomplete': True, 'read_errors': 2}),
+                         (False, True, 2))
+        # Legacy: truncated only, complete only, neither (unknown).
+        self.assertEqual(f({'truncated': True}), (False, True, 0))
+        self.assertEqual(f({'truncated': False}), (True, False, 0))
+        self.assertEqual(f({'complete': True}), (True, False, 0))
+        self.assertEqual(f({}), (False, True, 0))
+        # A read error count forces incomplete even if complete claims True.
+        self.assertEqual(f({'complete': True, 'read_errors': 1}), (False, True, 1))
+
+    def test_act_surfaces_source_incompleteness(self):
+        self.ns['read_json_file'].return_value = self.snapshot(
+            complete=False, incomplete=True, read_errors=3)
+        result = self.ns['act']('snapshot', [{'type': 'click', 'ref': 'e1'}])
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['snapshot_incomplete'])
+        self.assertFalse(result['snapshot_complete'])
+        self.assertEqual(result['snapshot_read_errors'], 3)
+
+    def test_act_surfaces_complete_source(self):
+        self.ns['read_json_file'].return_value = self.snapshot(
+            complete=True, incomplete=False, read_errors=0)
+        result = self.ns['act']('snapshot', [{'type': 'click', 'ref': 'e1'}])
+        self.assertTrue(result['ok'])
+        self.assertFalse(result['snapshot_incomplete'])
+        self.assertTrue(result['snapshot_complete'])
+        self.assertEqual(result['snapshot_read_errors'], 0)
+
+    def test_ground_surfaces_source_incompleteness(self):
+        self.ns['read_json_file'].return_value = self.snapshot(
+            complete=False, incomplete=True, read_errors=1)
+        result = self.ns['ground']('snapshot', 'abc123:e1')
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['snapshot_incomplete'])
+        self.assertFalse(result['snapshot_complete'])
+        self.assertEqual(result['snapshot_read_errors'], 1)
+        self.assertEqual(result['extents'], [0, 0, 10, 10])
 
 
 if __name__ == '__main__':

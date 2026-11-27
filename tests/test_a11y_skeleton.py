@@ -67,6 +67,35 @@ class SkeletonTests(unittest.TestCase):
         self.assertTrue(all('cut' not in e for e in expanded['elements']))
         self.assertEqual(expanded['elements'][-1]['children_count'],0)
 
+    def test_read_failure_marks_snapshot_incomplete_at_root(self):
+        bad=self.node('bad')
+        bad.get_name.side_effect=RuntimeError('app hung')
+        good=self.node('good')
+        self.tree=self.node('app',[good,bad])
+        self.a11y.applications=lambda: [self.tree]
+        out=self.a11y.observe(4242,skeleton=True)
+        # The unreadable node is dropped from elements but the
+        # root marking says so: unknown, not absent (I15).
+        self.assertEqual([e['name'] for e in out['elements']],['app','good'])
+        self.assertEqual(out['read_errors'],1)
+        self.assertTrue(out['incomplete'])
+        self.assertFalse(out['complete'])
+        self.assertFalse(out['truncated'])
+        # The stored snapshot file carries the same marking.
+        stored=json.loads(Path(out['snapshot']).read_text())
+        self.assertTrue(stored['incomplete'])
+        self.assertEqual(stored['read_errors'],1)
+
+    def test_clean_walk_is_complete_with_zero_read_errors(self):
+        out=self.a11y.observe(4242,skeleton=True)
+        self.assertEqual(out['read_errors'],0)
+        # This tree is depth-cut, so incomplete via truncated.
+        self.assertTrue(out['incomplete'])
+        expanded=self.a11y.drill(out['snapshot'],out['elements'][-1]['ref'])
+        self.assertEqual(expanded['read_errors'],0)
+        self.assertFalse(expanded['incomplete'])
+        self.assertTrue(expanded['complete'])
+
     def test_children_count_present_in_default_mode(self):
         leaf=self.node('leaf')
         iface=mock.Mock()

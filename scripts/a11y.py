@@ -80,9 +80,29 @@ def describe(e,path,ref):
     # Do not collect field values, passwords, full text documents or the entire desktop tree.
     return result
 
+def _completeness(snapshot):
+    """Root completeness of a snapshot dict (I15).
+
+    Returns (complete, incomplete, read_errors). New snapshots
+    carry all three; legacy ones derive incomplete from
+    complete, then truncated. A snapshot with no completeness
+    fields at all is unknown, hence incomplete: a read failure
+    must never collapse into "absent" or "complete"."""
+    errors=snapshot.get('read_errors')
+    if isinstance(errors,bool) or not isinstance(errors,int) or errors<0:errors=0
+    incomplete=snapshot.get('incomplete')
+    if not isinstance(incomplete,bool):
+        complete=snapshot.get('complete')
+        if isinstance(complete,bool):incomplete=not complete
+        elif isinstance(snapshot.get('truncated'),bool):incomplete=snapshot['truncated']
+        else:incomplete=True
+    if errors:incomplete=True
+    return not incomplete,incomplete,errors
+
 def observe(pid,skeleton=False,subtree=None):
     root=app(pid);origin,base=subtree if subtree is not None else (root,[])
     pending=[(origin,base)];items=[];visited=0;start=time.monotonic();truncated=False
+    read_errors=0
     cut_paths=set()
     while pending and visited<500 and time.monotonic()-start<2:
         e,path=pending.pop();visited+=1
@@ -104,14 +124,19 @@ def observe(pid,skeleton=False,subtree=None):
                 for i in reversed(range(min(count,100))):pending.append((e.get_child_at_index(i),path+[i]))
             elif count:
                 truncated=True;cut_paths.add(tuple(path))
-        except Exception:continue
+        except Exception:
+            # I15: a node that cannot be read is unknown, not
+            # absent. Count it at the root so the snapshot is
+            # marked incomplete instead of silently dropping it.
+            read_errors+=1;continue
     # Budget stop (node/time caps) leaves pending children unwalked:
     # their parents are cut too (I5 per-node accounting).
     for _e,path in pending:
         if path:cut_paths.add(tuple(path[:-1]))
     for item in items:
         if tuple(item['path']) in cut_paths:item['cut']=True
-    snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending) or truncated,'complete':not (bool(pending) or truncated)}
+    incomplete=bool(pending) or truncated or read_errors>0
+    snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending) or truncated,'complete':not incomplete,'incomplete':incomplete,'read_errors':read_errors}
     prepare_state();sid=uuid.uuid4().hex[:12];path=STATE/(sid+'.json');snapshot['snapshot']=str(path);snapshot['snapshot_id']=sid
     fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     try:
@@ -143,10 +168,13 @@ def query(pid,name=None,role=None,limit=20):
         if name is not None and name.casefold() not in (item.get('name') or '').casefold():continue
         if role is not None and role.casefold() not in (item.get('role') or '').casefold():continue
         matched.append(item)
+    _complete,incomplete,errors=_completeness(snapshot)
+    incomplete=incomplete or len(matched)>limit
     return {'backend':'a11y-query','pid':pid,'app_name':snapshot['app_name'],
             'created':snapshot['created'],'snapshot':snapshot['snapshot'],
             'elements':matched[:limit],'matched':len(matched),
-            'truncated':bool(snapshot.get('truncated')) or len(matched)>limit}
+            'truncated':bool(snapshot.get('truncated')) or len(matched)>limit,
+            'complete':not incomplete,'incomplete':incomplete,'read_errors':errors}
 
 def parse_ref(snapshot,ref):
     """Resolve a possibly snapshot-qualified ref to its bare form (I3).
@@ -203,9 +231,11 @@ def ground(snapshot_path,ref):
             except Exception:continue
             if root_extents is not None:break
         if root_extents is None:raise ValueError('no window frame extents; use vision')
+    complete,incomplete,errors=_completeness(snapshot)
     return {'ok':True,'ref':ref,'qref':(snapshot['snapshot_id']+':'+ref if snapshot.get('snapshot_id') else ref),'role':item['role'],'name':item['name'],
             'extents':extents,'extents_coord':'screen',
-            'root_extents':root_extents}
+            'root_extents':root_extents,
+            'snapshot_complete':complete,'snapshot_incomplete':incomplete,'snapshot_read_errors':errors}
 
 def resolve(root,item):
     e=root
@@ -270,7 +300,8 @@ def act(path,actions):
         e=resolve(root,refs[a['ref']])
         if a['type']=='set_text' and (not isinstance(a.get('text'),str) or len(a['text'])>10000 or not refs[a['ref']].get('editable')):raise ValueError('editable ref and text <=10000 required')
         if a['type']=='click' and not any(n.lower() in ('click','press','toggle') for n in refs[a['ref']]['actions']):raise ValueError('no native click action; use desktop pointer')
-    completed=0;result={'ok':True};start=time.monotonic()
+    complete,incomplete,errors=_completeness(snapshot)
+    completed=0;result={'ok':True,'snapshot_complete':complete,'snapshot_incomplete':incomplete,'snapshot_read_errors':errors};start=time.monotonic()
     try:
         for a in actions:
             e=wait_actionable(root,refs[a['ref']])
