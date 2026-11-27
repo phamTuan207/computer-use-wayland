@@ -1365,6 +1365,17 @@ class RDPClient:
         self._release_lock()
 
 
+def bench_wait_substr(url):
+    """Substring wait_load should expect in location.href for `url`:
+    the path when it names a page, else the host. Derived from the
+    URL itself, never a hardcoded page name (the old bench waited
+    for a literal 'slice' and timed out on any other local URL)."""
+    from urllib.parse import urlparse
+    p = urlparse(url)
+    path = (p.path or "").strip("/")
+    return path or p.netloc or url
+
+
 def bench(port, marker, local_url, real_url, runs, scope=None,
           denylist_patterns=None, credential_approvals=None,
           allow_unmarked_test_attach=False, unscoped_test=False):
@@ -1419,8 +1430,9 @@ def bench(port, marker, local_url, real_url, runs, scope=None,
     out["evaluate_dom_read"] = {
         "median_ms": ms(median(xs)), "runs_ms": [ms(x) for x in xs]}
     # navigate-to-load, local then real, alternating with about:blank
-    for label, url, substr in (("navigate_local", local_url, "slice"),
-                               ("navigate_real", real_url, "example")):
+    for label, url in (("navigate_local", local_url),
+                       ("navigate_real", real_url)):
+        substr = bench_wait_substr(url)
         xs = []
         for _ in range(runs):
             c.navigate("about:blank")

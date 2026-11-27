@@ -9,6 +9,9 @@ in the port registry = no drive; this script never guesses a port,
 it only verifies the port and profile marker it is handed.
 
 Checks:
+  z  deployed rdp_client.py byte-matches the landed copy next to
+     this script (only when --deployed-client is given; drift
+     fails loud before any attach)
   a  port owner pid + cmdline matches --profile-marker
   b  attach succeeds (connect, listTabs, getTarget)
   c  webdriver probe CLEAN, native false (client probe, fail-loud)
@@ -20,9 +23,14 @@ Checks:
   h  navigate the attached tab to about:blank and wait-load
      (proves navigateTo still works post-update). NOTE: (h) replaces
      the attached tab content; run smoke on a throwaway/tasked tab.
+  i  bench self-test (only when --bench-local-url is given): the
+     bench instrument completes with a timed result on the given
+     local URL (runs=1; bench navigates destructively, throwaway
+     sessions only)
 
 Exit codes: 0 pass, 2 setup/usage, 10 owner, 11 attach, 12 probe,
-13 evaluate, 14 parent target, 15 bind, 16 navigate.
+13 evaluate, 14 parent target, 15 bind, 16 navigate,
+17 deployed-copy drift, 18 bench self-test.
 
 Stdlib only. Reuses rdp_client.py (same directory) for attach,
 evaluate, and the webdriver probe. Sends no OS input; ydotool is
@@ -30,6 +38,7 @@ banned and not used. Generic and repo-shaped: no hardcoded port,
 profile, pid, or path defaults.
 """
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -41,7 +50,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 try:
-    from rdp_client import RDPClient, RDPError, check_port_owner, median, ms
+    from rdp_client import (RDPClient, RDPError, bench, check_port_owner,
+                            median, ms)
 except ImportError as e:
     print(json.dumps({
         "smoke": "rdp_smoke", "overall": "FAIL", "failed_check": "setup",
@@ -52,9 +62,35 @@ except ImportError as e:
 
 EXIT = {"setup": 2, "a_port_owner": 10, "b_attach": 11, "c_webdriver": 12,
         "d_evaluate": 13, "e_parent_target": 14, "f_bind": 15,
-        "h_navigate": 16}
+        "h_navigate": 16, "z_deployed_hash": 17, "i_bench": 18}
 
 PARENT_GLOBALS = ("gZenWorkspaces", "gBrowser", "gZenFolders")
+
+
+def file_sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def check_deployed_hash(deployed_path, reference_path=None):
+    """Pure: (ok, detail). The deployed (machine-layer) copy of
+    rdp_client.py must byte-match the landed reference (default:
+    the rdp_client.py next to this smoke script). Drift means
+    measured numbers describe the landed tree, not the deployed
+    lane, so it fails loud."""
+    ref = reference_path or str(
+        Path(__file__).resolve().parent / "rdp_client.py")
+    try:
+        d = file_sha256(deployed_path)
+        r = file_sha256(ref)
+    except OSError as e:
+        return False, {"error": str(e), "deployed": str(deployed_path),
+                       "reference": str(ref)}
+    return d == r, {"deployed_sha256": d, "reference_sha256": r,
+                    "deployed": str(deployed_path), "reference": str(ref)}
 
 
 def parse_bind(ss_text, port):
@@ -82,7 +118,8 @@ def parent_evaluate(client, expr, timeout=10):
     return value, client.parent_url
 
 
-def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
+def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10,
+              deployed_client=None, bench_local_url=None):
     """Returns (report_dict, exit_code). Stops at first failed check."""
     t_start = time.monotonic()
     report = {
@@ -99,6 +136,15 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
         report["error"] = str(err)
         report["elapsed_ms"] = ms(time.monotonic() - t_start)
         return report, EXIT[check]
+
+    # (z) deployed copy byte-matches the landed client (drift gate)
+    if deployed_client:
+        ok, detail = check_deployed_hash(deployed_client)
+        if not ok:
+            return fail("z_deployed_hash",
+                        "deployed rdp_client.py drifted from the landed "
+                        f"copy: {detail}", detail)
+        report["checks"]["z_deployed_hash"] = {"status": "PASS", **detail}
 
     # (a) port owner pid + cmdline matches marker
     try:
@@ -199,6 +245,23 @@ def run_smoke(port, marker, host="127.0.0.1", timeout=15, eval_runs=10):
     finally:
         client.close()
 
+    # (i) bench self-test: the measurement instrument completes with
+    # a timed result (runs=1, local URL for both legs so the smoke
+    # run needs no external network). Bench opens its own
+    # connections, so it runs after the smoke client closes.
+    if bench_local_url:
+        try:
+            result = bench(port, marker, bench_local_url, bench_local_url,
+                           runs=1, unscoped_test=True)
+            report["checks"]["i_bench"] = {
+                "status": "PASS",
+                "navigate_local_median_ms":
+                    result["navigate_local"]["median_ms"],
+                "attach_median_ms":
+                    result["attach_to_first_evaluate"]["median_ms"]}
+        except Exception as e:
+            return fail("i_bench", e)
+
     report["overall"] = "PASS"
     report["elapsed_ms"] = ms(time.monotonic() - t_start)
     return report, 0
@@ -214,9 +277,20 @@ def main():
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--timeout", type=int, default=15)
     ap.add_argument("--eval-runs", type=int, default=10)
+    ap.add_argument("--deployed-client", default=None, metavar="PATH",
+                    help="deployed (machine-layer) rdp_client.py that "
+                         "must byte-match the landed copy next to this "
+                         "script; drift fails the run (exit 17)")
+    ap.add_argument("--bench-local-url", default=None, metavar="URL",
+                    help="run the bench self-test (runs=1) against "
+                         "this local URL after the other checks; "
+                         "bench navigates destructively, throwaway "
+                         "sessions only")
     args = ap.parse_args()
     report, code = run_smoke(args.port, args.profile_marker, host=args.host,
-                             timeout=args.timeout, eval_runs=args.eval_runs)
+                             timeout=args.timeout, eval_runs=args.eval_runs,
+                             deployed_client=args.deployed_client,
+                             bench_local_url=args.bench_local_url)
     print(json.dumps(report, indent=1))
     return code
 
