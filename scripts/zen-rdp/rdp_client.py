@@ -467,10 +467,14 @@ def _fail(cmd, code, message, delivery, retry, exit_code, legacy,
 # The count is the TRUE count over the examined pool; when the pool
 # exceeds the scan cap the verdict carries candidatesTruncated=true
 # and count is a lower bound (zen-mcp's silent capped count, "6" on a
-# 100-button page, must not be copied). Refusal envelope:
-# delivery=delivered_verified (the script ran and its verdict
-# arrived), retry=unsafe (the act command class is never replayed:
-# a lost response cannot distinguish refusal from a landed click).
+# 100-button page, must not be copied). Refusal envelope (M3):
+# an ARRIVED refusal proves the input did not land, so it is
+# delivery=not_delivered, retry=safe. The one exception is the
+# defence-in-depth breach path (the script acted on a truncated
+# scan): the click may have landed, so that refusal stays
+# delivery_uncertain/unsafe. A LOST response (transport error)
+# cannot distinguish refusal from a landed click and also stays
+# delivery_uncertain/unsafe via _classify_error.
 _ACT_JS = r"""
 (() => {
   const spec = __SPEC__;
@@ -684,8 +688,11 @@ def _act_script(descriptor, action, value=None):
 class ActRefusal(RDPError):
     """The in-page act script ran and refused to act (count != 1, or
     the unique target is not editable, or the selector is invalid).
-    Carries the verdict dict; the CLI emits it as the envelope result
-    with retry=unsafe."""
+    Carries the verdict dict; the CLI emits it as the envelope
+    result. M3 disposition: an arrived refusal proves the input did
+    not land (not_delivered/safe), except the breach path where the
+    script acted on a truncated scan (may_have_acted=True), which
+    stays delivery_uncertain/unsafe."""
 
     _CODES = {"ambiguous": "target_ambiguous",
               "not_found": "target_not_found",
@@ -695,14 +702,24 @@ class ActRefusal(RDPError):
               "target_disabled": "target_disabled",
               "target_readonly": "target_readonly"}
 
-    def __init__(self, refusal):
+    def __init__(self, refusal, may_have_acted=False):
         self.refusal = refusal
+        self.may_have_acted = may_have_acted
         self.code = self._CODES.get(refusal.get("reason"), "act_refused")
         super().__init__(
             f"ACT REFUSED ({self.code}): count={refusal.get('count')} "
             f"candidatesTruncated={refusal.get('candidatesTruncated')} "
             f"descriptor={refusal.get('descriptor')!r} "
             f"action={refusal.get('action')!r}")
+
+    def disposition(self):
+        """(delivery, retry) for the envelope. Arrived refusal: the
+        verdict proves no input landed -> not_delivered/safe. Breach
+        path (acted on a truncated scan): input may have landed ->
+        delivery_uncertain/unsafe."""
+        if self.may_have_acted:
+            return ("delivery_uncertain", "unsafe")
+        return ("not_delivered", "safe")
 
 
 class Scope:
@@ -1663,14 +1680,16 @@ class RDPClient:
         verdict.setdefault("poolScope", "top-document")
         verdict["descriptor"] = _normalize_descriptor(descriptor)
         verdict["action"] = action
+        may_have_acted = False
         if verdict["acted"] and verdict.get("candidatesTruncated"):
             # The script acted on a truncated scan (contract breach:
             # uniqueness was never proven). Surface it as the
             # refusal it should have been; the action may have
-            # landed, which the refusal envelope's retry=unsafe
-            # already states.
+            # landed, so this refusal keeps the unsafe disposition
+            # (M3: every other arrived refusal is safe to retry).
             verdict = dict(verdict, acted=False,
                            reason="scan_truncated")
+            may_have_acted = True
         if verdict["acted"]:
             self._actions["act"] += 1
             return verdict
@@ -1680,7 +1699,7 @@ class RDPClient:
              "candidatesTruncated": verdict.get("candidatesTruncated"),
              "poolScope": verdict.get("poolScope"),
              "at": _now_iso()})
-        raise ActRefusal(verdict)
+        raise ActRefusal(verdict, may_have_acted=may_have_acted)
 
     # -- parent-process target (chrome JS, gated) -----------------------------
     def _open_parent(self):
@@ -2472,10 +2491,14 @@ def main():
                          "label": args.label},
                         args.action, args.value)
                 except ActRefusal as r:
-                    # The script ran and refused: delivery verified,
-                    # retry unsafe (act commands are never replayed).
+                    # M3: an arrived refusal proves the input did not
+                    # land (not_delivered/safe); only the breach path
+                    # (acted on a truncated scan) stays unsafe. A lost
+                    # response never reaches here: it propagates as
+                    # RDPError and classifies delivery_uncertain.
+                    delivery, retry = r.disposition()
                     return _fail(args.cmd, r.code, str(r),
-                                 "delivered_verified", "unsafe", 1,
+                                 delivery, retry, 1,
                                  legacy, result=r.refusal)
                 action_result = {"act": verdict}
                 if not args.wait_for:
