@@ -18,8 +18,8 @@ SOURCE = (ROOT / 'scripts/a11y.py').read_text()
 
 class A11yAdapterTests(unittest.TestCase):
     def setUp(self):
-        node = next(n for n in ast.parse(SOURCE).body
-                    if isinstance(n, ast.FunctionDef) and n.name == 'act')
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
         self.element = mock.Mock()
         self.element.get_action_iface.return_value = self.element
         self.element.get_n_actions.return_value = 1
@@ -27,11 +27,11 @@ class A11yAdapterTests(unittest.TestCase):
         self.element.do_action.return_value = True
         self.snapshot = {'backend': 'a11y', 'created': time.time(), 'pid': 1,
                          'elements': [{'ref': 'e1', 'editable': True, 'actions': ['click']}]}
-        self.ns = dict(time=time, read_json_file=mock.Mock(return_value=self.snapshot),
+        self.ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value=self.snapshot),
                        validate_actions=cu.validate_actions, app=mock.Mock(),
                        resolve=mock.Mock(return_value=self.element),
                        observe=mock.Mock(side_effect=RuntimeError('observe failed')))
-        exec(compile(ast.Module(body=[node], type_ignores=[]), 'a11y.py', 'exec'), self.ns)
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), 'a11y.py', 'exec'), self.ns)
 
     def test_final_observation_failure_preserves_acknowledged_count(self):
         result = self.ns['act']('snapshot', [{'type': 'click', 'ref': 'e1'}])
@@ -150,9 +150,9 @@ class ResolverTests(unittest.TestCase):
             self.resolve(self.node(name=None, sensitive=False), self.item())
 
     def test_production_act_with_production_resolve_nameless(self):
-        node = next(n for n in ast.parse(SOURCE).body
-                    if isinstance(n, ast.FunctionDef) and n.name == 'act')
-        ns = dict(time=time, read_json_file=mock.Mock(return_value={
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
+        ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
                           'role': 'button', 'actions': ['click']}]}),
@@ -165,18 +165,18 @@ class ResolverTests(unittest.TestCase):
         element.get_n_actions.return_value = 1
         element.get_action_name.return_value = 'click'
         element.do_action.return_value = True
-        exec(compile(ast.Module(body=[node], type_ignores=[]), 'a11y.py', 'exec'), ns)
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), 'a11y.py', 'exec'), ns)
         result = ns['act']('snapshot', [{'type': 'click', 'ref': 'e1'}])
         self.assertTrue(result['ok'])
         self.assertEqual(result['completed'], 1)
         element.do_action.assert_called_once_with(0)
 
     def test_name_changed_between_guards_sends_no_input(self):
-        node = next(n for n in ast.parse(SOURCE).body
-                    if isinstance(n, ast.FunctionDef) and n.name == 'act')
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
         root = self.node(name='')
         root.get_name.side_effect = ['', 'changed']
-        ns = dict(time=time, read_json_file=mock.Mock(return_value={
+        ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
                           'role': 'button', 'actions': ['click']}]}),
@@ -184,16 +184,16 @@ class ResolverTests(unittest.TestCase):
             app=mock.Mock(return_value=root),
             resolve=self.resolve,
             observe=mock.Mock(return_value={'ok': True}))
-        exec(compile(ast.Module(body=[node], type_ignores=[]), 'a11y.py', 'exec'), ns)
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), 'a11y.py', 'exec'), ns)
         result = ns['act']('snapshot', [{'type': 'click', 'ref': 'e1'}])
         self.assertFalse(result['ok'])
         self.assertEqual(result['completed'], 0)
         root.get_action_iface.assert_not_called()
 
     def test_stale_name_at_preflight_raises_before_input(self):
-        node = next(n for n in ast.parse(SOURCE).body
-                    if isinstance(n, ast.FunctionDef) and n.name == 'act')
-        ns = dict(time=time, read_json_file=mock.Mock(return_value={
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef) and n.name in ('act', 'parse_ref')]
+        ns = dict(time=time, sys=sys, read_json_file=mock.Mock(return_value={
             'backend': 'a11y', 'created': time.time(), 'pid': 1,
             'elements': [{'ref': 'e1', 'path': [], 'name': '',
                           'role': 'button', 'actions': ['click']}]}),
@@ -201,7 +201,7 @@ class ResolverTests(unittest.TestCase):
             app=mock.Mock(return_value=self.node(name='changed')),
             resolve=self.resolve,
             observe=mock.Mock())
-        exec(compile(ast.Module(body=[node], type_ignores=[]), 'a11y.py', 'exec'), ns)
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), 'a11y.py', 'exec'), ns)
         with self.assertRaisesRegex(ValueError, 'accessibility tree changed'):
             ns['act']('snapshot', [{'type': 'click', 'ref': 'e1'}])
         ns['observe'].assert_not_called()
@@ -444,6 +444,61 @@ class A11yObserveFileTests(unittest.TestCase):
                              'no extra os.close after ownership transferred to the stream')
             with self.assertRaises(OSError):
                 os.fstat(opened[0])
+
+
+class QualifiedRefTests(unittest.TestCase):
+    """I3: snapshot-qualified refs, in-file snapshot id, legacy
+    snapshots grandfathered."""
+
+    def setUp(self):
+        nodes = [n for n in ast.parse(SOURCE).body
+                 if isinstance(n, ast.FunctionDef)
+                 and n.name in ('parse_ref', 'act')]
+        self.element = mock.Mock()
+        self.element.get_action_iface.return_value = self.element
+        self.element.get_n_actions.return_value = 1
+        self.element.get_action_name.return_value = 'click'
+        self.element.do_action.return_value = True
+        self.snapshot = {'backend': 'a11y', 'created': time.time(), 'pid': 1,
+                         'snapshot_id': 'abc123',
+                         'elements': [{'ref': 'e1', 'editable': True,
+                                       'actions': ['click']}]}
+        self.ns = dict(time=time, sys=sys,
+                       read_json_file=mock.Mock(return_value=self.snapshot),
+                       validate_actions=cu.validate_actions, app=mock.Mock(),
+                       resolve=mock.Mock(return_value=self.element),
+                       observe=mock.Mock(return_value={'ok': True}))
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), 'a11y.py', 'exec'), self.ns)
+
+    def test_qualified_ref_accepted(self):
+        self.assertEqual(self.ns['parse_ref'](self.snapshot, 'abc123:e1'), 'e1')
+
+    def test_wrong_snapshot_id_refused(self):
+        with self.assertRaisesRegex(ValueError, 'different snapshot'):
+            self.ns['parse_ref'](self.snapshot, 'zzz999:e1')
+
+    def test_bare_ref_warns_but_passes(self):
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(self.ns['parse_ref'](self.snapshot, 'e1'), 'e1')
+        self.assertIn('bare accessibility ref', err.getvalue())
+
+    def test_legacy_snapshot_grandfathered(self):
+        legacy = {'backend': 'a11y', 'elements': []}
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(self.ns['parse_ref'](legacy, 'e1'), 'e1')
+            self.assertEqual(self.ns['parse_ref'](legacy, 'anyid:e1'), 'e1')
+        self.assertEqual(err.getvalue(), '')
+
+    def test_act_accepts_qualified_ref(self):
+        result = self.ns['act']('snapshot',
+                                [{'type': 'click', 'ref': 'abc123:e1'}])
+        self.assertTrue(result['ok'])
+        self.element.do_action.assert_called_once_with(0)
+
+    def test_act_refuses_foreign_qualified_ref(self):
+        with self.assertRaisesRegex(ValueError, 'different snapshot'):
+            self.ns['act']('snapshot', [{'type': 'click', 'ref': 'zzz999:e1'}])
+        self.element.do_action.assert_not_called()
 
 
 if __name__ == '__main__':

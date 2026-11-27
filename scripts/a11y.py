@@ -102,7 +102,7 @@ def observe(pid,skeleton=False,subtree=None):
             elif skeleton and count:truncated=True
         except Exception:continue
     snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending) or truncated}
-    prepare_state();path=STATE/(uuid.uuid4().hex[:12]+'.json');snapshot['snapshot']=str(path)
+    prepare_state();sid=uuid.uuid4().hex[:12];path=STATE/(sid+'.json');snapshot['snapshot']=str(path);snapshot['snapshot_id']=sid
     fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     try:
         os.fchmod(fd,0o600)
@@ -138,6 +138,30 @@ def query(pid,name=None,role=None,limit=20):
             'elements':matched[:limit],'matched':len(matched),
             'truncated':bool(snapshot.get('truncated')) or len(matched)>limit}
 
+def parse_ref(snapshot,ref):
+    """Resolve a possibly snapshot-qualified ref to its bare form (I3).
+
+    Qualified form is '<snapshot_id>:<ref>'. A qualified ref whose
+    id does not match the loaded snapshot's in-file snapshot_id is
+    refused (it belongs to a different observation). A bare ref
+    against a snapshot that carries an id is accepted with a
+    deprecation warning on stderr. Legacy snapshots without an
+    in-file id are grandfathered: bare refs pass silently and a
+    qualified ref's id cannot be verified, so its bare part is used.
+    """
+    if not isinstance(ref,str) or not ref:raise ValueError('valid accessibility ref required')
+    sid=snapshot.get('snapshot_id')
+    if ':' in ref:
+        given,_,bare=ref.partition(':')
+        if not bare:raise ValueError('valid accessibility ref required')
+        if sid is not None and given!=sid:
+            raise ValueError('ref belongs to a different snapshot: '+given)
+        return bare
+    if sid is not None:
+        print('warning: bare accessibility ref '+ref+'; use the '
+              'snapshot-qualified form '+sid+':'+ref,file=sys.stderr)
+    return ref
+
 def ground(snapshot_path,ref):
     """Re-resolve one snapshot ref against the live tree and return its box.
 
@@ -150,6 +174,7 @@ def ground(snapshot_path,ref):
     snapshot=read_json_file(snapshot_path)
     if snapshot.get('backend') not in ('a11y','a11y-query') or time.time()-snapshot['created']>90:
         raise ValueError('stale accessibility snapshot')
+    ref=parse_ref(snapshot,ref)
     item=next((e for e in snapshot['elements'] if e['ref']==ref),None)
     if item is None:raise ValueError('valid accessibility ref required')
     root=app(snapshot['pid']);element=resolve(root,item)
@@ -168,7 +193,7 @@ def ground(snapshot_path,ref):
             except Exception:continue
             if root_extents is not None:break
         if root_extents is None:raise ValueError('no window frame extents; use vision')
-    return {'ok':True,'ref':ref,'role':item['role'],'name':item['name'],
+    return {'ok':True,'ref':ref,'qref':(snapshot['snapshot_id']+':'+ref if snapshot.get('snapshot_id') else ref),'role':item['role'],'name':item['name'],
             'extents':extents,'extents_coord':'screen',
             'root_extents':root_extents}
 
@@ -182,6 +207,7 @@ def resolve(root,item):
 def drill(path,ref):
     snapshot=read_json_file(path)
     if snapshot.get('backend')!='a11y' or time.time()-snapshot['created']>90:raise ValueError('stale accessibility snapshot')
+    ref=parse_ref(snapshot,ref)
     item=next((e for e in snapshot['elements'] if e['ref']==ref),None)
     if item is None:raise ValueError('valid accessibility ref required')
     root=app(snapshot['pid']);element=resolve(root,item)
@@ -191,6 +217,7 @@ def act(path,actions):
     snapshot=read_json_file(path)
     if snapshot.get('backend')!='a11y' or time.time()-snapshot['created']>90:raise ValueError('stale accessibility snapshot')
     validate_actions(actions,'a11y')
+    actions=[dict(a,ref=parse_ref(snapshot,a.get('ref'))) if isinstance(a,dict) else a for a in actions]
     root=app(snapshot['pid']);refs={e['ref']:e for e in snapshot['elements']}
     for a in actions:
         if a.get('type') not in ('click','set_text') or a.get('ref') not in refs:raise ValueError('click/set_text and valid ref required')
