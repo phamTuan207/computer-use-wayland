@@ -15,6 +15,22 @@ In ra:
 Dòng 1: Xuất ma trận A ra màn hình dưới dạng bảng( mỗi phần tử cách nhau bằng 1 khoảng trắng).
 Dòng 2: In ra số lượng viên bi có màu i, kích thước j
 
+## Formula recovery note (coordinator, 27/11/2026)
+
+Recovered by PDF export (the doc's one equation object is not exposed via
+the Docs API): the blank "( )" in Cau 1 is "(0 <= so bi < 10^9)".
+
+Statement defects visible in the doc itself (not extraction artifacts):
+- The size-index range is malformed: "(0 < <= n)" is missing the variable j;
+  read as 0 < j <= n. Color index i range "(0 < i <= m)" is present, so
+  indices are 1-based (confirmed against all 80 tests: i, j in [1, 100]).
+- Input order is muddled: the query indices i, j are mentioned inside the
+  matrix-input bullet; the natural reading (m n, then matrix, then i j)
+  matches the setter on all 80 tests, but the statement never says so
+  cleanly, and there is no sample to pin it down.
+- Output spec says "Dong 1: print the matrix" although the matrix is m
+  lines; the count follows on the next line.
+
 
 
 

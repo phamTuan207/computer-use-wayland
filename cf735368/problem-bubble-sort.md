@@ -37,6 +37,13 @@ Output
 1 0 2 3 4 5 
 0 1 2 3 4 5 
 
+## Formula recovery note (coordinator, 27/11/2026)
+
+Recovered by PDF export: the two blanks in the recap paragraph are "n - 1"
+(number of passes) and "i" (pass index). The statement is otherwise complete;
+the recap-symbol loss was an extraction artifact, not a statement defect.
+Note the array is a permutation of 0..N-1 (0 <= Ai < N, all distinct).
+
 
 
 

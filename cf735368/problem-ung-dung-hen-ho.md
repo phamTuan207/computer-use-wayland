@@ -33,4 +33,24 @@ Trong ví dụ trên, các cặp  thỏa mãn điều kiện  và  chia hết ch
 :  (chia hết cho 3) 
 => Tổng cộng có 4 cặp thỏa mãn.
 
+## Formula recovery note (coordinator, 27/11/2026)
+
+The Drive doc writes all formulas as Google Docs equation objects, which the
+Docs API does not expose (25 equation elements, all empty via API). The text
+above therefore lost every formula. Recovered by exporting the doc to PDF and
+reading it visually:
+
+- Fate index of a member: A_i. Two people at positions i and j are a valid
+  pair iff BOTH: (1) 1 <= i < j <= N; (2) (A_i + A_j) divisible by K.
+- Input line 1: N and K (1 <= N <= 10^5, 1 <= K <= 10^3).
+- Input line 2: N non-negative integers A1..AN (0 <= A_i <= 10^9).
+- Output: total number of pairs (i, j). Result may exceed 32-bit int.
+- Sample pairs: (1,2): 1+2=3; (1,4): 1+5=6; (2,3): 2+4=6; (3,4): 4+5=9,
+  all divisible by K=3, total 4.
+- INCONSISTENCY IN THE DOC: the Note restates condition (1) as
+  "1 <= i <= j <= N" (i <= j), while the main text says i < j. The sample
+  does not disambiguate (no 2*A_i divisible by 3). The setter solution
+  implements i < j (verified: an independent i<j solver matched the setter
+  on all 50 tests). Fix the Note before the exam.
+
 
