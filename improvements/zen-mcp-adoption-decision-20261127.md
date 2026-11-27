@@ -416,3 +416,32 @@ was a dedicated throwaway on port 9236 via launch_dedicated,
 stopped through the tool afterwards; the owner's Zen was never
 touched. Clone2's P2a review was still pending at gate-fix time;
 if it lands, its findings need a follow-up pass.
+
+## Final-review BLOCKING fixes (2026-11-27, cf5d8790)
+
+Clone2's final pre-landing review of 2adb4c5a
+(improvements/adopt-final-review-20261127.md, 2389a4be on
+todolist-push) raised 2 BLOCKING findings. Both fixed in
+cf5d8790 on zen-mcp-adopt-20261127:
+
+- BLOCKING 1 (P1 snapshot ancestor innerText leak): FIXED.
+  SNAPSHOT_JS drops innerText from the name chain for any
+  element wrapping a form/editable descendant (wrapsField
+  guard); aria-label and attribute fallbacks still apply.
+  New stub-DOM node test runs the shipped script on the
+  review probe shape (div role=group wrapping a
+  contenteditable with a planted secret) and asserts the
+  secret reaches no emitted name and no text preview.
+- BLOCKING 2 (P2a act pool scope undisclosed): FIXED by
+  disclosure (the review's named minimum; scan still does
+  not enter iframes/shadow DOM). Header comment, module
+  docstring, act() docstring, and README now state the
+  top-document scope; every act verdict carries
+  poolScope: "top-document" (JS-emitted, defaulted
+  python-side in act(), recorded in drive-report refusals).
+
+Suite after fix: 162 tests OK (3 live skip). pii-scan delta
+zero (17 pre-existing benign hits, identical set). Still
+tracked for the follow-up pass, per the review: emoji UTF-16
+validation MAJOR, P2a M3 disposition, M5 evidence remainder,
+and the MINORs.
