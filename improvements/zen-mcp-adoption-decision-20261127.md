@@ -322,7 +322,16 @@ Per-item final status against the sequenced plan:
 6. P4 list+create wrappers: DONE, landed (zen_spaces.py, pinned
    method set in smoke, delete absent by construction).
 7. P3 spike: DONE (evidence in improvements/zen-mcp-spikes-
-   20261127.md, landed). Build decision still open.
+   20261127.md, landed). Build decision MADE 2026-11-28 by
+   council + redteam after extended measurements
+   (improvements/p3-event-feed-measurements-20261128.md):
+   DO NOT BUILD the general event feed; P3 as a feed is
+   closed. F11 is finished by the narrowest means (internal
+   descriptor-destroyed terminal flag in the wait loops, no
+   log/cursor/API; specification in the measurements file).
+   The F11 code fix itself is pending an owner go-ahead to
+   execute in a repo checkout (see measurements file, Build
+   outcome).
 8. P6 zen_ask spike: NOT RUN, REJECTED by the owner on
    2026-11-28 06:12 (owner does not want to be asked back; the
    consent-card interaction contract is closed, not deferred).
@@ -351,7 +360,9 @@ Final verification numbers:
 
 Open non-blocking follow-ups (tracked): emoji UTF-16 validation
 MAJOR, P2a M3 refusal disposition, P2a M5 evidence remainder,
-MINORs from both Clone2 reviews, P3 build decision (owner
-delegated to the team 2026-11-28 06:12: test, meet, decide),
-P2b gate (F1 + settling tests). P6 is closed by owner rejection
-(2026-11-28), not a follow-up.
+MINORs from both Clone2 reviews, F11 narrow fix (specified in
+improvements/p3-event-feed-measurements-20261128.md, pending
+owner go-ahead to execute in a repo checkout), P2b gate (F1 +
+settling tests). P3 feed is closed by team decision
+(2026-11-28); P6 is closed by owner rejection (2026-11-28).
+Neither is a follow-up.
