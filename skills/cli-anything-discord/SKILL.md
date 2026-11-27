@@ -19,7 +19,7 @@ This CLI was built for ONE machine: the owner's Omarchy laptop. Most of it
 is machine-private setup, not a generic tool:
 
 - Machine-private (only works on the owner's laptop as built): Discord
-  binary at `/home/james/.local/opt/Discord/discord`, CDP port 9229, the
+  binary at `~/.local/opt/Discord/discord`, CDP port 9229, the
   GUI launch env (`DISPLAY=:0` XWayland, `XDG_RUNTIME_DIR=/run/user/1000`,
   `HYPRLAND_INSTANCE_SIGNATURE`), install via `uv tool install --editable`,
   the test DM with Violet Joestar (channel 865272264831139840). If you run

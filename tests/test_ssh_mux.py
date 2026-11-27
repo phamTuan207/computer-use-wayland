@@ -74,7 +74,7 @@ class ConstructionTest(unittest.TestCase):
         """Same host, key, proxy, and timeouts as ~/workspace/ssh-laptop.sh."""
         opts = " ".join(self.mux.client_argv(["true"]))
         self.assertIn("testuser@192.0.2.1", opts)
-        self.assertIn("/home/hatch/.ssh/id_ed25519", opts)
+        self.assertIn(str(pathlib.Path.home() / ".ssh" / "id_ed25519"), opts)
         self.assertIn("tailscale-proxy.py", opts)
         self.assertIn("BatchMode=yes", opts)
         self.assertIn("ConnectTimeout=25", opts)

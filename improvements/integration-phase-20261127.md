@@ -1,0 +1,547 @@
+# Integration phase: Clone2 research findings into computer-use-wayland (2026-11-27)
+
+Owner approval (2026-11-27 18:29): integrate Clone2's research
+findings, test on the real laptop, keep researching and
+improving until the best level is reached. The Polygon final
+test stays LAST and is not part of this phase.
+
+Sources (all on todolist-push):
+- improvements/bottleneck-study-20261127.md (26b1133d):
+  register M1-M34, proof-law tiers, rejected list.
+- improvements/agent-desktop-comparison-20261127.md
+  (6b67e286): ideas I1-I23, do-first 10, open privacy finding
+  (section 6).
+- improvements/zen-r17-continuation-20261127.md (df2bbd0a):
+  four stacked defects in zen_live.py, RDP vs Marionette.
+
+Branch facts at start (2026-11-27):
+- Work branch: integration-20261127, based on todolist-push
+  tip 87242b01. Items push to todolist-push as they land;
+  landing to main is by cherry-pick after the council +
+  redteam gate (main and todolist-push diverged 981/1221
+  commits since merge-base 7007efa68f7a).
+- scripts/zen-rdp/ lives on fix-review-20261127, not on
+  todolist-push. Zen-lane items bring it in explicitly.
+- The tc02 tesseract fix (c7bc697e) is on main, NOT on
+  todolist-push: the M16 lineage defect is live.
+- Privacy finding: the personal name in
+  skill/cli-anything/chromium.md and zen.md is already
+  scrubbed on todolist-push (8b9f5da4, 9fd84006) but still
+  present on main. pii-scan.py does not check personal
+  names; that blind spot is what I13 must close.
+
+## Queue
+
+Status legend: QUEUED, IN PROGRESS, IMPLEMENTED (unit tests
+green), LIVE-TESTED (real laptop), LANDED (todolist-push),
+ON MAIN (cherry-picked after gate), REJECTED (with reason),
+PILOT (running, unproven).
+
+### First batch: PROVEN + do-first
+
+| # | Item | Source | Status | Notes |
+|---|---|---|---|---|
+| 0 | Privacy census + scrub (skill/ + user-facing docs; main's two files) | agent-desktop s.6 | ON MAIN | PR #1140 merged d69ef7c9; see record below |
+| 1 | zen_live.py four defects + test fixes + run_op smoke | R17 s.4 | LIVE-TESTED | e3d81539; live proof on laptop 2026-11-27 18:35-18:38; see record below |
+| 2 | M16 hermetic-suite gate + lineage check (incl. cherry-pick c7bc697e) | bottleneck M16 | IMPLEMENTED | 26662dea + 03f177b0 + db91f346 (CI); detector proven pre/post fix |
+| 3 | M17 sharded discover (serial stays gate of record) | bottleneck M17 | IMPLEMENTED + MEASURED | Full SHARD MATCH 2340 tests; 175.7s vs 292.0s (1.66x, 1.5-CPU VM); laptop re-measure pending |
+| 4 | I13 architecture guard (import map first; docs + name denylist) | agent-desktop I13 | IMPLEMENTED | 4b2cf7cf; found+fixed 7 hardcoded home paths |
+| 5 | I21 blocked key-combo list (conservative subset; full after Hyprland check) | agent-desktop I21 | IMPLEMENTED | 2e4369ac; full list from live Hyprland binds |
+| 6 | I3 snapshot-qualified refs (additive, id in file, grandfather legacy) | agent-desktop I3 | IMPLEMENTED + LIVE-TESTED | ec7e60b7; live on laptop AT-SPI app: id in file, qualified ground ok, bare warns, foreign refused |
+| 7 | M2 one-pass seal wrapper (gate stays separately runnable) | bottleneck M2 | IMPLEMENTED | rung3-ci/seal.py + test-seal.py (3 tests OK) |
+| 8 | I8 probes/ + probe ledger | agent-desktop I8 | IMPLEMENTED | probes/ + ledger.jsonl (11 rows, validator OK); mandatory A/B gate half stays rejected |
+| 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | IMPLEMENTED + LIVE-TESTED | 5313179d; live on owner Zen 6021: tabs/probe/eval envelopes, unscoped exit 2, legacy bare; 38 tests OK |
+| 10 | I17 post-action wait flags (after I1, no default timeout) | agent-desktop I17 | IMPLEMENTED + LIVE-TESTED | ad6476f0 + 5ea67253; live: satisfied + timeout preserves action outcome |
+| 11 | I22 secure-field redaction, DOM/RDP only | agent-desktop I22 | IMPLEMENTED | d1b67da4; field_value sentinel + URL query redaction + AX protected; 49 zen-rdp tests OK, zen_dom back to 4 pre-existing errors |
+| 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | IMPLEMENTED | e12fcf47; children_count both modes + cut flags + complete; walk half stays pilot-first |
+| 13 | I10 auto-wait half (a11y lane, short cap) | agent-desktop I10 | IMPLEMENTED + LIVE-TESTED | c2a3e47f; ground live 106ms ok; battery stays pilot-first |
+| 14 | I16 DOM-rect debug artifact (machine-layer only) | agent-desktop I16 | IMPLEMENTED + LIVE-TESTED | 98c4243a; live: 22/30 real rects drawn; outputs stay local |
+| 15 | I9 capability matrix in doctor (read-only) | agent-desktop I9 | IMPLEMENTED + LIVE-TESTED | 9df12d97; live matrix: all lanes true except zen_rdp (not installed on laptop yet, correctly reported) |
+| 16 | I15 root-level incomplete marking | agent-desktop I15 | DONE (merged) | d725684f int-i15; read_errors + incomplete root marking, ground/act surface it; 45 a11y tests OK; live on 6 AT-SPI apps |
+| 17 | I19-substitute: MCP drift test | agent-desktop I19 | DONE (merged) | acaa68ea int-i19; tests/test_mcp_drift.py 11 assertions over cu.py/mcp_bridge/session_driver surfaces; deliberate-drift proof (3 scratch breaks all FAIL); laptop run 11/11; note: report's mcp_server.py no longer exists, test targets the live mcp_bridge surface |
+| 18 | I20-substitute: RDP lock hardening + lock map doc | agent-desktop I20 | DONE (merged) | e1c52422 int-i20; 5 lock weaknesses fixed + LOCK-MAP.md; 63 zen-rdp tests OK; live lock refusal proven |
+| 19 | M14 adversarial probe gate (Y1b suite) | bottleneck M14 | DONE (merged) | c0b5d14b int-m14; frozen-hash gate v1 + fast-pass FLAG; 5 tests OK; live PASS VM+laptop |
+| 20 | M7 stall detector parts a+b (backtests required) | bottleneck M7 | DONE (merged) | f3033aa8 int-m7; union detector, backtest reproduces study numbers; proposed threshold 45min union silence; flag-only |
+| 21 | M11c Marionette pre-flight session check | bottleneck M11c | DONE (merged) | 2889ca6e int-m11c; marionette_preflight() 4 named checks; 27 tests OK; live pass+fail configs |
+| 22 | M11d pre-freeze triage (process + verify-list gate) | bottleneck M11d | DONE (merged) | 482aca7c int-m11d; procedure doc + pre-freeze-gate.py wrapper; 5 tests OK; live PASS VM+laptop; catch rate unmeasured until first use |
+| 23 | M28a watchdog rolling branch (append-only) | bottleneck M28a | DONE (merged) | 877afe6d int-m28a; watchdog_append.py (plumbing, ff-only, pii gate) + doc; 5 scratch-repo tests OK incl. concurrency; lane switch-over still a coordinator decision |
+| 24 | M18-reduced, M20, M23, M28d, M29, M34f (guidance/rules) | bottleneck | DONE (merged 1314b088) | 6 commits on int-guidance; pii clean, arch-guard PASS; rejected constant absent |
+| 25 | M10-reduced pre-calibrated spare scorer (process) | bottleneck M10 | DONE (merged) | 89072e10 int-m10; spare-scorer.md + check-spare-scorer.py; 10 tests OK; no cap-hours claims ever |
+
+### Pilots (UNPROVEN until they report)
+
+M1 (audit-share instrumentation first), M12 (429 rule,
+coord/mei.md s.9), M26 (verdict template), M4, M5, M6, M9,
+M11a, M11b, M13, M15, M19, M21, M27, M28b (fallback only),
+M30, M31 (snippet library), M32, M33 (after M28a), M34a-e;
+I2 (a11y identity probe, refusal budget named first), I4
+stale-ref preflight, I6 (click verification, gated on
+measured silent-failure rate), I12 (event-line convention),
+I14 (bench re-run, query() ungate separately), I18 (drift
+check, after item 0), I23 (browser-lane conformance).
+M25 is a recommendation to the owner only, not built.
+
+### Rejected (not revived without new evidence)
+
+M3, M8, M22 (standalone; drive-by only), M24, M28c, M28a
+force-updated form, M31 generator, M18 automatic selection,
+M34f 15x constant; I11, I19 generation, I20 lease as written,
+I4 executor, I5 walk-by-default, I6 uniform duty, I8
+mandatory gate, I9 big-bang, I10 battery as written, I12
+subsystem, I15 per-element, I18 serving, I22 full contract,
+I23 AT-SPI half, I2 full RefStore, I14 single-flip, I7
+standalone, I1 all-lane big-bang, I13 without import map.
+
+## Per-item records
+
+### Item 0: privacy census + scrub (2026-11-27)
+
+Census (skill/, docs/, README.md, skills/):
+- todolist-push: personal name already absent (scrub commits
+  8b9f5da4, 9fd84006). Real profile dir found in
+  skill/cli-anything/zen.md:83 (example command) and
+  scripts/zen_cli.py docstring; both genericized (7caff5b9).
+  The same profile hash remains in 10 historical
+  improvements/ log files; left as historical record (same
+  class as the deferred git-history rewrite).
+- main: name present in 5 files. User-facing four scrubbed
+  via PR #1140 (merged d69ef7c9, gitleaks check passed,
+  independent reviewer PASS with 2 cosmetic nits, both fixed
+  before merge). docs/clone2-watchdog-log.md keeps 5
+  historical log entries with the name (frozen audit log,
+  last updated 2026-11-23; left untouched, noted here).
+  pii-scan.py does not check personal names; that blind spot
+  is item 4's (I13) job to close.
+- pii-scan.py on scripts/zen_cli.py flags the word "session"
+  as credential assignments; pre-existing false positives
+  (scanner targets snapshot dirs), unchanged by this item.
+
+### Item 1: zen_live.py four defects (2026-11-27)
+
+Implementation (e3d81539): greeting read as length-prefixed
+frame (D1); namespaced command names WebDriver:NewSession /
+Marionette:SetContext / WebDriver:ExecuteAsyncScript /
+WebDriver:DeleteSession (D2); lazy ops table in run_op (D3);
+async completion via the appended callback
+arguments[arguments.length - 1] (D4); WebDriver {"value":...}
+unwrap in execute_async; launch-gate documented in the module
+docstring. Tests: fake server now sends the greeting
+length-prefixed and asserts namespaced names; run_op smoke
+test added. Suite: 21 tests OK in 0.231 s.
+
+Live test on the real laptop (throwaway profile, Marionette
+port 2829, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1; owner Zen PID
+807599 untouched, verified before/after):
+- Attempt 1 failed before starting: script upload raced with
+  launch in one ssh command, file landed 0 bytes. Fixed by
+  separate upload (sha256-verified) and launch steps.
+- Run 1 (18:35:42-18:35:52): introspect PASS (Zen internals
+  visible), list PASS, pin example.com PASS (verified in the
+  second list), create-folder FAILED because the example.org
+  tab never loaded (about:blank; pickTab matched 0, error
+  path correct, rc=1). Test-setup issue, not a client defect.
+  Pill gap: `cu.py session` without a driver command errored,
+  so no pill showed during run 1. The test window was visible
+  on the desktop; recorded honestly here.
+- Run 2 (18:38, as cu.py session driver, pill up): folder
+  "R17Test" created live, tabCount 2 (example.org plus the
+  fresh tab createFolder opens; members report pinned: true,
+  both matching Zen semantics in the R17 report). Test
+  instance killed by recorded pid after cmdline check;
+  session ended; desktop verified clean (only owner windows).
+Verdict: the four-defect fix is live-proven on Zen 1.24.3b on
+the real laptop for introspect/list/pin/create-folder.
+Remaining subcommands share the fixed transport and prelude;
+their payloads were not run live (same boundary as R17).
+
+### Items 2-3: M16 hermetic gate + lineage, M17 sharding (2026-11-27)
+
+Implementation: rung3-ci/test-discover.py (per-test runner,
+hermetic diff gate, sharded runner with --compare-serial),
+rung3-ci/lineage-check.py + lineage-manifest.txt (content
+markers, since cherry-picks rewrite hashes), unit tests in
+rung3-ci/test-test-discover.py (5 tests OK). The tc02 fix was
+cherry-picked from main (26662dea); lineage check passes.
+
+Detector proof (this VM has tesseract installed): with the
+pre-fix test file, the hermetic gate FAILs naming exactly the
+2 tc02 typed-text tests; post-fix it PASSes. Exit codes
+verified (0 post-fix).
+
+Sharding identity: first full run mismatched (1808 vs 2337
+tests) because loadTestsFromName does not reproduce discover
+identity for import-failing modules, plus a module-name
+normalization bug in the shard filter. Fixed by filtering a
+discovered suite (identity-exact by construction), attributing
+_FailedTest entries to the failing module, and an @@RESULT@@
+marker (a test's own stdout had polluted parsing). Second full
+run: 2337 vs 2338, 2 mismatches, both test_ime_cleanup
+real-signal timing tests flaking under 4-way parallel load on
+a 1.5-CPU VM (serial 3/3 OK; different tests flake each shard
+run). Resolution: --serial-only list (default test_ime_cleanup)
+run in the parent; serial stays gate of record. Third full
+run: 2338 = 2338, 1 mismatch: test_cli_exit_codes exists as a
+bare function test in TWO modules (test_phase3_brief,
+test_phase3_cleanup), colliding in the outcome map. Fixed by
+qualifying bare FunctionTestCase ids with their module and
+parsing the RESULT status from the right (some ids contain
+spaces). Subset re-test incl. the colliding modules: SHARD
+MATCH. Fourth full run: 2340 = 2340, 1 mismatch:
+test_phase3_cleanup.test_cli_exit_codes serial=ok shard=fail.
+Root cause (explained in writing per M17): the test runs
+session_cleanup.py --check, which scans the ambient /proc for
+a cmdline containing both 'cursor_session' and 'guard'; the
+shard runner's own cmdline contains both substrings (module
+names test_cursor_session + test_cursor_guard_build), so the
+check flips under sharding. Fixed at the source: a
+--procs-file test-support flag on session_cleanup.py and the
+test passes an empty procs file (3e699cec). Subset with the
+cursor modules: SHARD MATCH. Fifth full run: SHARD MATCH,
+2340 tests, sharded 175.7s vs serial 292.0s (1.66x on this
+1.5-CPU VM). Measured walls across runs: serial 292.0-313.0s,
+sharded 162.7-200.9s (1.54-1.82x). Pre-existing suite state on
+this VM: 2233 ok, 81 error, 9 fail, 17 skip (missing build
+artifacts/binaries; identical in serial and sharded).
+M17 measurement complete; laptop re-measure pending (more
+cores, expect better).
+
+### Item 4: I13 architecture guard (2026-11-27)
+
+rung3-ci/arch-guard.py + import-map.txt (generated from the
+current 71-module graph; new edges must be added deliberately)
++ test-arch-guard.py (2 tests OK). Machine-value denylist:
+personal name forms, profile-dir hash pattern, home paths,
+Tailscale IPs; scanned over scripts/, skill/, docs/, README.
+First run found 7 pre-existing hardcoded /home/<vm-user> paths
+(bench_manifest.py, ssh_mux.py, ssh-laptop-mux.sh); all fixed
+to Path.home()/$HOME. Guard now PASSes.
+
+### Item 5: I21 blocked key combos (2026-11-27)
+
+Blocklist at the key_names() choke point in scripts/cu.py;
+refusals raise ValueError (surface in action results, logged).
+Verified against live Hyprland binds on the laptop:
+Ctrl+Alt+Delete = close all windows, Super+Q = close window,
+Super+Ctrl+P + XF86PowerOff = power menu; plus kernel-level
+VT-switch (Ctrl+Alt+F1..F12) and SysRq combos. Neighbours
+verified still allowed (Ctrl+Alt+Left/Right Zen workspace
+switch, plain F5, plain PrintScreen). Tests in
+tests/test_core.py (test_blocked_key_combos_refused). One
+pre-existing error in test_core on this VM (missing
+native/wtype build artifact), identical with and without the
+change.
+
+### Item 6: I3 snapshot-qualified refs (2026-11-27)
+
+scripts/a11y.py: observe() now records snapshot_id inside the
+snapshot file (was filename-only); parse_ref() accepts
+'<snapshot_id>:<ref>', refuses a foreign id, warns on stderr
+for bare refs against id-carrying snapshots, and grandfathers
+legacy snapshots without an in-file id. Wired into ground,
+drill, act (actions normalized once before validation and
+execution). ground() returns qref. Tests: 6 new in
+tests/test_a11y.py (26 total OK); the 4 act-exec harness sites
+updated to include parse_ref. 22 pre-existing errors in
+test_p2_element_ref on this VM, identical with/without.
+
+Live test (laptop, under cu.py session pill, read-only):
+Zen is not AT-SPI-registered, so the target was a listed
+AT-SPI app (pid 1072896 'Unnamed'). observe -> snapshot_id in
+result and in file; ground with qualified ref ok (qref
+b73818eabcf2:e1); bare ref ok with deprecation warning;
+foreign id refused. Owner Zen PID 807599 untouched. Test
+files removed. Pre-existing stale indicator socket from
+2026-11-21 left in place (not from this work).
+
+### Item 7: M2 one-pass seal wrapper (2026-11-27)
+
+rung3-ci/seal.py: runs collect-evidence.py, snapshot.py,
+manifest-gate.py as subprocesses in sequence, echoes output,
+stops at the first non-zero exit, parses the SNAPSHOT: path
+for the gate step, prints SEALED: <dir>. No reimplementation
+(manifest identity by construction, matching the study's
+PROVEN 59-hash identity). The gate is unchanged and remains
+separately runnable (test proves it). rung3-ci/test-seal.py:
+3 tests OK (happy path seals + gate PASS; missing evidence
+stops at collect with no snapshot created; gate re-run over
+the sealed output passes). No time saving claimed (per M2:
+machine delta 0.35s, agent-minute effect UNPROVEN).
+
+### Item 8: I8 probes/ + probe ledger (2026-11-27)
+
+probes/README.md (naming, ledger rules, advisory-A/B-only
+stance), probes/ledger.jsonl seeded with this phase's five
+probes (M17 shard runs, M16 hermetic pre/post, R17 live,
+Hyprland bind dump, I3 live) plus six historical probes
+indexed by path (f4-*, r10-webdriver-probe.mjs,
+machine-control-discord-ipc-probe.py), and
+probes/validate-ledger.py (rows parse, required fields,
+cited paths exist; LEDGER OK: 11 rows). The mandatory
+merge-base A/B gate half stays rejected per the source
+report; docs/benchmarks/ remains the public aggregate store.
+
+### Item 9: I1 envelope + disposition, Zen lane (2026-11-27)
+
+scripts/zen-rdp/ brought in from fix-review-20261127
+(3450c85f). Consumer inventory: rdp_smoke.py and the live
+harnesses use the library API (unchanged); no CLI-stdout
+parsers exist in skill/, tests/, docs/, coord/, rung3-ci/.
+Envelope v1 in rdp_client.py main(): {version, ok, command,
+result, error{code,message,disposition}, disposition};
+exit codes 0/1/2 (runtime vs usage; _build_scope validation
+is usage-class); error codes classified from the existing
+ALL-CAPS refusal prefixes plus transport/evaluate patterns;
+disposition per command (reads delivered_verified, eval/peval
+delivered_unverified, navigate delivered_verified; refusals
+not_delivered/safe, post-send action failures
+delivery_uncertain/unsafe). --legacy-output restores the old
+behavior exactly. Migration notes in scripts/zen-rdp/README.md.
+Tests: test_envelope.py (9) + test_scope_unittest.py (29, two
+dead-port expectations updated 2->1 per the new contract) = 38
+OK. I7 read-outcome labels ride in the disposition field.
+
+Live test (laptop, cu.py session pill, owner Zen RDP 6021,
+read-only): tabs envelope ok (12 tabs, delivered_verified);
+probe webdriver CLEAN; eval 1+1=2 delivered_unverified;
+unscoped refusal exit 2 code unscoped_refused; legacy bare
+payload. Zen PID 807599 untouched; test files removed.
+
+### Item 10: I17 post-action wait flags (2026-11-27)
+
+RDPClient.wait_for(expr, timeout): polls evaluate until
+truthy, transient errors count as not-yet, expiry raises with
+the last observed value. CLI: --wait-for/--wait-timeout on the
+eval and navigate subparsers (natural placement; first live
+attempt caught top-level placement failing argparse).
+--wait-timeout is required with --wait-for (no default).
+Timeout path: envelope error code wait_timeout, exit 1, and
+result preserves action_result. One-paragraph wait-for vs I6
+vs I10 rule in scripts/zen-rdp/README.md. Tests: 6 new (44
+total OK). Live (owner Zen 6021, read-only evals):
+readyState wait satisfied (action result 2); false-predicate
+wait timed out at 1s with action result {"result": 4}
+preserved, delivery delivered_unverified. Zen untouched.
+
+### Item 11: I22 secure-field redaction (2026-11-27)
+
+Narrow contract, three tool-controlled byte paths:
+(1) zen_dom.field_value returns SECURE_REDACTED for
+password-type/autocomplete-password inputs; internal
+comparisons stay consistent (every read redacts the same
+way), verify_typed keeps its raw internal read and returns
+only a bool. (2) rdp_client: _redact_url strips sensitive
+query-param values (token/code/password/secret/...) in tab
+snapshots and across the whole drive report; scope matching
+keeps raw URLs internally. (3) cdp.mjs AX tree: protected
+nodes report '[redacted]' (DOM snapshot already redacted all
+values). evaluate() documented out of scope; skill rule 10 in
+skill/cli-anything/zen.md. Tests: test_redaction.py (5) +
+field_value fake test; zen-rdp 49 OK; test_zen_dom back to
+its 4 pre-existing VM errors. Live: tabs listing on owner
+Zen intact with redaction active (contents not recorded
+here). A live password-field proof needs a throwaway-profile
+session; deferred, unit+fake proof recorded honestly.
+
+### Item 12: I5 accounting half (2026-11-27)
+
+a11y.observe(): children_count now recorded in both modes
+(was skeleton-only); per-node cut flags mark nodes whose
+children were not walked (depth limit, 100-child cap, or
+budget stop leaving pending children); snapshot gains an
+explicit complete flag (= not truncated). Skeleton and drill
+already existed. Tests: 2 new in test_a11y_skeleton.py (36
+total OK with test_a11y). Live: skeleton observe on a real
+AT-SPI app (quickshell, 1-element tree): complete=true,
+children_count present; the live tree was too small to
+exercise cut, which is unit-proven on a deeper fake tree.
+The walk half (bounded-concurrency rewrite) stays
+pilot-first per the source report.
+
+### Item 13: I10 auto-wait half (2026-11-27)
+
+a11y.wait_actionable(root, item, cap_ms=1000): polls resolve
++ enabled/visible states + extents stability (two equal
+reads), first check immediate, last failing reason on expiry.
+Wired into act()'s execution loop and ground(). Elements
+without extents pass on enabled+visible alone. Tests: 3 new
+(ready fast, invisible cap, unstable cap) + harness updates;
+39 total OK. Live: ground on a real AT-SPI app ok in 106ms
+wall including subprocess start. The full actionability
+battery stays pilot-first (needs a proven hit-test signal;
+probe row belongs in probes/ledger.jsonl before any battery
+work).
+
+### Item 14: I16 DOM-rect debug artifact (2026-11-27)
+
+scripts/dom-rect-debug.py: draws rects from an existing DOM
+snapshot (observe elements shape) or harvest (items shape)
+onto a screenshot PNG with ref labels; --scale and
+--origin-x/y map CSS px to screenshot px. Annotated outputs
+are machine-local debug artifacts, never committed (stated in
+the docstring). Tests: 2 synthetic (both shapes, scale/origin,
+pixel checks) OK. Live: read-only RDP eval harvested 30 real
+interactive-element rects from the owner's current Zen tab,
+grim screenshot, annotate drew 22 (8 zero-size skipped),
+734KB PNG; Zen untouched. Setup notes from the live run:
+rdp_client.py is not yet installed in the laptop scripts dir
+(copied to /tmp for the test); eval needs --unscoped-test +
+--profile-marker (read from the live cmdline at runtime);
+--legacy-output is a top-level flag. The a11y-rect version
+stays pilot-first after I14.
+
+### Item 15: I9 capability matrix in doctor (2026-11-27)
+
+cu.capability_matrix(): read-only per-lane reporting (a11y,
+cdp, zen_rdp, vision, pointer, keyboard, keybind) with
+available/entry/operations; wired into doctor as
+result['capabilities']. Availability = entry point present +
+hard dependency (gi import for a11y, node for cdp); no lane is
+exercised. Test: shape test in test_core.py (41 ran, 1
+pre-existing VM error, same as item 5). Live on the laptop
+(new cu.py in a temp install-shaped tree, doctor under
+cu.py session): a11y/cdp/vision/pointer/keyboard/keybind
+true, zen_rdp false (rdp_client.py not yet installed on the
+laptop; the matrix reporting that gap is the point). The
+unified lane interface stays pilot-first after I23.
+
+### Coordinator decisions (2026-11-27, parallel wave)
+
+- M28a: coordinator approves the append-only rolling-branch
+  approach for watchdog logs (force-updated variant stays
+  rejected).
+- Items 1-5 gate: the two reviewers spawned ~19:05 finished,
+  but their full reports were lost in a context compaction
+  (only previews survive). The gate is re-run as a combined
+  items 1-15 council+redteam gate before any main landing.
+  UPDATE 20:2x: the original reports were delivered after all
+  (delayed, not lost). Council: items 1-5 + CI wiring all
+  PASS-WITH-NITS, 0 blockers, 1 major (hermetic silent-crash
+  hole), 1 watch item (first full CI hermetic run). Redteam:
+  no destructive blockers; 5 majors, all assurance failures:
+  (1) hermetic vacuous pass + stripped-crash fail-open,
+  (2) arch-guard evasions (case-sensitive name, home-path
+  gaps, UTF-8 skip, unscanned types/trees, dynamic imports,
+  SyntaxError fail-open), (3) key blocklist exact-match
+  fragility + unverified power keysyms/AltGr/KP_Delete,
+  (4) shard silent test drop without --compare-serial,
+  (5) CI does not run the guards' own tests. Minors: lineage
+  comment-marker, zen_live slow-drip hang/unbounded buffer,
+  CDP lane has no key blocklist (page-level only). Decision:
+  fix all 5 majors + cheap minors before landing items 1-5
+  to main (5 parallel fix workers). The combined items 1-15
+  gate still runs for items 6-15 coverage.
+- Parallel wave: remaining first-batch items run as parallel
+  workers, each on its own branch off integration-20261127;
+  coordinator merges, gates, lands. Quality gates unchanged
+  (unit green, live test, gate, measured numbers).
+- Laptop CLI routing (owner directive 20:20, save parent
+  tokens): implementation/test work routes to laptop CLIs
+  where practical; council+redteam gates and live-test
+  discipline unchanged. Probed live 20:23 (detached,
+  non-interactive, all OK): fcc-claude -p
+  --dangerously-skip-permissions; codex exec --sandbox
+  danger-full-access (codex-cli 0.172.0; herdr present for
+  interactive Codex, never tmux); opencode run -m
+  opencode/deepseek-v4.1-flash-free (opencode/ prefix ONLY).
+  Laptop gh is logged in (phamTuan207); laptop checkout
+  ~/computer-use-wayland exists (todolist-push, has another
+  worker's untracked files, leave alone; use fresh worktrees
+  off origin/integration-20261127 for CLI workers). The 16
+  Muse subagents already running finish as-is; the NEXT
+  wave (pilots, gate rework) routes to laptop CLIs. Mochi
+  gets no new tasks (resting).
+- Council gate items 1-15 (delivered 20:2x): LAND-WITH-FIXES.
+  All 15 items PASS; 3 fixes: (1) cmd_shard fail on non-zero
+  shard exit (covered by int-fix-discover worker), (2)
+  zen-rdp test_scope_unittest cwd independence, (3)
+  wait_actionable docstring accuracy. Fixes 2+3 routed to a
+  laptop CLI (first routed task). Decisions accepted by
+  coordinator: arch-guard personal-name denylist patterns
+  land on main as-is (guard cannot function without them);
+  I22 fragment/userinfo redaction gap becomes a follow-up
+  item, not a landing blocker; hermetic CI cost (suite twice)
+  accepted for now. Redteam items 1-15 still running.
+- Parallel wave 1 merged 20:3x (58013edd): int-i15, int-i20,
+  int-m11c, int-m28a, int-m7, int-m14, int-m11d, int-m10.
+  Post-merge verification green: a11y 45, zen-sidebar 27,
+  zen-rdp 63, stall-detector 7, pre-freeze-gate 5,
+  spare-scorer 10, probe-gate 5 + PASS, arch-guard PASS,
+  lineage ok, pre-freeze gate PASS. README item-numbering
+  conflict resolved (spare-scorer = item 11).
+- Gate-fix merges 20:3x (03ad960a): int-fix-blocklist
+  (2f0adddd: uniform subset semantics, power family +
+  KP_Delete + AltGr refused; live bind dump 254 binds;
+  super+shift+q Calculator bind refused for agent only,
+  human bind untouched), int-fix-zenlive (4497e195:
+  overall frame deadline + 4MiB cap + MarionetteError;
+  value-unwrap nit deliberately left, protocol-correct;
+  merged with M11c, 30 tests OK), int-fix-ci (b3ecaf2f:
+  7 guard test files + 4 zen-rdp test files in CI, PR
+  trigger for main; test_rdp_client excluded, needs live
+  Zen). Post-merge: workflow YAML valid (11 steps),
+  test_core 41 ran / 1 pre-existing wtype error,
+  arch-guard PASS. Still out: redteam 1-15,
+  int-fix-archguard, int-fix-discover, FCC council-fixes.
+- FCC council-fixes DONE+MERGED (e427ef09): first laptop-CLI
+  routed task end-to-end (brief file -> fcc-claude -p
+  detached -> commit ade8f113 + push -> coordinator merge +
+  verify). zen-rdp 63 tests now pass from repo root;
+  wait_actionable docstring tightened; a11y 45 OK;
+  arch-guard PASS. Council 1-15 fixes 2+3 closed; fix 1
+  (shard exit) still with int-fix-discover worker.
+- Redteam items 1-15 (delivered 20:30): LAND-WITH-FIXES,
+  no blockers. Majors: M1 I22 fragment tokens unredacted,
+  M2 I22 error paths echo raw URLs, M3 I22 exact-name
+  denylist too narrow, M4 I1 error classification trusts
+  page text (unsafe-replay hole), M5 I21 XF86Switch_VT_* /
+  Terminate_Server / XF86LogOff / plain Sys_Req (superset +
+  power family already fixed by int-fix-blocklist), M6 I10
+  disabled elements never polled, M7 I5 80-cap false
+  complete in non-skeleton mode, M8 M16 set-difference
+  warning-only (with int-fix-discover), M9 M17 run/shard
+  exit 0 (shard part with int-fix-discover), M10 I13 arch
+  guard evasions (with int-fix-archguard). Must-fix before
+  main: M1, M2, M4, M6, M7, M8. Routing (laptop CLIs):
+  FCC = rdp_client.py batch (M1-M4, navigate disposition,
+  wait-timeout validation); opencode = a11y.py batch (M6,
+  M7, I3 query snapshot_id); Codex = small batch (M5 rest,
+  I9 ops/exec, session_cleanup env-gate, lineage root,
+  dom-rect guards, ledger trailing newline). Minors noted
+  as follow-ups: zen_live port-owner guard (latent),
+  argparse no-envelope on usage errors (document),
+  cdp.mjs raw url in snapshot (out of I22 narrow scope,
+  follow-up item).
+- fix-archguard DONE+MERGED (e71ed971 + 7b959be1 import-map
+  edges for zen-rdp/test_lock): all evasions closed, 22
+  tests, guard PASS on real tree; wider scope surfaced real
+  leaks, fixed (profile hash in plan doc, laptop home path
+  in Discord skill doc, machine values in 3 test files).
+- opencode a11y batch DONE+MERGED (5365c84c): M6 disabled
+  polling, M7 80-cap truncated both modes, I3 query
+  snapshot_id; 50 a11y tests OK; live: observe complete,
+  ground ok, query carries snapshot_id (first live check
+  used query wrong, corrected and re-proven).
+- Codex small batch DONE+MERGED (1a429dd1): M5 rest
+  (XF86Switch_VT_*, Terminate_Server, XF86LogOff, plain
+  Sys_Req refused), I9 matrix ops+exec-bit, session_cleanup
+  --procs-file env-gated, lineage root from __file__,
+  dom-rect guards (out==screenshot refused, non-finite
+  skipped), ledger trailing newline. Verified post-merge:
+  test_core 41/1 pre-existing, dom-rect 3 OK, ledger OK,
+  lineage ok, arch-guard PASS.
+- fix-discover DONE+MERGED (06ade1e9 + f3f262f7): hermetic
+  and shard gates fail closed (child exit/SUMMARY/zero-
+  outcome checks, set-difference FAIL, shard id-set
+  verification, _FailedTest package attribution, subTest +
+  setUpClass outcome expansion); 30 tests OK; all redteam
+  repros flip PASS->FAIL. Full-suite shard post-fix:
+  2437/2437 accounted in 208.6s (pre-existing VM state:
+  135 error / 12 fail / 2273 ok / 17 skip). Exposed and
+  fixed test_a11y_skeleton single-pass import fragility.
+  Council fix 1 (shard exit) closed; M8/M9 closed.
+
+## Sources cited during this phase
+
+- The three source reports above (repo paths + commits).
+- External sources are cited per item with URL + access date
+  as they are used.

@@ -251,11 +251,16 @@ class JsPayloadTests(unittest.TestCase):
         self.assertIn("moveTabToWorkspace", zen_live.JS_MOVE_WORKSPACE)
         self.assertIn('need("gZenWorkspaces")', zen_live.JS_LIST)
         for payload in (zen_live.JS_LIST, zen_live.JS_MOVE_WORKSPACE, zen_live.JS_CREATE_FOLDER):
-            self.assertIn("marionetteScriptFinished", payload)
+            # Async completion is the callback Marionette appends as the
+            # last script argument (marionetteScriptFinished is gone).
+            self.assertIn("arguments[arguments.length - 1](v)", payload)
+            self.assertNotIn("marionetteScriptFinished", payload)
 
 
 class FakeMarionetteServer(threading.Thread):
-    """Modes: normal | dribble (byte-chunked sends) | error | wrongid."""
+    """Modes: normal | dribble (byte-chunked sends) | error | wrongid |
+    slowdrip | flood | badsize | negsize | barejson | oversize
+    (the last six misbehave at the greeting, for robustness tests)."""
 
     def __init__(self, mode="normal"):
         super().__init__(daemon=True)
@@ -274,9 +279,45 @@ class FakeMarionetteServer(threading.Thread):
         else:
             conn.sendall(data)
 
+    def _run_bad_greeting(self, conn):
+        try:
+            if self.mode == "slowdrip":
+                # One byte every 0.4s, never a colon: every recv
+                # succeeds well inside a per-recv timeout, so only an
+                # overall frame deadline can stop this.
+                while True:
+                    conn.sendall(b"x")
+                    time.sleep(0.4)
+            elif self.mode == "flood":
+                # Endless bytes, never a colon: only a buffer cap
+                # stops the client buffer growing without bound.
+                while True:
+                    conn.sendall(b"x" * 65536)
+            elif self.mode == "badsize":
+                conn.sendall(b"abc:{}")
+                time.sleep(0.5)
+            elif self.mode == "negsize":
+                conn.sendall(b"-5:hello")
+                time.sleep(0.5)
+            elif self.mode == "barejson":
+                # Greeting as bare JSON, no length prefix.
+                conn.sendall(b'{"applicationType":"gecko","marionetteProtocol":3}')
+                time.sleep(0.5)
+            elif self.mode == "oversize":
+                conn.sendall(b"99999999:{}")
+                time.sleep(0.5)
+        except OSError:
+            return
+
     def run(self):
         conn, _ = self.listener.accept()
-        self._send(conn, b'{"applicationType":"gecko","marionetteProtocol":3}')
+        if self.mode in ("slowdrip", "flood", "badsize", "negsize",
+                         "barejson", "oversize"):
+            self._run_bad_greeting(conn)
+            return
+        # The real server sends the greeting as a length-prefixed frame.
+        greeting = b'{"applicationType":"gecko","marionetteProtocol":3}'
+        self._send(conn, str(len(greeting)).encode() + b":" + greeting)
         buf = b""
         while True:
             try:
@@ -294,13 +335,15 @@ class FakeMarionetteServer(threading.Thread):
                 msg = json.loads(rest[:size])
                 buf = rest[size:]
                 self.commands.append(msg[2])
-                if self.mode == "error" and msg[2] == "executeAsyncScript":
+                if self.mode == "error" and msg[2] == "WebDriver:ExecuteAsyncScript":
                     reply = [1, msg[1], {"error": "fake failure"}, None]
                 elif self.mode == "wrongid":
                     reply = [1, msg[1] + 99, None, None]
                 else:
-                    result = {"sessionId": "fake"} if msg[2] == "newSession" else \
-                        {"echoArgs": msg[3].get("args")} if msg[2] == "executeAsyncScript" else None
+                    # WebDriver wraps script results as {"value": ...};
+                    # NewSession returns sessionId/capabilities unwrapped.
+                    result = {"sessionId": "fake", "capabilities": {}} if msg[2] == "WebDriver:NewSession" else \
+                        {"value": {"echoArgs": msg[3].get("args")}} if msg[2] == "WebDriver:ExecuteAsyncScript" else None
                     reply = [1, msg[1], None, result]
                 payload = json.dumps(reply).encode()
                 self._send(conn, str(len(payload)).encode() + b":" + payload)
@@ -320,7 +363,9 @@ class MarionetteClientTests(unittest.TestCase):
         result = client.execute_async("script body", ("a", 1))
         self.assertEqual(result["echoArgs"], ["a", 1])
         client.close()
-        self.assertEqual(server.commands[:3], ["newSession", "setContext", "executeAsyncScript"])
+        self.assertEqual(server.commands[:3],
+                         ["WebDriver:NewSession", "Marionette:SetContext",
+                          "WebDriver:ExecuteAsyncScript"])
 
     def test_split_frames_reassemble(self):
         client, _server = self._client("dribble")
@@ -341,6 +386,147 @@ class MarionetteClientTests(unittest.TestCase):
         with self.assertRaises(zen_live.MarionetteError):
             client.new_session()
         client.sock.close()
+
+    def test_run_op_list_needs_no_other_subcommand_args(self):
+        # Regression (R17 D3): run_op must not dereference arguments
+        # belonging to other subcommands; `list` defines none of them.
+        import argparse
+        client, server = self._client()
+        result = zen_live.run_op(client, argparse.Namespace(cmd="list"))
+        self.assertEqual(result, {"echoArgs": []})
+        client.close()
+        self.assertEqual(server.commands[:3],
+                         ["WebDriver:NewSession", "Marionette:SetContext",
+                          "WebDriver:ExecuteAsyncScript"])
+
+
+class PreflightTests(unittest.TestCase):
+    """M11c: synthetic env/port/profile cases for the launch
+    pre-flight. No real Zen is touched."""
+
+    def _free_port(self):
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+        probe.close()
+        return port
+
+    def _dbus_socket(self, directory):
+        path = os.path.join(directory, "bus")
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        listener.bind(path)
+        listener.listen(1)
+        self.addCleanup(listener.close)
+        return "unix:path=" + path
+
+    def _codes(self, result):
+        return {c["name"]: c["code"] for c in result["checks"]}
+
+    def test_all_pass(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                   "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            result = zen_live.marionette_preflight(
+                env=env, port=self._free_port(), profile=d)
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(set(self._codes(result).values()), {"ok"})
+
+    def test_missing_env_gate_fails_fast_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {"DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            result = zen_live.marionette_preflight(
+                env=env, port=self._free_port(), profile=d)
+            self.assertFalse(result["ok"])
+            self.assertEqual(self._codes(result)["system_access_env"],
+                             "missing_system_access_env")
+
+    def test_missing_dbus_address_fails_named(self):
+        env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1"}
+        result = zen_live.marionette_preflight(
+            env=env, port=self._free_port())
+        self.assertFalse(result["ok"])
+        self.assertEqual(self._codes(result)["dbus_session_bus"],
+                         "dbus_address_missing")
+
+    def test_port_in_use_fails_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            holder = socket.socket()
+            holder.bind(("127.0.0.1", 0))
+            holder.listen(1)
+            self.addCleanup(holder.close)
+            env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                   "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            result = zen_live.marionette_preflight(
+                env=env, port=holder.getsockname()[1], profile=d)
+            self.assertFalse(result["ok"])
+            self.assertEqual(self._codes(result)["port_free"], "port_in_use")
+
+    def test_profile_in_real_home_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                   "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            real = os.path.join(os.path.expanduser("~"), ".config", "zen",
+                                "throwaway")
+            result = zen_live.marionette_preflight(
+                env=env, port=self._free_port(), profile=real)
+            self.assertFalse(result["ok"])
+            self.assertEqual(self._codes(result)["profile_dir"],
+                             "profile_in_real_home")
+
+    def test_cli_exit_codes(self):
+        with tempfile.TemporaryDirectory() as d:
+            good = {"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1",
+                    "DBUS_SESSION_BUS_ADDRESS": self._dbus_socket(d)}
+            port = str(self._free_port())
+            old = dict(os.environ)
+            try:
+                os.environ.clear()
+                os.environ.update(good)
+                self.assertEqual(
+                    zen_live.main(["--port", port, "preflight",
+                                   "--profile", d]), 0)
+                del os.environ["MOZ_REMOTE_ALLOW_SYSTEM_ACCESS"]
+                self.assertEqual(
+                    zen_live.main(["--port", port, "preflight",
+                                   "--profile", d]), 1)
+            finally:
+                os.environ.clear()
+                os.environ.update(old)
+
+
+class MarionetteRobustnessTests(unittest.TestCase):
+    """A misbehaving server must fail fast with MarionetteError, never
+    hang the client, grow its buffer without bound, or leak a raw
+    ValueError/JSONDecodeError traceback."""
+
+    def _bad_client(self, mode, **kwargs):
+        server = FakeMarionetteServer(mode)
+        server.start()
+        return zen_live.Marionette("127.0.0.1", server.port, **kwargs)
+
+    def test_slow_drip_hits_overall_deadline(self):
+        start = time.monotonic()
+        with self.assertRaises(zen_live.MarionetteError):
+            self._bad_client("slowdrip", timeout=0.5)
+        elapsed = time.monotonic() - start
+        # Deadline is 0.5s; the drip would otherwise run forever
+        # (each byte lands inside a per-recv timeout).
+        self.assertLess(elapsed, 2.0)
+
+    def test_flood_without_colon_hits_frame_cap(self):
+        with self.assertRaises(zen_live.MarionetteError):
+            self._bad_client("flood", timeout=5, max_frame_size=1024)
+
+    def test_malformed_sizes_raise_marionette_error(self):
+        for mode, kwargs in (("badsize", {}), ("negsize", {}),
+                             ("barejson", {}),
+                             ("oversize", {"max_frame_size": 1024})):
+            with self.subTest(mode=mode):
+                with self.assertRaises(zen_live.MarionetteError) as ctx:
+                    self._bad_client(mode, timeout=5, **kwargs)
+                if mode in ("badsize", "barejson"):
+                    # Parse failures keep the original error chained.
+                    self.assertIsInstance(ctx.exception.__cause__, ValueError)
 
 
 if __name__ == "__main__":

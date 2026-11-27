@@ -118,6 +118,10 @@ Never write a brief from memory when a source exists.
   a fresh observation before acting.
 - JSONL appends go through `scripts/jsonlutil.py`: check the file ends
   with a newline before appending, and parse-verify after a push.
+- Bound git output in scripts and briefs: prefer `git log -n <N>` and
+  pathspec-limited queries over unbounded `git log --all` or full-history
+  dumps, and batch repeated git calls instead of looping one call per item.
+  This is scripting hygiene only; it claims no measured saving.
 - Direct driving is logged to a file with wall-clock time
   (Asia/Ho_Chi_Minh) and elapsed time (`scripts/drive_log.py`), not only
   in chat history.
@@ -134,6 +138,13 @@ Never write a brief from memory when a source exists.
   connectors only. Never open Messenger in the laptop browser.
 - Push to GitHub as you go (D3): every small piece of work is its
   own commit, pushed immediately. Never hold a push to batch it.
+  Mechanical log appends (append-only log files with no judgement content)
+  are exempt from the small-commit rule and may ride along with the next
+  commit instead of forcing a commit of their own.
+- No-council class (FORMAT only): pure status, acknowledgement, and log
+  artifacts need no council or redteam review. The exemption covers format
+  only. Any artifact that asserts another lane's liveness or declares a
+  stall is outside the exemption and still gets reviewed.
 - Record lessons in both places (D4): a generic version in the repo,
   a detailed version on the laptop. Never put personal information
   in the repo.
@@ -146,6 +157,10 @@ Never write a brief from memory when a source exists.
   screen reads as doing nothing. Acquire the overlay first
   (`scripts/overlay.py acquire --agent <name> --method <method>`)
   so the user sees who is driving, and release it when done.
+- Price deliberation on two clocks: every deliberation proposal and every
+  parallel-lane plan states its expected cost in wall time AND in tokens
+  before it runs. No imported exchange-rate constant is used; each plan
+  carries its own measured or estimated figures for both clocks.
 
 ## Ban list (in EVERY brief, no exceptions)
 

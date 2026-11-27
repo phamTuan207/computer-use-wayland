@@ -352,7 +352,8 @@ async function harvest(request) {
     if (!role || !/^(button|link|textbox|checkbox|radio|combobox|searchbox|spinbutton|slider|menuitem|menuitemcheckbox|menuitemradio|tab|switch|treeitem)$/i.test(role)) continue;
     axTree.push({nodeId: node.nodeId, backendDOMNodeId: node.backendDOMNodeId ?? null,
       role, name: node.name?.value ?? '',
-      value: node.value?.value ?? null,
+      // I22: never carry a protected (password) field's value.
+      value: (node.properties ?? []).some(p => p.name === 'protected' && p.value?.value === true) ? '[redacted]' : (node.value?.value ?? null),
       focused: (node.properties ?? []).some(p => p.name === 'focused' && p.value?.value === true),
       disabled: (node.properties ?? []).some(p => p.name === 'disabled' && p.value?.value === true)});
   }

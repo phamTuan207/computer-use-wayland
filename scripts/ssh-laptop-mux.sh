@@ -20,4 +20,4 @@
 # - For timed or logged runs, or for the per-use liveness check plus
 #   restart-on-death and the per-socket watchdog, use
 #   python3 scripts/ssh_mux.py instead of this wrapper.
-exec ssh -o BatchMode=yes -o ConnectTimeout=25 -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o ProxyCommand="python3 /home/hatch/workspace/tailscale-proxy.py %h %p" -i /home/hatch/.ssh/id_ed25519 -o ControlMaster=auto -o ControlPath=/tmp/cm-s0-%r@%h:%p -o ControlPersist=600 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 "${CU_LAPTOP_SSH:?Set CU_LAPTOP_SSH to user@host for the laptop}" "$@"
+exec ssh -o BatchMode=yes -o ConnectTimeout=25 -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o ProxyCommand="python3 $HOME/workspace/tailscale-proxy.py %h %p" -i "$HOME/.ssh/id_ed25519" -o ControlMaster=auto -o ControlPath=/tmp/cm-s0-%r@%h:%p -o ControlPersist=600 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 "${CU_LAPTOP_SSH:?Set CU_LAPTOP_SSH to user@host for the laptop}" "$@"

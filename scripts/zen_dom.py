@@ -73,6 +73,9 @@ from pathlib import Path
 DEFAULT_MARIONETTE_PORT = int(os.environ.get("ZEN_MARIONETTE_PORT", "2828"))
 DEFAULT_WD_PORT = int(os.environ.get("ZEN_WD_PORT", "4444"))
 
+# I22: returned instead of a secure field's real value.
+SECURE_REDACTED = "[secure field value redacted]"
+
 
 def _default_geckodriver(home=None, env=None):
     """Resolve the geckodriver path (R14, 2026-11-22).
@@ -1428,13 +1431,25 @@ class ZenSession:
         field there returns None and the caller must fall back to
         vision or a BiDi browsing-context call, never silently drop
         the target.
+
+        Secure fields (input type=password, or autocomplete naming
+        a password) never return their value: the sentinel
+        SECURE_REDACTED comes back instead (I22). Internal
+        comparisons stay consistent because every read redacts
+        the same way; verify_typed() is the one path that reads
+        the raw value, and it returns only a bool.
         """
-        return self.evaluate(
+        script = (
             "return (function(){" + _FIND_JS +
-            "const e=find(%s);"
+            "const e=find(" + json.dumps(selector) + ");"
             "if(!e) return null;"
+            "/* field_value */ if(e instanceof HTMLInputElement && "
+            "(e.type==='password' || "
+            "(e.autocomplete||'').indexOf('password')>=0)) "
+            "return " + json.dumps(SECURE_REDACTED) + ";"
             "return e.isContentEditable ? e.textContent : "
-            "('value' in e ? e.value : null);})()" % json.dumps(selector))
+            "('value' in e ? e.value : null);})()")
+        return self.evaluate(script)
 
     def verify_typed(self, selector, expected, before=None):
         """True when the field holds exactly the expected text.
