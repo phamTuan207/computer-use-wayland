@@ -511,6 +511,16 @@ unified lane interface stays pilot-first after I23.
   argparse no-envelope on usage errors (document),
   cdp.mjs raw url in snapshot (out of I22 narrow scope,
   follow-up item).
+- fix-archguard DONE+MERGED (e71ed971 + 7b959be1 import-map
+  edges for zen-rdp/test_lock): all evasions closed, 22
+  tests, guard PASS on real tree; wider scope surfaced real
+  leaks, fixed (profile hash in plan doc, laptop home path
+  in Discord skill doc, machine values in 3 test files).
+- opencode a11y batch DONE+MERGED (5365c84c): M6 disabled
+  polling, M7 80-cap truncated both modes, I3 query
+  snapshot_id; 50 a11y tests OK; live: observe complete,
+  ground ok, query carries snapshot_id (first live check
+  used query wrong, corrected and re-proven).
 
 ## Sources cited during this phase
 
