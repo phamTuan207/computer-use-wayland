@@ -1,0 +1,47 @@
+Ung Dung Hen Ho — test log
+Test step wall-clock: 2026-11-27 07:15:59 +07
+Test step elapsed_seconds_from_start: 47
+All expected outputs below were computed by hand.
+Compile command: `g++ -O2 -std=c++17 -o /home/james/cf735368-work/ung-dung-hen-ho/sol /home/james/cf735368-work/ung-dung-hen-ho/sol.cpp`
+Compile result: success (exit code 0), at 2026-11-27 07:15:39 +07; elapsed 27 seconds from recorded start.
+
+## Sample
+Input:
+```text
+4 3
+1 2 4 5
+```
+Hand-computed expected output: 4
+Actual output: 4
+Result: PASS
+
+## Single-member degenerate case
+Input:
+```text
+1 3
+0
+```
+Hand-computed expected output: 0
+Actual output: 0
+Result: PASS
+
+## Repeated residues and complementary residues
+Input:
+```text
+6 7
+0 7 14 1 6 8
+```
+Hand-computed expected output: 5
+Actual output: 5
+Result: PASS
+
+## Answer exceeds 32-bit signed range
+Input:
+```text
+100000 1
+[0 repeated 100000 times]
+
+```
+Hand-computed expected output: 4999950000
+Actual output: 4999950000
+Result: PASS

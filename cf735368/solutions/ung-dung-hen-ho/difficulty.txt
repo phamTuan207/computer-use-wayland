@@ -1,0 +1,3 @@
+AI-estimated rating: Thong hieu
+
+The solution groups values by remainder and counts the complementary remainder before adding each value, with special cases for remainder zero handled by the same formula. The core is standard frequency counting with linear expected time; the extracted statement omits the constraints, but the result requires a 64-bit integer.
