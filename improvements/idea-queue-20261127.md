@@ -1387,3 +1387,41 @@ them.
   finding in Q30 covers the release notes only.
 
 No personal information in this document.
+
+## 5. Pilot results 2026-11-27 (evening, clone2 VM)
+
+Four cheapest decisive pilots run by clone2 under the measurement
+rule; full evidence in improvements/pilot-results-20261127.md,
+per-pilot logs kept locally in ~/workspace/pilots-20261127/.
+
+- Q1: PROVEN, promoted to the integration queue. The
+  moz:firefoxOptions route is rejected outright by geckodriver
+  0.37.1 ("Argument --remote-allow-system-access can't be set via
+  capabilities"); a plain session cannot enter chrome context;
+  geckodriver --allow-system-access reaches chrome context and
+  runs chrome script. 
+- Q10: PROVEN with a recipe correction, promoted with the
+  correction. BiDi chrome scope works on Zen 1.24.3b, but the
+  gate is the environment variable
+  MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1; the browser argument
+  --remote-allow-system-access alone fails with "unsupported
+  operation". The read-only Zen dump (workspaces, tabs, folders)
+  completed through BiDi on a fresh profile; field-by-field
+  equality with the Marionette dump on a rich profile is not yet
+  proven.
+- Q4: PARTIAL, six of seven remaining subcommands promoted
+  (switch-workspace, move-workspace, move-folder-space,
+  leave-folder, move-folder, unpin all pass live). move-tab does
+  not actually move the tab (returned index 2 after --index 0 was
+  requested); it stays queued pending a Zen tab-order semantics
+  check. Side finding: the fixed client's CLI exit code stays 0
+  when the payload carries an error, because main() checks
+  result.get("error") while the payload nests under "value";
+  callers must inspect value.error.
+- Q33: PARTIAL, promoted with the fix specified. Single-threaded
+  use of the fixed Marionette client is one-in-flight by
+  construction, but one client object shared across threads
+  misattributes responses: in six interleaving rounds, three
+  ended in an explicit response-id mismatch after a 30 s stall
+  and three were silent misattribution. The minimal fix is a
+  threading.Lock around command().
