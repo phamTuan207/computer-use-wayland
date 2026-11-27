@@ -274,6 +274,18 @@ class Coordinates(IsolatedCuState):
         self.assertEqual(cu.key_names(['CTRL','Enter']),(['ctrl'],['Return']))
         self.assertEqual(cu.key_names(['Shift','ArrowLeft','PageUp','f12']),(['shift'],['Left','Prior','F12']))
         self.assertEqual(cu.key_names(['Shift','Tab']),(['shift'],['ISO_Left_Tab']))
+    def test_blocked_key_combos_refused(self):
+        for keys in (['ctrl','alt','F1'],['ctrl','alt','f12'],
+                     ['ctrl','alt','BackSpace'],['ctrl','alt','Delete'],
+                     ['alt','PrintScreen'],['ctrl','Sys_Req'],
+                     ['super','q'],['super','ctrl','p'],['XF86PowerOff']):
+            with self.assertRaisesRegex(ValueError,'blocked key combo'):
+                cu.key_names(keys)
+        # Neighbours that must stay allowed: Zen workspace switch,
+        # plain F-keys, screenshot without SysRq modifiers.
+        self.assertEqual(cu.key_names(['ctrl','alt','Left']),(['ctrl','alt'],['Left']))
+        self.assertEqual(cu.key_names(['F5']),([],['F5']))
+        self.assertEqual(cu.key_names(['PrintScreen']),([],['Print']))
     def test_bad_key_and_non_bmp_rejected_before_execution(self):
         for a in ([{'type':'key','keys':['not_a_key']}],[{'type':'type','text':'🐱'}],[{'type':'key','keys':['Ctrl']}],[{'type':'key','keys':['a'],'repeat':999}]):
             with self.assertRaises(ValueError):cu.validate_actions(a,'desktop')

@@ -98,7 +98,32 @@ def key_names(keys):
         regular.append(k)
     if not regular:raise ValueError('key action needs a non-modifier key')
     if 'shift' in mods:regular=['ISO_Left_Tab' if k=='Tab' else k for k in regular]
-    return list(dict.fromkeys(mods)),regular
+    mods=list(dict.fromkeys(mods))
+    _reject_blocked_combo(mods,regular)
+    return mods,regular
+
+# Destructive combos refused before dispatch (agent-desktop I21).
+# Verified against the live Hyprland binds on the reference laptop
+# 2026-11-27: Ctrl+Alt+Delete = close all windows, Super+Q = close
+# window, Super+Ctrl+P and XF86PowerOff = power menu. VT-switch and
+# SysRq are kernel-level. Refusals raise ValueError so they surface
+# in the action result (logged), never silently dropped.
+def _reject_blocked_combo(mods,regular):
+    modset=set(mods)
+    for k in regular:
+        ku=k.upper()
+        if {'ctrl','alt'}<=modset and re.fullmatch(r'F\d{1,2}',ku):
+            raise ValueError('blocked key combo: ctrl+alt+'+k+' (VT switch)')
+        if {'ctrl','alt'}<=modset and ku in ('BACKSPACE','DELETE'):
+            raise ValueError('blocked key combo: ctrl+alt+'+k+' (session/window kill)')
+        if ku in ('PRINT','SYS_REQ') and modset&{'alt','ctrl'}:
+            raise ValueError('blocked key combo: SysRq with modifier ('+k+')')
+        if modset=={'logo'} and ku=='Q':
+            raise ValueError('blocked key combo: super+q (close window)')
+        if modset=={'logo','ctrl'} and ku=='P':
+            raise ValueError('blocked key combo: super+ctrl+p (power menu)')
+        if ku=='XF86POWEROFF':
+            raise ValueError('blocked key combo: XF86PowerOff (power menu)')
 
 def _wtype_executable():
     helper = ROOT / 'native' / 'wtype'
