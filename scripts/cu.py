@@ -118,11 +118,13 @@ def _reject_blocked_combo(mods,regular):
     if 'altgr' in modset:modset=(modset-{'altgr'})|{'alt'}
     for k in regular:
         ku=k.upper()
+        if re.fullmatch(r'XF86SWITCH_VT_(?:[1-9]|1[0-2])',ku) or ku in ('TERMINATE_SERVER','XF86LOGOFF'):
+            raise ValueError('blocked key combo: '+k+' (session control key)')
         if {'ctrl','alt'}<=modset and re.fullmatch(r'F\d{1,2}',ku):
             raise ValueError('blocked key combo: ctrl+alt+'+k+' (VT switch)')
         if {'ctrl','alt'}<=modset and ku in ('BACKSPACE','DELETE','KP_DELETE'):
             raise ValueError('blocked key combo: ctrl+alt+'+k+' (session/window kill)')
-        if ku in ('PRINT','SYS_REQ') and modset&{'alt','ctrl'}:
+        if (ku=='SYS_REQ' and not modset) or (ku in ('PRINT','SYS_REQ') and modset&{'alt','ctrl'}):
             raise ValueError('blocked key combo: SysRq with modifier ('+k+')')
         if {'logo'}<=modset and ku=='Q':
             raise ValueError('blocked key combo: super+q (close window)')
@@ -3198,7 +3200,7 @@ def capability_matrix():
         gi_ok=False
     return {
         'a11y':lane(a11y_py if a11y_py.is_file() else None,gi_ok,
-                    ['apps','observe','ground','act','drill']),
+                    ['apps','observe','ground','act','drill','query']),
         'cdp':lane(scripts/'cdp.mjs' if (scripts/'cdp.mjs').is_file() else None,
                    shutil.which('node') is not None,
                    ['observe','act','harvest']),
@@ -3208,10 +3210,10 @@ def capability_matrix():
                        ['tabs','eval','peval','navigate','probe']),
         'vision':lane(shutil.which('grim'),True,['screenshot']),
         'pointer':lane(ROOT/'native'/'pointer'
-                       if (ROOT/'native'/'pointer').is_file() else None,
+                       if (ROOT/'native'/'pointer').is_file() and os.access(ROOT/'native'/'pointer',os.X_OK) else None,
                        True,['click','move','scroll']),
         'keyboard':lane(ROOT/'native'/'wtype'
-                        if (ROOT/'native'/'wtype').is_file() else None,
+                        if (ROOT/'native'/'wtype').is_file() and os.access(ROOT/'native'/'wtype',os.X_OK) else None,
                         True,['type','key']),
         'keybind':lane(shutil.which('hyprctl'),True,
                        ['binds','dispatch','clients','monitors']),

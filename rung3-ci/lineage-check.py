@@ -33,7 +33,9 @@ def load_manifest(path):
     return entries
 
 
-def check(entries, root="."):
+def check(entries, root=None):
+    if root is None:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     missing = []
     for commit, rel, marker in entries:
         path = os.path.join(root, rel)

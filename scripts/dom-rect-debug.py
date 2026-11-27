@@ -26,6 +26,7 @@ synthetic tests are the only repo parts.
 """
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -36,6 +37,8 @@ def rects_from_snapshot(data):
     """Yield (label, rect) from either supported JSON shape."""
     if isinstance(data.get("elements"), list):
         for el in data["elements"]:
+            if not isinstance(el, dict):
+                continue
             rect = el.get("rect")
             if isinstance(rect, dict):
                 yield str(el.get("ref", "?")), rect
@@ -65,6 +68,9 @@ def annotate(snapshot_path, screenshot_path, out_path,
         if w <= 0 or h <= 0:
             skipped += 1
             continue
+        if not all(math.isfinite(value) for value in (x, y, w, h)):
+            skipped += 1
+            continue
         draw.rectangle([x, y, x + w, y + h], outline=(255, 0, 0), width=2)
         draw.text((x + 2, max(0, y - 12)), label, fill=(255, 0, 0))
         drawn += 1
@@ -72,7 +78,7 @@ def annotate(snapshot_path, screenshot_path, out_path,
     return {"drawn": drawn, "skipped": skipped, "output": str(out_path)}
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--snapshot", required=True)
     ap.add_argument("--screenshot", required=True)
@@ -80,8 +86,10 @@ def main():
     ap.add_argument("--scale", type=float, default=1.0)
     ap.add_argument("--origin-x", type=float, default=0)
     ap.add_argument("--origin-y", type=float, default=0)
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     out = args.out or (args.screenshot + ".rects.png")
+    if Path(out).resolve() == Path(args.screenshot).resolve():
+        ap.error("--out must not be the same file as --screenshot")
     result = annotate(args.snapshot, args.screenshot, out,
                       scale=args.scale, origin_x=args.origin_x,
                       origin_y=args.origin_y)

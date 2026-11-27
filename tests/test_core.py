@@ -280,6 +280,10 @@ class Coordinates(IsolatedCuState):
                      ['ctrl','alt','KP_Delete'],
                      ['ctrl','altgr','Delete'],['ctrl','altgr','F2'],
                      ['alt','PrintScreen'],['ctrl','Sys_Req'],
+                     ['Sys_Req'],
+                     *(['XF86Switch_VT_'+str(n)] for n in range(1,13)),
+                     ['ctrl','XF86Switch_VT_1'],['alt','XF86Switch_VT_12'],
+                     ['Terminate_Server'],['super','XF86LogOff'],
                      ['super','q'],['super','shift','q'],['super','alt','q'],
                      ['super','ctrl','p'],['super','ctrl','shift','p'],
                      ['XF86PowerOff'],['XF86PowerDown'],['XF86Sleep'],
@@ -307,6 +311,7 @@ class Coordinates(IsolatedCuState):
             self.assertTrue(lane['operations'])
             if lane['available']:
                 self.assertTrue(lane['entry'])
+        self.assertIn('query',matrix['a11y']['operations'])
     def test_bad_key_and_non_bmp_rejected_before_execution(self):
         for a in ([{'type':'key','keys':['not_a_key']}],[{'type':'type','text':'🐱'}],[{'type':'key','keys':['Ctrl']}],[{'type':'key','keys':['a'],'repeat':999}]):
             with self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
