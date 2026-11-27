@@ -62,6 +62,10 @@ repo default.
   exit-code map (no browser).
 - `test_rdp_client.py` - small live self-test against a throwaway
   browser (see its docstring for the fixture contract).
+- `test_act.py` - unit tests for the P2a ambiguity-refusing act:
+  descriptor validation, single-eval script contract, verdict
+  handling (true count / candidatesTruncated), refusal envelope
+  shape with retry=unsafe, CLI pre-connect validation (no browser).
 - `test_lock.py` - unit tests for the single-drive lock hardening:
   holder identity (pid + process start time), stale-record
   classification, release on failed attach, CLOEXEC, symlink
@@ -111,7 +115,7 @@ continues; do not retry-drive on a failed smoke.
 Unit tests (no browser):
 
 ```
-python3 -m unittest test_scope_unittest -v
+python3 -m unittest test_scope_unittest test_envelope test_act test_lock test_redaction -v
 python3 test_rdp_smoke.py
 ```
 
@@ -138,14 +142,19 @@ configuration until acceptance passes on the real profile.
                  "retry": "not_applicable"}}
 ```
 
-On failure `ok` is false, `result` is null, and `error` carries
+On failure `ok` is false, `result` is null (except act refusals
+and wait timeouts, which carry their verdict in `result`), and
+`error` carries
 `code` (closed set: unscoped_refused, scope_refused,
 denylist_refused, lock_held, lock_unavailable,
 raw_packet_refused, parent_evaluate_refused,
 port_owner_mismatch, scope_config_invalid,
 profile_marker_required, not_attached, tab_not_found,
 attach_failed, evaluate_failed, transport_error,
-runtime_error, unexpected), `message`, and the same
+runtime_error, unexpected, target_ambiguous,
+target_not_found, target_not_editable, bad_selector,
+act_target_required, act_action_invalid,
+act_value_required, act_value_unexpected), `message`, and the same
 `disposition` object. Delivery vocabulary: `not_delivered`,
 `delivery_uncertain`, `delivered_unverified`,
 `delivered_verified`. Retry vocabulary: `safe` (nothing was
@@ -169,6 +178,50 @@ text), and treat exit 1 vs 2 as runtime vs usage.
 `--legacy-output` restores the old behavior exactly (bare
 payload, stderr-only errors, exit 2 on any error) as a compat
 shim. The library API (RDPClient, RDPError) is unchanged.
+
+## Ambiguity-refusing act (P2a)
+
+`act` is the only act path that resolves a target by descriptor.
+One eval script counts ALL visible matches for the descriptor
+(role/name/text/selector/label, ANDed; exact match after
+whitespace normalization, case-insensitive) and acts only when
+the count is exactly 1. There is no first-match fallback.
+
+```
+rdp_client.py --port <rdp-port> --profile-marker <profile-dir> \
+  --scope-url-pattern '<pattern>' act --text Action click
+rdp_client.py ... act --role button --name Submit click
+rdp_client.py ... act --label Name type 'Bench User'
+```
+
+The count is the true count over the examined pool. When the
+pool exceeds the scan cap (10000 elements) the verdict carries
+`candidatesTruncated: true` and `count` is a lower bound; a
+silently capped count is never reported. On refusal the
+envelope is `ok: false` with code `target_ambiguous` /
+`target_not_found` / `target_not_editable` / `bad_selector`,
+`result` carries the verdict (count, candidatesTruncated, up to
+10 candidate summaries, the descriptor echo), delivery is
+`delivered_verified` (the script ran and its verdict arrived),
+and retry is `unsafe`: act commands are never replayed, because
+a lost response cannot distinguish a refusal from a landed
+click. A transport failure mid-act is `delivery_uncertain` /
+`unsafe` by the same rule. Success is `delivered_unverified`
+(JS ran; page effect not verified by the tool), like `eval`.
+`--wait-for` / `--wait-timeout` apply after a successful act,
+as with `eval`. Refusals are recorded in the drive report
+(`act_refusals`).
+
+The descriptor is the I3 ref content: snapshot refs carry
+role+name, and `act` is the act-time resolver for that shape
+(one ref system, two resolvers). The snapshot-time resolver
+(persistent registry + cross-call digest) is P2b, gated on its
+settling tests; it is not part of this command. Text search
+covers actionable elements only (links, buttons, form controls,
+labels, role/tabindex/contenteditable elements), not arbitrary
+divs. `type` sets the value via the native setter plus
+input/change events (the measured 52 ms class path), on
+input/textarea targets only.
 
 ## Post-action waits (I17)
 
