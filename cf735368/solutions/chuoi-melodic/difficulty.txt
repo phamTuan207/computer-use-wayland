@@ -1,0 +1,2 @@
+AI-estimated difficulty: Van dung (Application).
+The solution applies divisibility and periodicity: the retained values must include a candidate period p and every retained value must be divisible by p. The main insight is to try each array value as p and count its multiples in O(n^2), which fits the total n <= 5000; duplicate values and the bounds up to 10^9 need no special treatment.
