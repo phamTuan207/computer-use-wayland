@@ -308,12 +308,11 @@ def detect_real_profile():
 
     Reads ~/.config/zen/profiles.ini. The Install sections name the
     default profile path; a Profile section may also carry Default=1.
-    On this laptop the two disagree: the Install default points at
-    ae59l0ak.Default (release) (the profile with places.sqlite),
-    while a second profile (pkdwoij3.Default Profile) carries
-    Default=1 and has no places.sqlite. So a candidate only counts
-    when its dir exists, and a dir with places.sqlite beats one
-    without. Never writes anything.
+    On the reference laptop the two disagree: the Install default
+    points at one profile dir (the one with places.sqlite), while a
+    second profile carries Default=1 and has no places.sqlite. So a
+    candidate only counts when its dir exists, and a dir with
+    places.sqlite beats one without. Never writes anything.
     """
     ini = REAL_PROFILE_HOME / "profiles.ini"
     try:

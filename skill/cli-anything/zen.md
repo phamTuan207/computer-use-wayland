@@ -80,7 +80,7 @@ computer-use cli run zen -- --port 9223 session start
 computer-use cli run zen -- --port 9223 tabs
 
 # A different profile dir for history
-computer-use cli run zen -- --profile ~/.config/zen/ae59l0ak.Default\ \(release\) history
+computer-use cli run zen -- --profile ~/.config/zen/<profile-dir> history
 ```
 
 Flags go after the `--` that separates the `cli run` arguments from
