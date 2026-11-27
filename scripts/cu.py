@@ -3172,6 +3172,45 @@ def cli_command(args):
                 'requires':entry['requires']}
     return cli_run(args.app,args.command_args)
 
+def capability_matrix():
+    """I9: read-only per-lane capability reporting for doctor.
+
+    Reports which control lanes are usable on this install and
+    what each lane offers. No lane is exercised; availability is
+    presence of the entry point plus its hard dependency. The
+    unified lane interface stays pilot-first (I9 split)."""
+    scripts=ROOT/'scripts'
+    def lane(entry,dep_ok,operations):
+        return {'available':bool(entry and dep_ok),
+                'entry':str(entry) if entry else None,
+                'operations':operations}
+    a11y_py=scripts/'a11y.py'
+    try:
+        import gi as _gi  # noqa: F401
+        gi_ok=True
+    except Exception:
+        gi_ok=False
+    return {
+        'a11y':lane(a11y_py if a11y_py.is_file() else None,gi_ok,
+                    ['apps','observe','ground','act','drill']),
+        'cdp':lane(scripts/'cdp.mjs' if (scripts/'cdp.mjs').is_file() else None,
+                   shutil.which('node') is not None,
+                   ['observe','act','harvest']),
+        'zen_rdp':lane(scripts/'zen-rdp'/'rdp_client.py'
+                       if (scripts/'zen-rdp'/'rdp_client.py').is_file() else None,
+                       True,
+                       ['tabs','eval','peval','navigate','probe']),
+        'vision':lane(shutil.which('grim'),True,['screenshot']),
+        'pointer':lane(ROOT/'native'/'pointer'
+                       if (ROOT/'native'/'pointer').is_file() else None,
+                       True,['click','move','scroll']),
+        'keyboard':lane(ROOT/'native'/'wtype'
+                        if (ROOT/'native'/'wtype').is_file() else None,
+                        True,['type','key']),
+        'keybind':lane(shutil.which('hyprctl'),True,
+                       ['binds','dispatch','clients','monitors']),
+    }
+
 def main():
     global BROWSER_ENDPOINT
     parser=argparse.ArgumentParser(description=__doc__)
@@ -3327,6 +3366,7 @@ def main():
         if latch_state['cancelled']:result['cancellation']=latch_state['cancellation']
     elif args.command=='doctor':
         result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':False,'monitors':[]}
+        result['capabilities']=capability_matrix()
         result['dependencies']['wtype']=(ROOT/'native/wtype').is_file()
         try:
             env=environment()

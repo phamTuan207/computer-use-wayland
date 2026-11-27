@@ -286,6 +286,16 @@ class Coordinates(IsolatedCuState):
         self.assertEqual(cu.key_names(['ctrl','alt','Left']),(['ctrl','alt'],['Left']))
         self.assertEqual(cu.key_names(['F5']),([],['F5']))
         self.assertEqual(cu.key_names(['PrintScreen']),([],['Print']))
+    def test_capability_matrix_shape(self):
+        matrix=cu.capability_matrix()
+        self.assertEqual(set(matrix),{'a11y','cdp','zen_rdp','vision',
+                                      'pointer','keyboard','keybind'})
+        for lane in matrix.values():
+            self.assertIn('available',lane)
+            self.assertIn('entry',lane)
+            self.assertTrue(lane['operations'])
+            if lane['available']:
+                self.assertTrue(lane['entry'])
     def test_bad_key_and_non_bmp_rejected_before_execution(self):
         for a in ([{'type':'key','keys':['not_a_key']}],[{'type':'type','text':'🐱'}],[{'type':'key','keys':['Ctrl']}],[{'type':'key','keys':['a'],'repeat':999}]):
             with self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
