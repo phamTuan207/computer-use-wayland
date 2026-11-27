@@ -605,6 +605,64 @@ class LongStringTests(unittest.TestCase):
         self.assertIn("substring error", str(cm.exception))
         c.close()
 
+    def test_longstring_astral_payload_reassembles(self):
+        # Review M-1 (2026-11-28): the grip length and substring
+        # indices are JS UTF-16 units. The transport below slices
+        # in UTF-16 units like a real server (the ASCII transport
+        # above slices in Python code points and masks the bug).
+        # With Python-len accounting the client drifted and
+        # refused; with _utf16_len accounting it reassembles.
+        payload = canned_payload(total=200, returned=200)
+        payload["elements"] = [
+            {"tag": "button",
+             "name": f"Action \U0001F600 {i} " + "x" * 20}
+            for i in range(200)]
+        payload["textPreview"] = "\U0001F600" * 100
+        payload["textLength"] = 200  # UTF-16 units
+        transport = Utf16LongStringTransport(payload, chunk_units=999)
+        c = make_client(payload, transport=transport)
+        c.attach()
+        snap = c.snapshot()
+        c.close()
+        self.assertEqual(snap["totalElements"], 200)
+        self.assertEqual(snap["textLength"], 200)
+        self.assertGreater(transport.substring_calls, 1)
+
+
+class Utf16LongStringTransport(SnapshotTransport):
+    """JS-faithful longString server: payload text carries raw
+    astral chars (JSON.stringify shape), grip length is in UTF-16
+    units, substring slices at UTF-16 unit boundaries (a chunk
+    can split a surrogate pair, like the real server)."""
+
+    def __init__(self, payload, chunk_units=8000):
+        super().__init__(payload)
+        self.payload_text = json.dumps(payload, ensure_ascii=False)
+        self.payload_units = self.payload_text.encode(
+            "utf-16-le", "surrogatepass")
+        self.chunk_units = chunk_units
+        self.substring_calls = 0
+
+    def _eval(self, expr):
+        if expr == rc.SNAPSHOT_JS:
+            return {"type": "longString",
+                    "actor": "server1.conn0.longString9",
+                    "length": len(self.payload_units) // 2,
+                    "initial": ""}
+        return super()._eval(expr)
+
+    def _handle(self, req):
+        if req.get("type") == "substring":
+            self.substring_calls += 1
+            start = int(req.get("start", 0))
+            end = min(int(req.get("end", 0)),
+                      start + self.chunk_units)
+            chunk = self.payload_units[start * 2:end * 2].decode(
+                "utf-16-le", "surrogatepass")
+            self._reply({"from": req.get("to"), "substring": chunk})
+            return
+        super()._handle(req)
+
 
 if __name__ == "__main__":
     unittest.main()

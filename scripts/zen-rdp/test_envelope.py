@@ -176,6 +176,15 @@ class WaitForTests(unittest.TestCase):
         self.assertEqual(
             rc._classify_error("wait_for timeout after 1s: 'x'", "eval"),
             ("wait_timeout", "delivered_unverified", "unsafe"))
+        # Pin the ACTUALLY RAISED message (review m-2): the gone=
+        # disclosure must not break the classifier needle.
+        client = self.make_client([True] * 1000)
+        with self.assertRaises(rc.RDPError) as cm:
+            client.wait_for("x", timeout=0.05, poll_interval=0.01,
+                            gone=True)
+        self.assertEqual(
+            rc._classify_error(str(cm.exception), "eval"),
+            ("wait_timeout", "delivered_unverified", "unsafe"))
 
     def test_wait_for_gone_returns_first_falsy(self):
         client = self.make_client([True, 1, 0])

@@ -1556,7 +1556,11 @@ class RDPClient:
         (a short chunk must not skip bytes), an error packet is
         rejected wherever it arrives (never consumed as content),
         an empty chunk fails loud instead of looping, and the
-        assembled length is verified against the declared length."""
+        assembled length is verified against the declared length.
+        All lengths are JS UTF-16 units (grip length and substring
+        indices), so advancement and verification count with
+        _utf16_len, never Python len() (astral chars would drift
+        the position and fail the check; review M-1 2026-11-28)."""
         actor = grip.get("actor")
         length = grip.get("length", 0)
         if not isinstance(length, int) or length < 0:
@@ -1582,12 +1586,12 @@ class RDPClient:
                     f"(declared length {length}); refusing to "
                     "assemble a short longString")
             parts.append(sub)
-            pos += len(sub)
+            pos += _utf16_len(sub)
         text = "".join(parts)
-        if len(text) != length:
+        if _utf16_len(text) != length:
             raise RDPError(
                 f"longString length mismatch: declared {length}, "
-                f"assembled {len(text)}")
+                f"assembled {_utf16_len(text)}")
         return text
 
     def _unwrap_full(self, grip):
@@ -1893,8 +1897,12 @@ class RDPClient:
                 ".length")
         count = self.wait_for(expr, timeout,
                               poll_interval=poll_interval, gone=gone)
-        return {"selector": selector,
-                "count": count if isinstance(count, int) else 0,
+        if not isinstance(count, int) or isinstance(count, bool):
+            # Fail loud, never fabricate a 0 (review m-1): a
+            # non-int here means the count contract broke.
+            raise RDPError(
+                f"wait_for_selector: count is not an int ({count!r})")
+        return {"selector": selector, "count": count,
                 "gone": gone, "poolScope": "top-document"}
 
     def wait_load(self, url_substr, timeout=30):
