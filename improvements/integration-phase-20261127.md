@@ -41,8 +41,8 @@ PILOT (running, unproven).
 
 | # | Item | Source | Status | Notes |
 |---|---|---|---|---|
-| 0 | Privacy census + scrub (skill/ + user-facing docs; main's two files) | agent-desktop s.6 | QUEUED | Rule violation; precondition for I18 |
-| 1 | zen_live.py four defects + test fixes + run_op smoke | R17 s.4 | QUEUED | PROVEN by reproduction; live test on laptop throwaway profile |
+| 0 | Privacy census + scrub (skill/ + user-facing docs; main's two files) | agent-desktop s.6 | ON MAIN | PR #1140 merged d69ef7c9; see record below |
+| 1 | zen_live.py four defects + test fixes + run_op smoke | R17 s.4 | LIVE-TESTED | e3d81539; live proof on laptop 2026-11-27 18:35-18:38; see record below |
 | 2 | M16 hermetic-suite gate + lineage check (incl. cherry-pick c7bc697e) | bottleneck M16 | QUEUED | PROVEN detector |
 | 3 | M17 sharded discover (serial stays gate of record) | bottleneck M17 | QUEUED | PROVEN 1.57x on VM; re-measure on laptop |
 | 4 | I13 architecture guard (import map first; docs + name denylist) | agent-desktop I13 | QUEUED | Closes the privacy blind spot |
@@ -94,8 +94,65 @@ standalone, I1 all-lane big-bang, I13 without import map.
 
 ## Per-item records
 
-(appended as items land: implementation, unit tests, live
-test evidence, measured before/after, gate verdict, commits)
+### Item 0: privacy census + scrub (2026-11-27)
+
+Census (skill/, docs/, README.md, skills/):
+- todolist-push: personal name already absent (scrub commits
+  8b9f5da4, 9fd84006). Real profile dir found in
+  skill/cli-anything/zen.md:83 (example command) and
+  scripts/zen_cli.py docstring; both genericized (7caff5b9).
+  The same profile hash remains in 10 historical
+  improvements/ log files; left as historical record (same
+  class as the deferred git-history rewrite).
+- main: name present in 5 files. User-facing four scrubbed
+  via PR #1140 (merged d69ef7c9, gitleaks check passed,
+  independent reviewer PASS with 2 cosmetic nits, both fixed
+  before merge). docs/clone2-watchdog-log.md keeps 5
+  historical log entries with the name (frozen audit log,
+  last updated 2026-11-23; left untouched, noted here).
+  pii-scan.py does not check personal names; that blind spot
+  is item 4's (I13) job to close.
+- pii-scan.py on scripts/zen_cli.py flags the word "session"
+  as credential assignments; pre-existing false positives
+  (scanner targets snapshot dirs), unchanged by this item.
+
+### Item 1: zen_live.py four defects (2026-11-27)
+
+Implementation (e3d81539): greeting read as length-prefixed
+frame (D1); namespaced command names WebDriver:NewSession /
+Marionette:SetContext / WebDriver:ExecuteAsyncScript /
+WebDriver:DeleteSession (D2); lazy ops table in run_op (D3);
+async completion via the appended callback
+arguments[arguments.length - 1] (D4); WebDriver {"value":...}
+unwrap in execute_async; launch-gate documented in the module
+docstring. Tests: fake server now sends the greeting
+length-prefixed and asserts namespaced names; run_op smoke
+test added. Suite: 21 tests OK in 0.231 s.
+
+Live test on the real laptop (throwaway profile, Marionette
+port 2829, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1; owner Zen PID
+807599 untouched, verified before/after):
+- Attempt 1 failed before starting: script upload raced with
+  launch in one ssh command, file landed 0 bytes. Fixed by
+  separate upload (sha256-verified) and launch steps.
+- Run 1 (18:35:42-18:35:52): introspect PASS (Zen internals
+  visible), list PASS, pin example.com PASS (verified in the
+  second list), create-folder FAILED because the example.org
+  tab never loaded (about:blank; pickTab matched 0, error
+  path correct, rc=1). Test-setup issue, not a client defect.
+  Pill gap: `cu.py session` without a driver command errored,
+  so no pill showed during run 1. The test window was visible
+  on the desktop; recorded honestly here.
+- Run 2 (18:38, as cu.py session driver, pill up): folder
+  "R17Test" created live, tabCount 2 (example.org plus the
+  fresh tab createFolder opens; members report pinned: true,
+  both matching Zen semantics in the R17 report). Test
+  instance killed by recorded pid after cmdline check;
+  session ended; desktop verified clean (only owner windows).
+Verdict: the four-defect fix is live-proven on Zen 1.24.3b on
+the real laptop for introspect/list/pin/create-folder.
+Remaining subcommands share the fixed transport and prelude;
+their payloads were not run live (same boundary as R17).
 
 ## Sources cited during this phase
 
