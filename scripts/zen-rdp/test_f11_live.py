@@ -105,13 +105,13 @@ def main():
 
         # Storm: open/close OTHER tabs while the waiter interleaves
         # requests; pairing must hold and the flag must stay unset.
-        token = "f11-storm"
+        tag = "f11-storm"
         paired = True
         for _i in range(10):
             _parent(closer,
                     "(function(){var t=gBrowser.addTrustedTab("
                     "'about:blank'); t.setAttribute('data-f11', '"
-                    + token + "'); return 'ok';})()")
+                    + tag + "'); return 'ok';})()")
             waiter.list_tabs()
             if waiter.evaluate("1+1") != 2:
                 paired = False
@@ -119,7 +119,7 @@ def main():
             closer,
             "(function(){var mine=[...gBrowser.tabs].filter("
             "function(t){return t.getAttribute('data-f11') === '"
-            + token + "';}); mine.forEach(function(t){"
+            + tag + "';}); mine.forEach(function(t){"
             "gBrowser.removeTab(t);}); return mine.length;})()")
         waiter.list_tabs()
         if waiter.evaluate("1+1") != 2:
