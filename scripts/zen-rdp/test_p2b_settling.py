@@ -425,7 +425,7 @@ def _is_act_result(pkt):
         return False
     res = pkt.get("result")
     value = res.get("value") if isinstance(res, dict) else res
-    return isinstance(value, str) and '"acted": true' in value
+    return isinstance(value, str) and '"acted":true' in value
 
 
 class FaultInjectionDeliveryTests(unittest.TestCase):
