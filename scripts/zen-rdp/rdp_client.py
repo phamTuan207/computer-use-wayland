@@ -26,7 +26,10 @@ RT-20 additions (enforced IN the tool, not in briefs):
   in the drive report. Large string results (RDP longString grips) are
   fetched in full via substring requests for tab and parent evaluates.
 - Single-drive lock: --lock-file (or RDP_LOCK_FILE) flock()s the file
-  for the session; a second client on the same file is refused.
+  for the session; a second client on the same file is refused. The
+  holder records pid + process start time in the file, so a refusal
+  names the holder and says whether it is alive or a stale record.
+  See LOCK-MAP.md for every lock in the stack and stale behavior.
 - Drive report (JSON): webdriver probe, tab list before/after with diff,
   scope used, denylist hits, scope refusals, approvals used, action counts.
   Written to --drive-report on session end, or on demand via `report`.
@@ -52,6 +55,7 @@ import json
 import os
 import re
 import socket
+import stat as _stat
 import subprocess
 import sys
 import time
@@ -98,6 +102,107 @@ def ms(sec):
 
 def _now_iso():
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def _stat_is_regular(info):
+    return _stat.S_ISREG(info.st_mode)
+
+
+def _proc_start_time(pid):
+    """Process start time (clock ticks since boot) from /proc, or None.
+
+    Field 22 of /proc/<pid>/stat; the comm field may contain spaces
+    and parens, so split after the last ')'. pid + start time pins a
+    process incarnation: a reused pid has a different start time."""
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            rest = f.read().rsplit(")", 1)[1].split()
+        return rest[19]  # field 22 overall, index 19 after comm/state
+    except (OSError, IndexError):
+        return None
+
+
+def _lock_record(pid=None):
+    pid = os.getpid() if pid is None else pid
+    start = _proc_start_time(pid) or "-"
+    return f"pid={pid} start={start} at={_now_iso()}\n"
+
+
+def _parse_lock_record(text):
+    """Parse a lock-file holder record. Accepts the current
+    'pid=N start=T at=ISO' form and the legacy bare-pid form.
+    Returns {'pid': int, 'start': str|None} or None."""
+    text = (text or "").strip()
+    if not text:
+        return None
+    if text.isdigit():
+        return {"pid": int(text), "start": None}
+    fields = {}
+    for part in text.split():
+        if "=" in part:
+            k, v = part.split("=", 1)
+            fields[k] = v
+    try:
+        pid = int(fields["pid"])
+    except (KeyError, ValueError):
+        return None
+    start = fields.get("start")
+    return {"pid": pid, "start": None if start in (None, "-") else start}
+
+
+def _holder_alive(record):
+    """True: recorded holder process is running (same incarnation).
+    False: pid is gone or was reused (stale record). None: cannot
+    tell (no record, or liveness check not permitted)."""
+    if not record:
+        return None
+    pid = record["pid"]
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return None
+    except OSError:
+        return None
+    if record.get("start") is not None:
+        current = _proc_start_time(pid)
+        if current is not None and current != record["start"]:
+            return False  # pid reused by an unrelated process
+    return True
+
+
+def _lock_holder_detail(fd):
+    """Human suffix for the LOCK REFUSED message, read from our own
+    fd (same file we just failed to flock; no path re-open race)."""
+    try:
+        raw = os.pread(fd, 256, 0).decode("utf-8", "replace")
+    except OSError:
+        return ""
+    record = _parse_lock_record(raw)
+    if record is None:
+        return ""
+    alive = _holder_alive(record)
+    if alive is True:
+        return f" by pid {record['pid']} (process alive)"
+    if alive is False:
+        return (f"; recorded holder pid {record['pid']} is not running "
+                "(stale record: the flock is held by another open file "
+                "description, e.g. an inherited fd)")
+    return f" by pid {record['pid']} (liveness unknown)"
+
+
+def _lock_path_is_fd(path, fd):
+    """True when path still names the inode behind fd. False means the
+    file was replaced (unlink + recreate) and our flock guards an
+    unlinked inode that no contender will ever see."""
+    try:
+        by_path = os.stat(path)
+        by_fd = os.fstat(fd)
+    except OSError:
+        return False
+    return (by_path.st_ino == by_fd.st_ino
+            and by_path.st_dev == by_fd.st_dev)
 
 
 def _url_matches(url, pattern):
@@ -440,12 +545,25 @@ class RDPClient:
         self._lock_holder_pid = None
         if self.lock_file:
             self._acquire_lock(self.lock_file)
-        if transport is not None:
-            self.sock = transport
-        else:
-            self.sock = socket.create_connection((host, port), timeout=timeout)
-        self.buf = b""
-        self.greeting = self._recv()
+        try:
+            if transport is not None:
+                self.sock = transport
+            else:
+                self.sock = socket.create_connection((host, port),
+                                                     timeout=timeout)
+            self.buf = b""
+            self.greeting = self._recv()
+        except BaseException:
+            # A failed attach must not wedge the single-drive fence:
+            # the raw lock fd has no finalizer, so release it here.
+            sock = getattr(self, "sock", None)
+            if sock is not None:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
+            self._release_lock()
+            raise
         self.desc_actor = None
         self.target_actor = None
         self.console_actor = None
@@ -469,32 +587,71 @@ class RDPClient:
         self._started_at = _now_iso()
 
     # -- single-drive lock --------------------------------------------------
+    # Hardened (I20 substitute): holder identity is pid + process start
+    # time, so a contender can tell a live holder from a stale record
+    # (dead pid, or pid reused by an unrelated process). The fd is
+    # O_CLOEXEC (never inherited by children, which would keep the
+    # flock alive past this process) and O_NOFOLLOW with an ownership
+    # check (same fence as the relay lock). After flock succeeds the
+    # path inode is re-checked: if the file was replaced under us
+    # (unlink + recreate race), retry on the new inode instead of
+    # holding a lock nobody else can see. flock itself needs no stale
+    # recovery: the kernel releases it when the holder dies, so a
+    # leftover file with a dead pid in it never wedges the fence.
     def _acquire_lock(self, path):
-        try:
-            fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
-        except OSError as e:
-            raise RDPError(f"cannot open lock file {path!r}: {e}")
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            holder = ""
+        for _attempt in range(3):
+            fd = self._open_lock_file(path)
             try:
-                with open(path) as f:
-                    holder = f.read().strip()
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                detail = _lock_holder_detail(fd)
+                os.close(fd)
+                raise RDPError(
+                    f"LOCK REFUSED: lock file {path!r} is already held"
+                    + detail
+                    + "; refusing to attach (single-drive fence)")
+            if _lock_path_is_fd(path, fd):
+                break
+            # File replaced while we locked it: our flock guards an
+            # unlinked inode. Drop it and retry on the visible file.
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
             except OSError:
                 pass
             os.close(fd)
+        else:
             raise RDPError(
-                f"LOCK REFUSED: lock file {path!r} is already held"
-                + (f" by pid {holder}" if holder else "")
-                + "; refusing to attach (single-drive fence)")
+                f"cannot open lock file {path!r}: file kept being "
+                "replaced during acquisition")
         try:
             os.ftruncate(fd, 0)
-            os.write(fd, f"{os.getpid()}\n".encode())
+            os.lseek(fd, 0, os.SEEK_SET)
+            os.write(fd, _lock_record().encode())
         except OSError:
             pass
         self._lock_fd = fd
         self._lock_holder_pid = os.getpid()
+
+    @staticmethod
+    def _open_lock_file(path):
+        flags = (os.O_RDWR | os.O_CREAT
+                 | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_CLOEXEC", 0))
+        try:
+            fd = os.open(path, flags, 0o600)
+        except OSError as e:
+            raise RDPError(f"cannot open lock file {path!r}: {e}")
+        try:
+            info = os.fstat(fd)
+        except OSError as e:
+            os.close(fd)
+            raise RDPError(f"cannot open lock file {path!r}: {e}")
+        if not _stat_is_regular(info) or info.st_uid != os.geteuid():
+            os.close(fd)
+            raise RDPError(
+                f"cannot open lock file {path!r}: not a regular file "
+                "owned by this user")
+        return fd
 
     def _release_lock(self):
         if self._lock_fd is not None:
@@ -1085,7 +1242,9 @@ class RDPClient:
                 print(f"WARNING: drive report write failed: {e}",
                       file=sys.stderr)
         try:
-            self.sock.close()
+            sock = getattr(self, "sock", None)
+            if sock is not None:
+                sock.close()
         except Exception:
             pass
         self._release_lock()

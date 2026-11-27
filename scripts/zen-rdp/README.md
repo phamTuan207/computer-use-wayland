@@ -33,7 +33,12 @@ repo default.
   evaluate/navigate packet types; they must go through the guarded
   methods. Large string results (longString grips) are fetched in
   full. Single-drive lock: `--lock-file` / `RDP_LOCK_FILE` flock()s
-  the file for the session and refuses a second client. Fail-closed
+  the file for the session and refuses a second client. The holder
+  records pid + process start time in the file; refusals classify
+  the recorded holder (alive / stale record / pid reused); the fd
+  is O_CLOEXEC + O_NOFOLLOW with an ownership check; the path inode
+  is re-checked after flock; a failed attach releases the lock
+  (see `LOCK-MAP.md`). Fail-closed
   port-owner guard: an explicit `--profile-marker` is required
   before attach (test-only escape: `--allow-unmarked-test-attach`,
   warns loudly). Tab-pinned re-attach: when a target swap (e.g.
@@ -57,6 +62,12 @@ repo default.
   exit-code map (no browser).
 - `test_rdp_client.py` - small live self-test against a throwaway
   browser (see its docstring for the fixture contract).
+- `test_lock.py` - unit tests for the single-drive lock hardening:
+  holder identity (pid + process start time), stale-record
+  classification, release on failed attach, CLOEXEC, symlink
+  refusal, replaced-inode detection (no browser).
+- `LOCK-MAP.md` - every file lock in the stack: who takes it, what
+  it fences, holder records, and stale behavior (I20 substitute).
 
 ## Machine layer (not in this repo)
 
