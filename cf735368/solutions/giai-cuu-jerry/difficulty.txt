@@ -1,0 +1,3 @@
+AI-estimated rating: Nhan biet
+
+The solution counts even and odd values, since a pair has an even sum exactly when both values have the same parity. This is a direct observation with linear counting; N up to 10^5 requires no advanced technique, while a 64-bit result handles the maximum number of pairs.

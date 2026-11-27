@@ -1,0 +1,53 @@
+Giai Cuu Jerry — test log
+Started: 2026-11-27 07:20:23 +07 (Asia/Ho_Chi_Minh)
+
+Step: inspect instructions and target directory
+Time: 2026-11-27 07:20:50 +07 | elapsed 0.00s
+Result: No AGENTS.md found under /home/james/cf735368-work; target directory was empty. Read ponytail skill instructions and followed the minimal standard-library solution approach.
+
+Step: write solution and difficulty rating
+Time: 2026-11-27 07:20:50 +07 | elapsed 0.00s
+Result: Wrote sol.cpp and difficulty.txt. The answer counts pairs among even values and among odd values using 64-bit arithmetic.
+
+Step: run sample and self-made tests
+Time: 2026-11-27 07:21:15 +07 | elapsed 0.03s
+Command: python3 harness invoking ./sol for each listed input
+
+Test: Sample
+Time: 2026-11-27 07:21:15 +07 | elapsed 0.00s
+Input: N=5; values: 1 2 3 4 5
+Hand-computed expected output: 4
+Actual output: '4' (exit 0)
+Result: PASS
+
+Test: Minimum N / no possible pair
+Time: 2026-11-27 07:21:15 +07 | elapsed 0.00s
+Input: N=1; values: 7
+Hand-computed expected output: 0
+Actual output: '0' (exit 0)
+Result: PASS
+
+Test: Maximum N / 64-bit result
+Time: 2026-11-27 07:21:15 +07 | elapsed 0.02s
+Input: N=100000; every value is 1000000000
+Hand-computed expected output: 4999950000
+Actual output: '4999950000' (exit 0)
+Result: PASS
+
+Test: Mixed parity / maximum values / whitespace
+Time: 2026-11-27 07:21:15 +07 | elapsed 0.00s
+Input: N=6; values: 1000000000 999999999 1000000000 999999999 1 2 (trailing spaces/newline)
+Hand-computed expected output: 6
+Actual output: '6' (exit 0)
+Result: PASS
+
+Step: compile
+Time: 2026-11-27 07:20:57 +07 | elapsed 0s
+Command: g++ -O2 -std=c++17 -o ~/cf735368-work/giai-cuu-jerry/sol ~/cf735368-work/giai-cuu-jerry/sol.cpp
+Result: exit code 0 (success).
+
+Step: release overlay holder and verify status
+Time: 2026-11-27 07:21:20 +07 | elapsed 0.2s
+Commands: python3 ~/computer-use-wayland/scripts/overlay.py release --agent Codex --pid 109633; python3 ~/computer-use-wayland/scripts/overlay.py status
+Result: Codex holder released. Status shows remaining holder Muse (acquired 2026-11-27 06:47:08 +07), label "Computer use active", visible=true. Cannot report holders empty or visible=false while this other holder remains.
+
