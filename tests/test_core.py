@@ -267,6 +267,44 @@ class Coordinates(IsolatedCuState):
         self.assertEqual(cu.key_names(['CTRL','Enter']),(['ctrl'],['Return']))
         self.assertEqual(cu.key_names(['Shift','ArrowLeft','PageUp','f12']),(['shift'],['Left','Prior','F12']))
         self.assertEqual(cu.key_names(['Shift','Tab']),(['shift'],['ISO_Left_Tab']))
+    def test_blocked_key_combos_refused(self):
+        for keys in (['ctrl','alt','F1'],['ctrl','alt','f12'],
+                     ['ctrl','alt','BackSpace'],['ctrl','alt','Delete'],
+                     ['ctrl','alt','KP_Delete'],
+                     ['ctrl','altgr','Delete'],['ctrl','altgr','F2'],
+                     ['alt','PrintScreen'],['ctrl','Sys_Req'],
+                     ['Sys_Req'],
+                     *(['XF86Switch_VT_'+str(n)] for n in range(1,13)),
+                     ['ctrl','XF86Switch_VT_1'],['alt','XF86Switch_VT_12'],
+                     ['Terminate_Server'],['super','XF86LogOff'],
+                     ['super','q'],['super','shift','q'],['super','alt','q'],
+                     ['super','ctrl','p'],['super','ctrl','shift','p'],
+                     ['XF86PowerOff'],['XF86PowerDown'],['XF86Sleep'],
+                     ['XF86Suspend'],['XF86Hibernate']):
+            with self.assertRaisesRegex(ValueError,'blocked key combo'):
+                cu.key_names(keys)
+        # Neighbours that must stay allowed: Zen workspace switch,
+        # plain F-keys, screenshot without SysRq modifiers, Super+P
+        # variants without Ctrl, plain KP_Delete, AltGr alone.
+        self.assertEqual(cu.key_names(['ctrl','alt','Left']),(['ctrl','alt'],['Left']))
+        self.assertEqual(cu.key_names(['ctrl','alt','Right']),(['ctrl','alt'],['Right']))
+        self.assertEqual(cu.key_names(['F5']),([],['F5']))
+        self.assertEqual(cu.key_names(['PrintScreen']),([],['Print']))
+        self.assertEqual(cu.key_names(['super','p']),(['logo'],['p']))
+        self.assertEqual(cu.key_names(['super','shift','p']),(['logo','shift'],['p']))
+        self.assertEqual(cu.key_names(['KP_Delete']),([],['KP_Delete']))
+        self.assertEqual(cu.key_names(['altgr','Delete']),(['altgr'],['Delete']))
+    def test_capability_matrix_shape(self):
+        matrix=cu.capability_matrix()
+        self.assertEqual(set(matrix),{'a11y','cdp','zen_rdp','vision',
+                                      'pointer','keyboard','keybind'})
+        for lane in matrix.values():
+            self.assertIn('available',lane)
+            self.assertIn('entry',lane)
+            self.assertTrue(lane['operations'])
+            if lane['available']:
+                self.assertTrue(lane['entry'])
+        self.assertIn('query',matrix['a11y']['operations'])
     def test_bad_key_and_non_bmp_rejected_before_execution(self):
         for a in ([{'type':'key','keys':['not_a_key']}],[{'type':'type','text':'🐱'}],[{'type':'key','keys':['Ctrl']}],[{'type':'key','keys':['a'],'repeat':999}]):
             with self.assertRaises(ValueError):cu.validate_actions(a,'desktop')

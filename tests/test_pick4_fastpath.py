@@ -200,7 +200,7 @@ class A11yQueryGroundTests(unittest.TestCase):
         return ns
 
     def test_query_filters_and_caps(self):
-        ns = self._extract('query', '_pick4')
+        ns = self._extract('query', '_pick4', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: True
         snapshot = {'backend': 'a11y', 'app_name': 'App',
                     'created': time.time(), 'snapshot': '/tmp/s.json',
@@ -223,7 +223,7 @@ class A11yQueryGroundTests(unittest.TestCase):
             ns['query'](4242, name='save', limit=21)
 
     def test_query_refuses_with_flag_off(self):
-        ns = self._extract('query', '_pick4')
+        ns = self._extract('query', '_pick4', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: False
         ns['observe'] = mock.Mock()
         with self.assertRaisesRegex(ValueError, 'pick4 fast path is off'):
@@ -231,7 +231,7 @@ class A11yQueryGroundTests(unittest.TestCase):
         ns['observe'].assert_not_called()
 
     def test_ground_returns_fresh_box_and_root(self):
-        ns = self._extract('ground', '_pick4', '_component_extents')
+        ns = self._extract('ground', '_pick4', '_component_extents', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: True
         snapshot = {'backend': 'a11y', 'created': time.time(), 'pid': 4242,
                     'elements': [{'ref': 'e1', 'path': [], 'name': 'Save',
@@ -241,6 +241,7 @@ class A11yQueryGroundTests(unittest.TestCase):
         element = mock.Mock()
         ns['app'] = mock.Mock(return_value=root)
         ns['resolve'] = mock.Mock(return_value=element)
+        ns['wait_actionable'] = mock.Mock(return_value=element)
         boxes = {id(element): [300, 400, 120, 30], id(root): [100, 200, 800, 600]}
         ns['_component_extents'] = lambda e: boxes[id(e)]
         result = ns['ground']('/tmp/s.json', 'e1')
@@ -248,11 +249,11 @@ class A11yQueryGroundTests(unittest.TestCase):
         self.assertEqual(result['extents'], [300, 400, 120, 30])
         self.assertEqual(result['root_extents'], [100, 200, 800, 600])
         self.assertEqual(result['name'], 'Save')
-        ns['resolve'].assert_called_once()
+        ns['wait_actionable'].assert_called_once()
 
     def test_ground_uses_first_top_level_frame_extents(self):
         import types
-        ns = self._extract('ground', '_pick4', '_component_extents', '_ints4')
+        ns = self._extract('ground', '_pick4', '_component_extents', '_ints4', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: True
         ns['Atspi'] = types.SimpleNamespace(
             CoordType=types.SimpleNamespace(SCREEN=0))
@@ -280,6 +281,7 @@ class A11yQueryGroundTests(unittest.TestCase):
         ns['read_json_file'] = mock.Mock(return_value=snapshot)
         ns['app'] = mock.Mock(return_value=root)
         ns['resolve'] = mock.Mock(return_value=element)
+        ns['wait_actionable'] = mock.Mock(return_value=element)
 
         result = ns['ground']('/tmp/s.json', 'e1')
 
@@ -290,7 +292,7 @@ class A11yQueryGroundTests(unittest.TestCase):
 
     def test_ground_fails_closed_without_app_or_frame_extents(self):
         import types
-        ns = self._extract('ground', '_pick4', '_component_extents', '_ints4')
+        ns = self._extract('ground', '_pick4', '_component_extents', '_ints4', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: True
         ns['Atspi'] = types.SimpleNamespace(
             CoordType=types.SimpleNamespace(SCREEN=0))
@@ -311,12 +313,13 @@ class A11yQueryGroundTests(unittest.TestCase):
         ns['read_json_file'] = mock.Mock(return_value=snapshot)
         ns['app'] = mock.Mock(return_value=root)
         ns['resolve'] = mock.Mock(return_value=element)
+        ns['wait_actionable'] = mock.Mock(return_value=element)
 
         with self.assertRaisesRegex(ValueError, 'no window frame extents; use vision'):
             ns['ground']('/tmp/s.json', 'e1')
 
     def test_ground_refuses_with_flag_off(self):
-        ns = self._extract('ground', '_pick4')
+        ns = self._extract('ground', '_pick4', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: False
         ns['read_json_file'] = mock.Mock()
         with self.assertRaisesRegex(ValueError, 'pick4 fast path is off'):
@@ -324,10 +327,11 @@ class A11yQueryGroundTests(unittest.TestCase):
         ns['read_json_file'].assert_not_called()
 
     def test_ground_fails_closed(self):
-        ns = self._extract('ground', '_pick4', '_component_extents')
+        ns = self._extract('ground', '_pick4', '_component_extents', '_completeness', 'parse_ref')
         ns['_pick4'] = lambda: True
         ns['app'] = mock.Mock()
         ns['resolve'] = mock.Mock()
+        ns['wait_actionable'] = mock.Mock()
         stale = {'backend': 'a11y', 'created': time.time() - 91, 'pid': 1,
                  'elements': []}
         ns['read_json_file'] = mock.Mock(return_value=stale)

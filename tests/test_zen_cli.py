@@ -363,7 +363,7 @@ class ZenCliTest(unittest.TestCase):
         real = self.make_profile([
             ("https://example.com/", "Example Domain", 2, 1794000000000000),
         ])
-        decoy = self.home / ".config" / "zen" / "pkdwoij3.Default Profile"
+        decoy = self.home / ".config" / "zen" / "decoy-profile.Default Profile"
         decoy.mkdir(parents=True)
         # The fixture profile dir is named abc.default-release, so point
         # the ini at the real fixture dir, with a decoy Default=1 profile
@@ -374,7 +374,7 @@ class ZenCliTest(unittest.TestCase):
             "[Install15B76BAA26BA15E7]\n"
             "Default=%s\nLocked=1\n\n"
             "[Profile1]\nName=Default Profile\nIsRelative=1\n"
-            "Path=pkdwoij3.Default Profile\nDefault=1\n"
+            "Path=decoy-profile.Default Profile\nDefault=1\n"
             % (real.name, real.name))
         code, _, parsed = self.run_wrapper("history", "--limit", "5")
         self.assertEqual(code, 0)

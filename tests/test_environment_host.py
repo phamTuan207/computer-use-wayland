@@ -31,7 +31,7 @@ class HostEnvironment(unittest.TestCase):
         self.hypr_response = None
 
     def base(self, **values):
-        result = {'HOME': '/home/james', 'USER': 'james', 'LOGNAME': 'james',
+        result = {'HOME': '/home/testuser', 'USER': 'testuser', 'LOGNAME': 'testuser',
                   'PATH': '/usr/bin:/bin', 'XDG_CACHE_HOME': '/tmp/cu-fixture-cache',
                   'PYTHONDONTWRITEBYTECODE': '1'}
         result.update(values)
@@ -84,7 +84,7 @@ class HostEnvironment(unittest.TestCase):
             'XDG_SEAT': 'seat-fixture',
             'XDG_VTNR': '9',
             'USER': 'gui-user',
-            'HOME': '/home/james',
+            'HOME': '/home/testuser',
             'LOGNAME': 'gui-user',
             'PATH': '/donor/bin:/usr/bin',
             'GDK_BACKEND': 'wayland,x11',
@@ -164,7 +164,7 @@ class HostEnvironment(unittest.TestCase):
         found = self.run_environment()
         self.assertEqual(found['PATH'], '/different/donor/path')
         self.assertEqual((found['USER'], found['HOME'], found['LOGNAME']),
-                         ('james', '/home/james', 'james'))
+                         ('testuser', '/home/testuser', 'testuser'))
 
     def test_does_not_invent_missing_display_seat_or_platform_hints(self):
         donor = self.session_environ()
@@ -398,10 +398,10 @@ class HostEnvironment(unittest.TestCase):
         self.assertNotIn('GTK_IM_MODULE', found)
 
     def test_home_change_that_moves_default_state_root_is_refused(self):
-        donor = self.session_environ(HOME='/home/different-gui-home')
+        donor = self.session_environ(HOME='/home/demo')
         self.make_instance(donor['HYPRLAND_INSTANCE_SIGNATURE'])
         self.add_donor(200, 'waybar', donor)
-        base = {'HOME': str(pathlib.Path.home()), 'USER': 'james', 'LOGNAME': 'james',
+        base = {'HOME': str(pathlib.Path.home()), 'USER': 'testuser', 'LOGNAME': 'testuser',
                 'PATH': '/usr/bin:/bin'}
         with self.assertRaisesRegex(RuntimeError, 'donated HOME would change the already computed default'):
             self.run_environment(base)
