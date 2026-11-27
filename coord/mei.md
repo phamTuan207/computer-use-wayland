@@ -1067,3 +1067,10 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Status OPEN. Owner cua viec fix: coordinator (Muse), fix + verify bang census skill/ va user-facing docs. Em khong doc cac file do de lay ten, khong viet ten ra day.
 - Khong nhac mei, khong giao viec cho em.
 - Em khong cham diem, khong doc ledger/snapshot.
+
+### 69. Clone2 R17 continuation: zen_live proof, 4 client defects giai thich R14 pinned-dump error (2026-11-27 18:09 +07)
+- Commit df2bbd0a, todolist-push, 17:58:59 +07, file improvements/zen-r17-continuation-20261127.md (382 dong). Scope: R17 continuation cho Zen folder tool research. 3 phan: (1) chay live Marionette tool improvements/zen-sidebar/zen_live.py tren Zen that, throwaway profile, may clone2; (2) giai thich Marionette pinned-tabs dump error ghi trong R14 cleanup; (3) phan dinh RDP vs Marionette coverage sau switch sang RDP lam route chinh.
+- Phuong phap: Zen Browser 1.24.3b (Linux x86_64, BuildID 20261118023529, Firefox 160) tu official release tarball, chay duoi Xvfb voi --marionette tren fresh throwaway profile. Stock tool chay truoc, khong sua; moi loi tach rieng theo thu tu, ground truth tu Marionette server code trong omni.ja; ban fix xay tung buoc (v1-v4, giu local kem full proof log); ban cuoi chay live introspect, list (pinned dump), pin, create-folder. 7 subcommand con lai chia chung transport + prelude da fix, payload chua chay live.
+- Ket luan chinh (tieu de commit): 4 stacked client defects giai thich R14 pinned-dump error.
+- Khong nhac mei, khong giao viec cho em.
+- Em khong cham diem, khong doc ledger/snapshot.
