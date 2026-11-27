@@ -1,0 +1,53 @@
+Task: di-tim-bai-de-nhat
+Date: 2026-11-27 (Asia/Ho_Chi_Minh)
+Start: 06:58:14 +07
+
+Step log (wall clock; elapsed from start)
+- 06:58:14 (+00:00): Began task; inspected task directory and applicable instructions.
+- 06:58:19 (+00:05): Overlay acquired using long-lived Codex PID 71458. Status verified visible=true, label="Computer use active". Another holder (Muse) was already present.
+- 06:58:31 (+00:17): Wrote sol.cpp and difficulty.txt.
+- 06:58:32 (+00:18): Compile command completed, exit code 0.
+- 06:58:41 (+00:27): Ran the two statement samples and two self-made edge cases; all passed.
+
+Compile
+Command: g++ -O2 -std=c++17 -o ~/cf735368-work/di-tim-bai-de-nhat/sol ~/cf735368-work/di-tim-bai-de-nhat/sol.cpp
+Result: success (exit code 0) at 06:58:32 +07.
+
+Tests
+1) Sample 1
+Input:
+3
+0 0 1
+Hand-computed expected: HARD (there is at least one 1).
+Actual: HARD
+Result: PASS
+
+2) Sample 2
+Input:
+1
+0
+Hand-computed expected: EASY (the only opinion is 0).
+Actual: EASY
+Result: PASS
+
+3) Self-made minimum bound, all easy
+Input:
+1
+0
+Hand-computed expected: EASY.
+Actual: EASY
+Result: PASS
+
+4) Self-made maximum bound, hard opinion is last
+Input:
+100
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+Hand-computed expected: HARD (the last of the 100 opinions is 1).
+Actual: HARD
+Result: PASS
+
+All four tests passed; no debugging was needed.
+- 06:59:01 (+00:47): Released overlay with the same PID (71458). Verification showed only the pre-existing Muse holder remains; holders are not empty and visible remains true. No other holder was changed.
+
+End: 06:59:01 +07
+Elapsed: 00:47

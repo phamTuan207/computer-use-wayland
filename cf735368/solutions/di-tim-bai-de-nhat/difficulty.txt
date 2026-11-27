@@ -1,0 +1,3 @@
+AI-estimated: Nhan biet
+
+Bài yêu cầu đọc các ý kiến 0/1 và in HARD nếu có ít nhất một giá trị 1, nếu không thì in EASY; chỉ cần vòng lặp và kiểm tra điều kiện cơ bản. Các trường hợp biên n=1 và n=100 đều nằm gọn trong giới hạn, không có công thức khó hay áp lực đáng kể về thời gian, bộ nhớ hoặc tràn số.
