@@ -43,10 +43,10 @@ PILOT (running, unproven).
 |---|---|---|---|---|
 | 0 | Privacy census + scrub (skill/ + user-facing docs; main's two files) | agent-desktop s.6 | ON MAIN | PR #1140 merged d69ef7c9; see record below |
 | 1 | zen_live.py four defects + test fixes + run_op smoke | R17 s.4 | LIVE-TESTED | e3d81539; live proof on laptop 2026-11-27 18:35-18:38; see record below |
-| 2 | M16 hermetic-suite gate + lineage check (incl. cherry-pick c7bc697e) | bottleneck M16 | QUEUED | PROVEN detector |
-| 3 | M17 sharded discover (serial stays gate of record) | bottleneck M17 | QUEUED | PROVEN 1.57x on VM; re-measure on laptop |
-| 4 | I13 architecture guard (import map first; docs + name denylist) | agent-desktop I13 | QUEUED | Closes the privacy blind spot |
-| 5 | I21 blocked key-combo list (conservative subset; full after Hyprland check) | agent-desktop I21 | QUEUED | |
+| 2 | M16 hermetic-suite gate + lineage check (incl. cherry-pick c7bc697e) | bottleneck M16 | IMPLEMENTED | 26662dea + 03f177b0 + db91f346 (CI); detector proven pre/post fix |
+| 3 | M17 sharded discover (serial stays gate of record) | bottleneck M17 | IMPLEMENTED + MEASURED | Full SHARD MATCH 2340 tests; 175.7s vs 292.0s (1.66x, 1.5-CPU VM); laptop re-measure pending |
+| 4 | I13 architecture guard (import map first; docs + name denylist) | agent-desktop I13 | IMPLEMENTED | 4b2cf7cf; found+fixed 7 hardcoded home paths |
+| 5 | I21 blocked key-combo list (conservative subset; full after Hyprland check) | agent-desktop I21 | IMPLEMENTED | 2e4369ac; full list from live Hyprland binds |
 | 6 | I3 snapshot-qualified refs (additive, id in file, grandfather legacy) | agent-desktop I3 | QUEUED | |
 | 7 | M2 one-pass seal wrapper (gate stays separately runnable) | bottleneck M2 | QUEUED | PROVEN manifest identity |
 | 8 | I8 probes/ + probe ledger | agent-desktop I8 | QUEUED | Measurement layer for later pilots |
@@ -153,6 +153,83 @@ Verdict: the four-defect fix is live-proven on Zen 1.24.3b on
 the real laptop for introspect/list/pin/create-folder.
 Remaining subcommands share the fixed transport and prelude;
 their payloads were not run live (same boundary as R17).
+
+### Items 2-3: M16 hermetic gate + lineage, M17 sharding (2026-11-27)
+
+Implementation: rung3-ci/test-discover.py (per-test runner,
+hermetic diff gate, sharded runner with --compare-serial),
+rung3-ci/lineage-check.py + lineage-manifest.txt (content
+markers, since cherry-picks rewrite hashes), unit tests in
+rung3-ci/test-test-discover.py (5 tests OK). The tc02 fix was
+cherry-picked from main (26662dea); lineage check passes.
+
+Detector proof (this VM has tesseract installed): with the
+pre-fix test file, the hermetic gate FAILs naming exactly the
+2 tc02 typed-text tests; post-fix it PASSes. Exit codes
+verified (0 post-fix).
+
+Sharding identity: first full run mismatched (1808 vs 2337
+tests) because loadTestsFromName does not reproduce discover
+identity for import-failing modules, plus a module-name
+normalization bug in the shard filter. Fixed by filtering a
+discovered suite (identity-exact by construction), attributing
+_FailedTest entries to the failing module, and an @@RESULT@@
+marker (a test's own stdout had polluted parsing). Second full
+run: 2337 vs 2338, 2 mismatches, both test_ime_cleanup
+real-signal timing tests flaking under 4-way parallel load on
+a 1.5-CPU VM (serial 3/3 OK; different tests flake each shard
+run). Resolution: --serial-only list (default test_ime_cleanup)
+run in the parent; serial stays gate of record. Third full
+run: 2338 = 2338, 1 mismatch: test_cli_exit_codes exists as a
+bare function test in TWO modules (test_phase3_brief,
+test_phase3_cleanup), colliding in the outcome map. Fixed by
+qualifying bare FunctionTestCase ids with their module and
+parsing the RESULT status from the right (some ids contain
+spaces). Subset re-test incl. the colliding modules: SHARD
+MATCH. Fourth full run: 2340 = 2340, 1 mismatch:
+test_phase3_cleanup.test_cli_exit_codes serial=ok shard=fail.
+Root cause (explained in writing per M17): the test runs
+session_cleanup.py --check, which scans the ambient /proc for
+a cmdline containing both 'cursor_session' and 'guard'; the
+shard runner's own cmdline contains both substrings (module
+names test_cursor_session + test_cursor_guard_build), so the
+check flips under sharding. Fixed at the source: a
+--procs-file test-support flag on session_cleanup.py and the
+test passes an empty procs file (3e699cec). Subset with the
+cursor modules: SHARD MATCH. Fifth full run: SHARD MATCH,
+2340 tests, sharded 175.7s vs serial 292.0s (1.66x on this
+1.5-CPU VM). Measured walls across runs: serial 292.0-313.0s,
+sharded 162.7-200.9s (1.54-1.82x). Pre-existing suite state on
+this VM: 2233 ok, 81 error, 9 fail, 17 skip (missing build
+artifacts/binaries; identical in serial and sharded).
+M17 measurement complete; laptop re-measure pending (more
+cores, expect better).
+
+### Item 4: I13 architecture guard (2026-11-27)
+
+rung3-ci/arch-guard.py + import-map.txt (generated from the
+current 71-module graph; new edges must be added deliberately)
++ test-arch-guard.py (2 tests OK). Machine-value denylist:
+personal name forms, profile-dir hash pattern, home paths,
+Tailscale IPs; scanned over scripts/, skill/, docs/, README.
+First run found 7 pre-existing hardcoded /home/<vm-user> paths
+(bench_manifest.py, ssh_mux.py, ssh-laptop-mux.sh); all fixed
+to Path.home()/$HOME. Guard now PASSes.
+
+### Item 5: I21 blocked key combos (2026-11-27)
+
+Blocklist at the key_names() choke point in scripts/cu.py;
+refusals raise ValueError (surface in action results, logged).
+Verified against live Hyprland binds on the laptop:
+Ctrl+Alt+Delete = close all windows, Super+Q = close window,
+Super+Ctrl+P + XF86PowerOff = power menu; plus kernel-level
+VT-switch (Ctrl+Alt+F1..F12) and SysRq combos. Neighbours
+verified still allowed (Ctrl+Alt+Left/Right Zen workspace
+switch, plain F5, plain PrintScreen). Tests in
+tests/test_core.py (test_blocked_key_combos_refused). One
+pre-existing error in test_core on this VM (missing
+native/wtype build artifact), identical with and without the
+change.
 
 ## Sources cited during this phase
 
