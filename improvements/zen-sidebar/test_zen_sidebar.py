@@ -258,7 +258,9 @@ class JsPayloadTests(unittest.TestCase):
 
 
 class FakeMarionetteServer(threading.Thread):
-    """Modes: normal | dribble (byte-chunked sends) | error | wrongid."""
+    """Modes: normal | dribble (byte-chunked sends) | error | wrongid |
+    slowdrip | flood | badsize | negsize | barejson | oversize
+    (the last six misbehave at the greeting, for robustness tests)."""
 
     def __init__(self, mode="normal"):
         super().__init__(daemon=True)
@@ -277,8 +279,42 @@ class FakeMarionetteServer(threading.Thread):
         else:
             conn.sendall(data)
 
+    def _run_bad_greeting(self, conn):
+        try:
+            if self.mode == "slowdrip":
+                # One byte every 0.4s, never a colon: every recv
+                # succeeds well inside a per-recv timeout, so only an
+                # overall frame deadline can stop this.
+                while True:
+                    conn.sendall(b"x")
+                    time.sleep(0.4)
+            elif self.mode == "flood":
+                # Endless bytes, never a colon: only a buffer cap
+                # stops the client buffer growing without bound.
+                while True:
+                    conn.sendall(b"x" * 65536)
+            elif self.mode == "badsize":
+                conn.sendall(b"abc:{}")
+                time.sleep(0.5)
+            elif self.mode == "negsize":
+                conn.sendall(b"-5:hello")
+                time.sleep(0.5)
+            elif self.mode == "barejson":
+                # Greeting as bare JSON, no length prefix.
+                conn.sendall(b'{"applicationType":"gecko","marionetteProtocol":3}')
+                time.sleep(0.5)
+            elif self.mode == "oversize":
+                conn.sendall(b"99999999:{}")
+                time.sleep(0.5)
+        except OSError:
+            return
+
     def run(self):
         conn, _ = self.listener.accept()
+        if self.mode in ("slowdrip", "flood", "badsize", "negsize",
+                         "barejson", "oversize"):
+            self._run_bad_greeting(conn)
+            return
         # The real server sends the greeting as a length-prefixed frame.
         greeting = b'{"applicationType":"gecko","marionetteProtocol":3}'
         self._send(conn, str(len(greeting)).encode() + b":" + greeting)
@@ -456,6 +492,41 @@ class PreflightTests(unittest.TestCase):
             finally:
                 os.environ.clear()
                 os.environ.update(old)
+
+
+class MarionetteRobustnessTests(unittest.TestCase):
+    """A misbehaving server must fail fast with MarionetteError, never
+    hang the client, grow its buffer without bound, or leak a raw
+    ValueError/JSONDecodeError traceback."""
+
+    def _bad_client(self, mode, **kwargs):
+        server = FakeMarionetteServer(mode)
+        server.start()
+        return zen_live.Marionette("127.0.0.1", server.port, **kwargs)
+
+    def test_slow_drip_hits_overall_deadline(self):
+        start = time.monotonic()
+        with self.assertRaises(zen_live.MarionetteError):
+            self._bad_client("slowdrip", timeout=0.5)
+        elapsed = time.monotonic() - start
+        # Deadline is 0.5s; the drip would otherwise run forever
+        # (each byte lands inside a per-recv timeout).
+        self.assertLess(elapsed, 2.0)
+
+    def test_flood_without_colon_hits_frame_cap(self):
+        with self.assertRaises(zen_live.MarionetteError):
+            self._bad_client("flood", timeout=5, max_frame_size=1024)
+
+    def test_malformed_sizes_raise_marionette_error(self):
+        for mode, kwargs in (("badsize", {}), ("negsize", {}),
+                             ("barejson", {}),
+                             ("oversize", {"max_frame_size": 1024})):
+            with self.subTest(mode=mode):
+                with self.assertRaises(zen_live.MarionetteError) as ctx:
+                    self._bad_client(mode, timeout=5, **kwargs)
+                if mode in ("badsize", "barejson"):
+                    # Parse failures keep the original error chained.
+                    self.assertIsInstance(ctx.exception.__cause__, ValueError)
 
 
 if __name__ == "__main__":
