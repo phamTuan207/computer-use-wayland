@@ -47,7 +47,7 @@ PILOT (running, unproven).
 | 3 | M17 sharded discover (serial stays gate of record) | bottleneck M17 | IMPLEMENTED + MEASURED | Full SHARD MATCH 2340 tests; 175.7s vs 292.0s (1.66x, 1.5-CPU VM); laptop re-measure pending |
 | 4 | I13 architecture guard (import map first; docs + name denylist) | agent-desktop I13 | IMPLEMENTED | 4b2cf7cf; found+fixed 7 hardcoded home paths |
 | 5 | I21 blocked key-combo list (conservative subset; full after Hyprland check) | agent-desktop I21 | IMPLEMENTED | 2e4369ac; full list from live Hyprland binds |
-| 6 | I3 snapshot-qualified refs (additive, id in file, grandfather legacy) | agent-desktop I3 | QUEUED | |
+| 6 | I3 snapshot-qualified refs (additive, id in file, grandfather legacy) | agent-desktop I3 | IMPLEMENTED + LIVE-TESTED | ec7e60b7; live on laptop AT-SPI app: id in file, qualified ground ok, bare warns, foreign refused |
 | 7 | M2 one-pass seal wrapper (gate stays separately runnable) | bottleneck M2 | QUEUED | PROVEN manifest identity |
 | 8 | I8 probes/ + probe ledger | agent-desktop I8 | QUEUED | Measurement layer for later pilots |
 | 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | QUEUED | Needs scripts/zen-rdp/ brought in; compat shim |
@@ -230,6 +230,28 @@ tests/test_core.py (test_blocked_key_combos_refused). One
 pre-existing error in test_core on this VM (missing
 native/wtype build artifact), identical with and without the
 change.
+
+### Item 6: I3 snapshot-qualified refs (2026-11-27)
+
+scripts/a11y.py: observe() now records snapshot_id inside the
+snapshot file (was filename-only); parse_ref() accepts
+'<snapshot_id>:<ref>', refuses a foreign id, warns on stderr
+for bare refs against id-carrying snapshots, and grandfathers
+legacy snapshots without an in-file id. Wired into ground,
+drill, act (actions normalized once before validation and
+execution). ground() returns qref. Tests: 6 new in
+tests/test_a11y.py (26 total OK); the 4 act-exec harness sites
+updated to include parse_ref. 22 pre-existing errors in
+test_p2_element_ref on this VM, identical with/without.
+
+Live test (laptop, under cu.py session pill, read-only):
+Zen is not AT-SPI-registered, so the target was a listed
+AT-SPI app (pid 1072896 'Unnamed'). observe -> snapshot_id in
+result and in file; ground with qualified ref ok (qref
+b73818eabcf2:e1); bare ref ok with deprecation warning;
+foreign id refused. Owner Zen PID 807599 untouched. Test
+files removed. Pre-existing stale indicator socket from
+2026-11-21 left in place (not from this work).
 
 ## Sources cited during this phase
 
