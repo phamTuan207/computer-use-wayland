@@ -50,7 +50,7 @@ PILOT (running, unproven).
 | 6 | I3 snapshot-qualified refs (additive, id in file, grandfather legacy) | agent-desktop I3 | IMPLEMENTED + LIVE-TESTED | ec7e60b7; live on laptop AT-SPI app: id in file, qualified ground ok, bare warns, foreign refused |
 | 7 | M2 one-pass seal wrapper (gate stays separately runnable) | bottleneck M2 | IMPLEMENTED | rung3-ci/seal.py + test-seal.py (3 tests OK) |
 | 8 | I8 probes/ + probe ledger | agent-desktop I8 | IMPLEMENTED | probes/ + ledger.jsonl (11 rows, validator OK); mandatory A/B gate half stays rejected |
-| 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | QUEUED | Needs scripts/zen-rdp/ brought in; compat shim |
+| 9 | I1 envelope + disposition, Zen lane first (rdp_client.py) | agent-desktop I1+I7 | IMPLEMENTED + LIVE-TESTED | 5313179d; live on owner Zen 6021: tabs/probe/eval envelopes, unscoped exit 2, legacy bare; 38 tests OK |
 | 10 | I17 post-action wait flags (after I1, no default timeout) | agent-desktop I17 | QUEUED | |
 | 11 | I22 secure-field redaction, DOM/RDP only | agent-desktop I22 | QUEUED | |
 | 12 | I5 accounting half (per-node completeness, skeleton, drill-down) | agent-desktop I5 | QUEUED | |
@@ -279,6 +279,32 @@ probes/validate-ledger.py (rows parse, required fields,
 cited paths exist; LEDGER OK: 11 rows). The mandatory
 merge-base A/B gate half stays rejected per the source
 report; docs/benchmarks/ remains the public aggregate store.
+
+### Item 9: I1 envelope + disposition, Zen lane (2026-11-27)
+
+scripts/zen-rdp/ brought in from fix-review-20261127
+(3450c85f). Consumer inventory: rdp_smoke.py and the live
+harnesses use the library API (unchanged); no CLI-stdout
+parsers exist in skill/, tests/, docs/, coord/, rung3-ci/.
+Envelope v1 in rdp_client.py main(): {version, ok, command,
+result, error{code,message,disposition}, disposition};
+exit codes 0/1/2 (runtime vs usage; _build_scope validation
+is usage-class); error codes classified from the existing
+ALL-CAPS refusal prefixes plus transport/evaluate patterns;
+disposition per command (reads delivered_verified, eval/peval
+delivered_unverified, navigate delivered_verified; refusals
+not_delivered/safe, post-send action failures
+delivery_uncertain/unsafe). --legacy-output restores the old
+behavior exactly. Migration notes in scripts/zen-rdp/README.md.
+Tests: test_envelope.py (9) + test_scope_unittest.py (29, two
+dead-port expectations updated 2->1 per the new contract) = 38
+OK. I7 read-outcome labels ride in the disposition field.
+
+Live test (laptop, cu.py session pill, owner Zen RDP 6021,
+read-only): tabs envelope ok (12 tabs, delivered_verified);
+probe webdriver CLEAN; eval 1+1=2 delivered_unverified;
+unscoped refusal exit 2 code unscoped_refused; legacy bare
+payload. Zen PID 807599 untouched; test files removed.
 
 ## Sources cited during this phase
 
