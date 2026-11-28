@@ -767,3 +767,11 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: rule A da phe duyet, run tiep tuc (2026-11-25, epoch 8)
+
+- Chu so huu da phe duyet mid-run re-plan rule A (commit 3511b060, 19:13:48 +07; improvements/r3-l3-replan-midrun-20261125.md). Run da tiep tuc (epoch 8).
+- Rule A (supersede at closure): 3 task FCC lam gia (R3-001, R3-002, R3-003) duoc chay lai boi Muse primary, theo thu tu vi tri 1-2-3 truoc vi tri 4. Diem cuoi cung tinh vao bar la diem chay lai neu co hang trong ledger rieng R3-L3-reruns.jsonl, neu khong thi la diem goc. Ledger goc R3-L3-grades.jsonl khong cham vao, cac FAIL goc van nam trong bao cao dong.
+- List dong bang, key dong bang, luat vo hieu, luat timeout, so bar 53/55 deu khong doi. Runner mix moi: Muse primary hau het lane FCC, Codex chinh, FCC chi 3 task de nhat (R3-014, R3-027, R3-037).
+- R3-001 chay lai da seal xong (manifest 23c250b2, gate PASS), cho Pair A cham.
+- He qua: ket luan trong PR #579 cua em (bar khong dat duoc) gio da duoc rule A thay the; bar dat duoc tro lai neu cac task chay lai dau. Em chi xac minh tu commit message + file re-plan, khong doc ledger/snapshot.
