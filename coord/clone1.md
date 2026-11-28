@@ -2005,8 +2005,7 @@ Báo cáo ở docs/batch6-redteam-20261122.md (403 dòng theo wc -l),
 đã push (9a8b093).
 
 Tổng: 12 sai thực tế, 8 claim chưa kiểm chứng nhưng nói như đã
-xong, 2 bug thật, 6 nhỏ. Phán quyết tự nó hầu hết đứng: 13 vi
-phạm là thật, D1 SOUND, các lần chạy Firefox khớp đúng từng số.
+xong, 2 bug thật, 6 nhỏ. Phán quyết tự nó hầu hết đứng: 13 vi phạm là thật, D1 SOUND, các lần chạy Firefox khớp đúng từng số.
 Hỏng ở kế toán bằng chứng, timestamp, và một báo cáo đã cũ.
 
 Nặng nhất:
@@ -2489,8 +2488,7 @@ là hàng VERDICT. Ghi chú: trích "MEMORY.md 22:57" giờ tổng 20
 dòng trên branch (đợt 6 audit là 13), giải thích đủ bằng chính các
 sửa (5 trong doc sửa + 2 trong entry V1).
 
-Không kiểm lại được: "Không tồn tại trên VM của clone2" (cả 3 vi
-phạm, cả 2 báo cáo): không truy cập VM clone2 từ máy này. Chưa
+Không kiểm lại được: "Không tồn tại trên VM của clone2" (cả 3 vi phạm, cả 2 báo cáo): không truy cập VM clone2 từ máy này. Chưa
 chứng minh sai, chỉ là chưa kiểm được ở đây. P-33 ở
 opt-redteam-m-skeptic.md:58 xác nhận qua grep; council không đọc
 đủ opt-redteam-m-verdict.md dòng 33 và 81. Tip "tiến 2 lần" theo

@@ -17,20 +17,24 @@ Two checks, both mechanical defences of project principles:
    graph, it does not bless it.
 
 2. Machine values: a small denylist scanned over scripts/,
-   skill/, docs/, .github/, tests/, skills/, native/ and the
-   repo root files: personal name forms (any case, spaced or
-   separator-joined), real Firefox/Zen profile dir names
-   (8-char hash + .Default), home-dir paths with a real
-   username, and Tailscale-range addresses (the CGNAT range
-   literal 100.64.0.0/10 in documentation is not a hit).
-   Split string literals and values split across lines are
-   caught by a normalized second pass. Files are decoded with
-   errors="replace" so invalid UTF-8 cannot hide content.
-   Historical records (improvements/, rung3-run-log/, coord/)
-   and this directory (rung3-ci/, which holds the patterns
-   themselves) are out of scope by design; test fixtures with
-   fake values and frozen ship/bench records are allowlisted
-   by path below, each with a stated reason.
+   skill/, docs/, .github/, tests/, skills/, native/,
+   improvements/, coord/, probes/, snippets/,
+   rung3-run-log/ and the repo root files: personal name
+   forms (any case, spaced or separator-joined), real
+   Firefox/Zen profile dir names (8-char hash + .Default),
+   home-dir paths with a real username, and Tailscale-range
+   addresses (the CGNAT range literal 100.64.0.0/10 in
+   documentation is not a hit). Split string literals and
+   values split across lines are caught by a normalized
+   second pass. Files are decoded with errors="replace" so
+   invalid UTF-8 cannot hide content. This directory
+   (rung3-ci/, which holds the patterns themselves) is out
+   of scope by design; test fixtures with fake values and
+   frozen ship/bench records are allowlisted by path below,
+   each with a stated reason. (Scope extended 2026-11-28,
+   Phase 0 of the repo-redo research: improvements/, coord/,
+   probes/, snippets/ and rung3-run-log/ were previously
+   unscanned and carried tip exposures.)
 
 Exit 1 on any violation. Python standard library only.
 """
@@ -55,11 +59,18 @@ ROOT = os.path.dirname(HERE)
 # never matches, while spaced, hyphenated, underscored and
 # concatenated full-name forms do.
 DENY_PATTERNS = [
+    # Diacritic forms: the bare surname syllable also appears in
+    # two common Vietnamese words (the words for "violation" and
+    # "scope"), which are not name references. The lookarounds
+    # exclude exactly those two compounds; every other bare
+    # occurrence (including other compounds) still hits, fail
+    # closed. (Precision fix 2026-11-28, Phase 0 gate extension;
+    # covered by unit tests in test-arch-guard.py.)
     ("personal-name", re.compile(
         r"(?<![A-Za-z])pham[\s._-]+tuan(?![A-Za-z])"
         r"|(?<![A-Za-z])phamtuan[\s._-]*huy(?![A-Za-z])"
         r"|(?<![A-Za-z])tuan[\s._-]*huy(?![A-Za-z])"
-        r"|phạm|tuấn", re.IGNORECASE)),
+        r"|(?<!vi )phạm(?!\s+vi\b)|tuấn", re.IGNORECASE)),
     ("profile-dir", re.compile(r"\b[a-z0-9]{8}\.Default\b")),
     # user/demo/testuser are placeholders and synthetic fixture
     # homes, not real usernames. Any other username is a hit,
@@ -71,7 +82,8 @@ DENY_PATTERNS = [
     ("tailscale-ip", re.compile(r"\b100\.\d{1,3}\.\d{1,3}\.\d{1,3}\b(?!/10\b)")),
 ]
 SCAN_DIRS = ["scripts", "skill", "docs", ".github", "tests",
-             "skills", "native"]
+             "skills", "native", "improvements", "coord",
+             "probes", "snippets", "rung3-run-log"]
 # Paths (relative, prefix match) exempt from the machine-value
 # scan, each with its reason:
 ALLOW_PREFIXES = (
