@@ -10,7 +10,7 @@
 //
 // Usage:
 //   PLAYWRIGHT_PATH=/tmp/hcu-scratch/node_modules/playwright-core \
-//   CHROMIUM_PATH=/home/hatch/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome \
+//   CHROMIUM_PATH=$HOME/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome \
 //     node tests/hcu_batch.mjs [--mode batch|single] [--url URL]
 //     [--actions actions.json] [--timeout-ms 30000]
 //
@@ -22,6 +22,7 @@
 // elapsed milliseconds, plus a final summary line.
 
 import { createRequire } from 'node:module';
+import { homedir } from 'node:os';
 import { readFileSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
@@ -229,7 +230,7 @@ async function main() {
     process.exit(3);
   }
   const { chromium } = createRequire(import.meta.url)(playwrightPath);
-  const chromiumPath = process.env.CHROMIUM_PATH || '/home/hatch/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome';
+  const chromiumPath = process.env.CHROMIUM_PATH || join(homedir(), '.cache/ms-playwright/chromium-1254/chrome-linux64/chrome');
 
   const started = Date.now();
   const startedWall = new Date().toISOString();

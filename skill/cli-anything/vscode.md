@@ -64,7 +64,7 @@ computer-use cli run vscode -- workspaces
 computer-use cli run vscode -- tabs
 
 # Read a saved file (bounded)
-computer-use cli run vscode -- read /home/james/Work/iac-eval/README.md
+computer-use cli run vscode -- read ~/Work/iac-eval/README.md
 
 # List extensions with versions
 computer-use cli run vscode -- extensions
@@ -73,7 +73,7 @@ computer-use cli run vscode -- extensions
 Or run the wrapper directly from the repo checkout:
 
 ```bash
-python3 scripts/vscode_cli.py tabs --workspace /home/james/Work/iac-eval
+python3 scripts/vscode_cli.py tabs --workspace ~/Work/iac-eval
 ```
 
 ## Command Groups
@@ -126,7 +126,7 @@ Extension inventory commands.
 ### Open a file at a line
 
 ```bash
-computer-use cli run vscode -- open /home/james/Work/iac-eval/evaluation/metrics.py --goto 42
+computer-use cli run vscode -- open ~/Work/iac-eval/evaluation/metrics.py --goto 42
 ```
 
 ### Open a scratch workspace in a new window
@@ -138,7 +138,7 @@ computer-use cli run vscode -- open /tmp/vscode-live-test --new-window
 ### Find what is open in one workspace
 
 ```bash
-computer-use cli run vscode -- tabs --workspace /home/james/Work/iac-eval
+computer-use cli run vscode -- tabs --workspace ~/Work/iac-eval
 ```
 
 ### Compare two files
@@ -173,7 +173,7 @@ Every command prints exactly one JSON object on stdout and exits 0 on
 success, 1 on error:
 
 ```json
-{"ok": true, "workspaces": [{"workspace": "/home/james/Work/iac-eval", "kind": "folder", "hash": "92fcf26671f2e2328dcb22795279d90e", "groups": [{"group": 0, "editors": ["/home/james/Work/iac-eval/templates/aws_iam_policy/demo_policy.rego"], "active": "/home/james/Work/iac-eval/templates/aws_iam_policy/demo_policy.rego"}]}]}
+{"ok": true, "workspaces": [{"workspace": "~/Work/iac-eval", "kind": "folder", "hash": "92fcf26671f2e2328dcb22795279d90e", "groups": [{"group": 0, "editors": ["~/Work/iac-eval/templates/aws_iam_policy/demo_policy.rego"], "active": "~/Work/iac-eval/templates/aws_iam_policy/demo_policy.rego"}]}]}
 ```
 
 Through `computer-use cli run`, that object arrives inside the standard

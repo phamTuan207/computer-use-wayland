@@ -19,7 +19,7 @@ neu dung deu, va khi chet thi dang nhap lai bang 1 click qua account chooser, kh
 - Phien chet som khi: doi IP hoac thiet bi (IP datacenter/VPN hay bi Google danh dau la),
   khong hoat dong lau, trinh duyet xoa cookie, hoac dang xuat o noi khac.
 - Account switcher chi nho danh sach tai khoan, khong giu phien song. Moi tai khoan co phien
-  rieng va chet doc lap. Dung chuyen hom nay: phamtuanhuy1109 chet, dangtmuda van song.
+  rieng va chet doc lap. Dung chuyen hom nay: mot tai khoan chet, tai khoan kia van song.
 
 ## Cach tot nhat: ket hop 3 thu
 

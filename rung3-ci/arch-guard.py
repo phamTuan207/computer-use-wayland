@@ -86,6 +86,36 @@ ALLOW_PREFIXES = (
     "deploy-manifest.json",
     # Frozen run output embedding the allowlisted ship record.
     "tests/realistic/live-run-y9-agy-y2-20261121.stdout.log",
+    # Frozen 2026-11-22 council/redteam/fix run records; machine
+    # paths in them are historical provenance of past runs.
+    "docs/batch",
+    # Frozen clone2 run records; the watchdog log keeps its
+    # historical name entries per owner decision 2026-11-27.
+    "docs/clone2-",
+    # Frozen 2026-11-22 two-vision bench records.
+    "docs/two-vision-",
+    # Frozen 2026-11-21 test/todolist/research records.
+    "docs/decision-2-2-3-hyprglass-test-20261121.md",
+    "docs/zen-error-fix-todolist-20261121.md",
+    "docs/research/2026-11-21-microsoft-hybrid-computer-use.md",
+    # Generated realistic-test spec fixtures; the persona name is
+    # the owner's public repo-facing name, fixture data by design.
+    "tests/realistic/agy-q/",
+    "tests/realistic/agy-q2/",
+    "tests/realistic/fcc-k/",
+    # Frozen realistic run records (logs, report, ship record).
+    "tests/realistic/run-u-all-20261121.log",
+    "tests/realistic/live-run-u-20261121.jsonl",
+    "tests/realistic/RUN-REPORT-FCCK-FIXED-20261121.md",
+    "tests/realistic/codex-y5/SHIPPED.md",
+    # Realistic-test drivers; the typed persona name is fixture
+    # data fed to local form fixtures, not live config.
+    "tests/realistic/run_fcck.py",
+    "tests/realistic/run_live.py",
+    # Unit-test input strings; fake home paths fed to parsers.
+    "tests/test_chromium_cli.py",
+    "tests/test_code_exec.py",
+    "tests/test_vscode_cli.py",
 )
 TEXT_SUFFIXES = (".py", ".md", ".txt", ".json", ".sh", ".yml",
                  ".yaml", ".toml", ".mjs", ".js", ".lua", ".html",
@@ -193,10 +223,15 @@ def local_imports(path, key, modules, by_base):
     importer_dir = key.rsplit("/", 1)[0] if "/" in key else ""
 
     def resolve_static(name):
-        if importer_dir:
-            cand = importer_dir + "/" + name
+        # Try the importer's dir, then each ancestor dir (a file in
+        # zen-rdp/probes/ importing zen-rdp siblings via a sys.path
+        # parent insert resolves at the zen-rdp level), then root.
+        d = importer_dir
+        while d:
+            cand = d + "/" + name
             if cand in modules:
                 return cand
+            d = d.rpartition("/")[0]
         if name in modules:
             return name
         return None

@@ -5,10 +5,10 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/james/computer-use-wayland
+WorkingDirectory=%h/computer-use-wayland
 Environment=PYTHONDONTWRITEBYTECODE=1
-Environment=XDG_CACHE_HOME=/home/james/.cache
-ExecStart=/usr/bin/python3 /home/james/computer-use-wayland/scripts/session_remote.py serve --socket %t/computer-use-wayland/relay.sock
+Environment=XDG_CACHE_HOME=%h/.cache
+ExecStart=/usr/bin/python3 %h/computer-use-wayland/scripts/session_remote.py serve --socket %t/computer-use-wayland/relay.sock
 RuntimeDirectory=computer-use-wayland
 RuntimeDirectoryMode=0700
 UMask=0077

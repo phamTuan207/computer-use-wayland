@@ -83,8 +83,8 @@ SPEC = importlib.util.spec_from_file_location(
     "two_vision_bench", os.path.join(HERE, "two_vision_bench.py"))
 bench = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bench)
-FIXTURE_DIR = ("file:///home/hatch/workspace/computer-use-wayland/"
-               "tests/")
+FIXTURE_DIR = ("file://" + os.path.dirname(os.path.abspath(__file__))
+               + "/")
 
 
 def make_plan(run_id, fixture_name, messages, v12_s=5,

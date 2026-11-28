@@ -65,7 +65,7 @@ def _default_repo():
     candidate = Path(__file__).resolve().parents[1]
     if (candidate / '.git').exists():
         return candidate
-    return Path('/home/james/computer-use-wayland')
+    return Path.home() / 'computer-use-wayland'
 
 
 def _defaults():

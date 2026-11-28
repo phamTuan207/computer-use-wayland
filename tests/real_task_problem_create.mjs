@@ -12,7 +12,7 @@ import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 
 const SERVER = '/tmp/firefox-mcp-test/node_modules/@mozilla/firefox-mcp/dist/index.js';
-const FIXTURE = 'file:///home/james/workspace/computer-use-wayland/tests/fixtures/problem-create-fixture.html';
+const FIXTURE = new URL('./fixtures/problem-create-fixture.html', import.meta.url).href;
 const ZIP = '/tmp/realtask/problem-tests.zip';
 const startedAt = performance.now();
 let nextId = 1;

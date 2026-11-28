@@ -1,7 +1,7 @@
 // One-off snapshot dump for the problem-create fixture (debug helper).
 import { spawn } from 'node:child_process';
 const SERVER = '/tmp/firefox-mcp-test/node_modules/@mozilla/firefox-mcp/dist/index.js';
-const FIXTURE = 'file:///home/james/workspace/computer-use-wayland/tests/fixtures/problem-create-fixture.html';
+const FIXTURE = new URL('./fixtures/problem-create-fixture.html', import.meta.url).href;
 let nextId = 1, buffer = '';
 const pending = new Map();
 let proc = spawn('node', [SERVER, '--connect-existing', '--marionette-port', '2828', '--log-file', '/tmp/firefox-mcp.log'], { stdio: ['pipe', 'pipe', 'pipe'] });
