@@ -145,7 +145,9 @@ new tab, then immediately re-activates the opener tab before the
 title fetch, so visible selection ends on the opener while tracked
 stays the new tab: visible != tracked immediately after open. The
 result reports `selection_restored` and `flash_window_ms` (time
-from `window.open` to re-activate completion); if the re-activate
+from the `window.open` call send to re-activate completion, a
+slight overestimate since it starts before the new tab lands); if
+the re-activate
 fails the open still succeeds with `selection_restored: false`
 plus `selection_restore_error` and a note. BiDi exposes no
 selected-tab read, so when the opener was not the pre-open

@@ -66,7 +66,9 @@ Commands (each prints exactly one JSON object on stdout):
                         selection ends on the opener while tracked
                         stays the new tab. The result reports
                         selection_restored and flash_window_ms (time
-                        from window.open to re-activate completion).
+                        from the window.open call send to re-activate
+                        completion; a slight overestimate, it starts
+                        before the new tab lands).
   open --live <url>     Open url in a new tab of his RUNNING Zen
                         (remoting). Opt-in only, see above.
   navigate <url> [--tab INDEX]
