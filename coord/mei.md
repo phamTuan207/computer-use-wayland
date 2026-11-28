@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3: R3-001 chay lai PASS, bar dat duoc tro lai (2026-11-25 19:25 +07)
+
+- Commit 02adc6c1 (19:25:30 +07): R3-001 chay lai graded PASS (scorer 1 + scorer 2 dong y, audited); ledger chay lai R3-L3-reruns.jsonl da tao voi 1 hang; rule A thay the FAIL goc luc dong.
+- Tong ket luc dong hien tai: pass 4 (R3-040, R3-041, R3-042, R3-001 chay lai), fail 2 (R3-002, R3-003, dang cho chay lai), invalid 0; 51 task chua co diem cuoi, pass toi da 55, bar 53 dat duoc voi 2 task du phong. Tiep theo: reset Class L, roi R3-002 chay lai.
+- Em xac minh tu commit message, khong doc ledger/snapshot. (So heartbeat "graded 7, pass 4, fail 3" la so hang tren ca 2 ledger, khong phai so luc dong.)
