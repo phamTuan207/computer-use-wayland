@@ -34,9 +34,10 @@ import sys
 import time
 from datetime import datetime, timezone
 
-FF = "/home/hatch/workspace/tools/firefox/firefox"
-GD = "/home/hatch/workspace/tools/geckodriver"
-FIXTURE = "file:///home/hatch/workspace/computer-use-wayland/tests/dom_grounding_fixture.html"
+FF = os.path.expanduser("~/workspace/tools/firefox/firefox")
+GD = os.path.expanduser("~/workspace/tools/geckodriver")
+FIXTURE = "file://" + os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "dom_grounding_fixture.html")
 
 RECT_JS = """
 const els = [...document.querySelectorAll('button, input, select, a')];

@@ -79,14 +79,27 @@ visuals: activate-cursor-guard, activate-glass, activation_checks, build-cursor,
 vm_proxy: 
 vscode_cli: 
 warm_browser: 
-zen-rdp/rdp_client: 
-zen-rdp/rdp_smoke: zen-rdp/rdp_client
+zen-rdp/launch_dedicated: zen-rdp/rdp_client
+zen-rdp/probes/p3_unsolicited_probe: zen-rdp/launch_dedicated, zen-rdp/rdp_client
+zen-rdp/rdp_client: zen-rdp/zen_spaces
+zen-rdp/rdp_smoke: zen-rdp/launch_dedicated, zen-rdp/rdp_client, zen-rdp/zen_spaces
+zen-rdp/test_act: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
+zen-rdp/test_act_count_js: zen-rdp/rdp_client
+zen-rdp/test_bench: zen-rdp/rdp_client
 zen-rdp/test_envelope: zen-rdp/rdp_client
+zen-rdp/test_f11_live: zen-rdp/rdp_client
+zen-rdp/test_f11_terminal: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
+zen-rdp/test_f1_replay: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
+zen-rdp/test_launch_dedicated: zen-rdp/launch_dedicated
 zen-rdp/test_lock: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
+zen-rdp/test_p2b_settling: zen-rdp/rdp_client
 zen-rdp/test_rdp_client: zen-rdp/rdp_client
 zen-rdp/test_rdp_smoke: zen-rdp/rdp_smoke
 zen-rdp/test_redaction: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
 zen-rdp/test_scope_unittest: zen-rdp/rdp_client
+zen-rdp/test_snapshot: zen-rdp/rdp_client, zen-rdp/test_scope_unittest
+zen-rdp/test_zen_spaces: zen-rdp/rdp_client, zen-rdp/test_scope_unittest, zen-rdp/zen_spaces
+zen-rdp/zen_spaces: zen-rdp/rdp_client
 zen_backend: element_ref, fastpath, zen_dom
 zen_cli: 
 zen_dom: fastpath

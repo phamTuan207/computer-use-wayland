@@ -19,16 +19,17 @@ import subprocess
 import sys
 import time
 
-ROOT = "/home/james/workspace/computer-use-wayland"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 POINTER = ROOT + "/native/pointer"
-OBS = "/home/james/.cache/agent-computer-use/44623b123878.json"
+OBS = os.path.expanduser("~/.cache/agent-computer-use/44623b123878.json")
 ACTIONS = "/tmp/e2-actions.json"
 LOG = "/tmp/e2-direct-clicks.log"
 ENV = {
     "XDG_RUNTIME_DIR": "/run/user/1000",
     "WAYLAND_DISPLAY": "wayland-1",
     "HYPRLAND_INSTANCE_SIGNATURE": "11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795201820_401709775",
-    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/bin:/home/james/.local/bin",
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/bin:"
+            + os.path.expanduser("~/.local/bin"),
 }
 
 

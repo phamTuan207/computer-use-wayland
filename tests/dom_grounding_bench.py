@@ -15,15 +15,17 @@ Every step prints one JSON line: wall clock (UTC) and elapsed seconds
 from a monotonic clock. Run with the repo venv python.
 """
 import json
+import os
 import subprocess
 import sys
 import time
 import uuid
 from datetime import datetime, timezone
 
-FF = "/home/hatch/workspace/tools/firefox/firefox"
-GD = "/home/hatch/workspace/tools/geckodriver"
-FIXTURE = "file:///home/hatch/workspace/computer-use-wayland/tests/dom_grounding_fixture.html"
+FF = os.path.expanduser("~/workspace/tools/firefox/firefox")
+GD = os.path.expanduser("~/workspace/tools/geckodriver")
+FIXTURE = "file://" + os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "dom_grounding_fixture.html")
 BIDI_PORT = 9223
 
 RECT_JS = """

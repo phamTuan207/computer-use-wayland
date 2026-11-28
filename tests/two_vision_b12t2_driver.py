@@ -37,8 +37,8 @@ SPEC.loader.exec_module(bench)
 
 
 def make_plan(run_id, fixture_name, messages, v12_s=5):
-    base = ("file:///home/hatch/workspace/computer-use-wayland/tests/"
-            + fixture_name)
+    base = "file://" + os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), fixture_name)
     return {
         "run_id": run_id,
         "windows": [

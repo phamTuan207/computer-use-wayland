@@ -5,9 +5,10 @@ The spec's uppercase =C2*D2 fails because the fixture's evalFormula
 looks up cells['C2'] (keys are lowercase) -> #ERR. This probe confirms
 the rest of the flow passes with lowercase. NOT the official f01 result
 (official = as-specced, FAIL)."""
+import os
 import sys
 
-sys.path.insert(0, "/home/james/workspace/computer-use-wayland/tests/realistic")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import run_live as rl
 
 
