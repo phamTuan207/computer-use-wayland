@@ -1,0 +1,9 @@
+Task ID: R3-037 (rerun)
+Session ID: 01a2202c-9ca1-70d1-8073-a393f6e0426d
+Evidence folder: /home/james/rung3-chung-cu/R3-037-rerun
+Start wall-clock time: 2026-11-28T10:22:30+07:00
+End wall-clock time: 2026-11-28T10:25:13+07:00
+Smoke result: PASS (rdp_smoke.py exit 0; overall PASS; saved to rdp-smoke.json)
+Pill gap: No control was issued before visible=true was confirmed. Pill release returned visible=false; final screenshot pill-gone.png confirms it is gone.
+Unusual: Ctrl+N via cu.py act-now opened a Zen search panel, but the RDP tabs list remained unchanged and no new selected task-tab descriptor appeared. To obey tab scoping, the run stopped before entering who.is. No domain lookups, results, or domain screenshots were produced.
+Drive status: Incomplete; stopped fail-closed on task-tab scoping precondition. No service bot block occurred, so there is no block-evidence page/path.

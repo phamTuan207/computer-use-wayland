@@ -1,0 +1,85 @@
+{
+ "smoke": "rdp_smoke",
+ "version": 1,
+ "timestamp_utc": "2026-11-28T03:29:41.048120+00:00",
+ "port": 6021,
+ "host": "127.0.0.1",
+ "profile_marker": "ae59l0ak.Default",
+ "checks": {
+  "a_port_owner": {
+   "status": "PASS",
+   "pid": 807599
+  },
+  "b_attach": {
+   "status": "PASS",
+   "desc_actor": "server1.conn42.tabDescriptor10",
+   "console_actor": "server1.conn42.child13/consoleActor3"
+  },
+  "c_webdriver": {
+   "status": "PASS",
+   "webdriver": false,
+   "webdriver_type": "boolean",
+   "getter_tostring": "function webdriver() {\n    [native code]\n}",
+   "doc_webdriver_attr": "null",
+   "plugins_length": 5,
+   "automation_globals": "",
+   "verdict": "CLEAN"
+  },
+  "d_evaluate": {
+   "status": "PASS",
+   "one_plus_one": 2,
+   "dom_nodes": 3
+  },
+  "e_parent_target": {
+   "status": "PASS",
+   "typeof": {
+    "gZenWorkspaces": "object",
+    "gBrowser": "object",
+    "gZenFolders": "object"
+   },
+   "parent_url": "chrome://browser/content/browser.xhtml"
+  },
+  "i_pinned_methods": {
+   "status": "PASS",
+   "methods": {
+    "gZenWorkspaces.getWorkspaces": "function",
+    "gZenWorkspaces.createAndSaveWorkspace": "function",
+    "gZenFolders.createFolder": "function"
+   }
+  },
+  "f_bind": {
+   "status": "PASS",
+   "local_addrs": [
+    "127.0.0.1:6021"
+   ]
+  },
+  "h_navigate": {
+   "status": "PASS",
+   "loaded": "complete|about:blank"
+  },
+  "g_latency": {
+   "status": "PASS",
+   "note": "informational"
+  }
+ },
+ "latency": {
+  "attach_to_first_evaluate_ms": 9.4,
+  "evaluate_median_ms": 0.7,
+  "evaluate_runs_ms": [
+   1.3,
+   0.7,
+   0.6,
+   0.7,
+   0.6,
+   0.6,
+   0.6,
+   0.8,
+   0.8,
+   0.8
+  ]
+ },
+ "overall": "PASS",
+ "failed_check": null,
+ "error": null,
+ "elapsed_ms": 111.9
+}

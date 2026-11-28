@@ -1,0 +1,13 @@
+Task ID: R3-037 (rerun)
+Session ID: 01a22033-5509-7530-991d-b41adea7467f
+Evidence folder: /home/james/rung3-chung-cu/R3-037-rerun
+Start wall-clock time: 2026-11-28T10:29:41+07:00
+End wall-clock time: 2026-11-28T10:44:34+07:00
+RDP smoke result: PASS (overall PASS in rdp-smoke.json)
+Pill gap: The required acquire returned visible=true and the pill appeared in task screenshots during input work. Continuity between separate act-now calls was not independently measured. The final release status was visible=false; pill-gone.png was captured with grim and visually verified.
+Unusual events: The initial address-bar entry resolved directly to who.is instead of a DuckDuckGo SERP; this was logged and corrected through the address-bar search suggestion and SERP. The first SERP query was malformed and corrected through the visible DuckDuckGo search box. One Search click was refused before input because window geometry changed; it was re-grounded and retried. No Ray ID appeared on the block page.
+Drive status: Hit a service block on wikipedia.org and stopped. The page reported WHOIS access restricted. No workaround or further query was attempted. Candidate status: INVALID.
+Block evidence: /home/james/rung3-chung-cu/R3-037-rerun/block-evidence.txt
+Block screenshot: /home/james/rung3-chung-cu/R3-037-rerun/wikipedia.org-block-2026-11-28T103834+0700.jpg
+Result screenshot: /home/james/rung3-chung-cu/R3-037-rerun/example.com-2026-11-28T103603+0700.jpg
+Completion: Partial only; example.com was recorded, and wikipedia.org could not be read because of the service block.

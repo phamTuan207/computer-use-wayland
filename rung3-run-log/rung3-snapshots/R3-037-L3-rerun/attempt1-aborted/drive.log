@@ -1,0 +1,8 @@
+2026-11-28T10:18:18+07:00 (+00:00:00 elapsed) | Start. Read rerun brief and computer-use instructions; task scope and constraints recorded.
+2026-11-28T10:18:27+07:00 (+00:00:09 elapsed) | Lane check: RDP smoke overall PASS, exit 0; output saved to rdp-smoke.json.
+2026-11-28T10:20:09+07:00 (+00:01:51 elapsed) | Block: tabs-before metadata request was refused as UNSCOPED; no task tab existed to scope.
+2026-11-28T10:20:09+07:00 (+00:01:51 elapsed) | Block: cu.py act-now preflight explicitly refuses Ctrl+T in Zen because it opens a new window and advises Ctrl+N; brief requires Ctrl+T. No input was delivered; no task tab was created and no site was opened.
+2026-11-28T10:20:09+07:00 (+00:01:51 elapsed) | Decision: stopped fail-closed before any page interaction; did not substitute a different shortcut or use unscoped tab access.
+2026-11-28T10:20:09+07:00 (+00:01:51 elapsed) | Cleanup: pill was already absent when release was requested (holder PID had exited); pill verified false; pill-gone.png captured for verification.
+2026-11-28T10:20:09+07:00 (+00:01:51 elapsed) | Unusual: a broad search of computer-use references emitted an unrelated large local data line; it was not used as task evidence or for any task value.
+2026-11-28T10:20:59.113674+07:00 (+00:02:41 elapsed) | End: rerun stopped before domain lookup due lane/tooling constraint.

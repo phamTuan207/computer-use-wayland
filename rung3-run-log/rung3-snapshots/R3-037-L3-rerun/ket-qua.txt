@@ -1,0 +1,6 @@
+R3-037 rerun WHOIS results (source: saved screenshots)
+
+example.com | Registrar: RESERVED-Internet Assigned Numbers Authority | Registration date: August 14, 1995 | Expiry date: August 13, 2027 | Name servers: elliott.ns.cloudflare.com, hera.ns.cloudflare.com | Status: still valid as of 2026-11-28
+wikipedia.org | Registrar: unavailable | Registration date: unavailable | Expiry date: unavailable | Name servers: unavailable | Status: blocked; INVALID candidate, WHOIS access restricted
+
+Evidence: example.com-2026-11-28T103603+0700.jpg; wikipedia.org-block-2026-11-28T103834+0700.jpg

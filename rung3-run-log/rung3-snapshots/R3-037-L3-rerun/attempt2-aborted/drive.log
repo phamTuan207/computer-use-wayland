@@ -1,0 +1,27 @@
+2026-11-28 10:22:48 +07 | elapsed=00:00:18 | lane smoke PASS exit=0; Zen PID 807599; profile marker matched
+2026-11-28T10:22:48.092338+07:00 | elapsed=00:00:12 | smoke JSON saved; overall PASS
+2026-11-28 10:22:48 +07 | elapsed=00:00:18 | lane checks: active workspace JSON={
+    "address": "2",
+    "id": 2,
+    "type": "normal",
+    "name": "2",
+    "monitor": "eDP-2",
+    "monitorID": 0,
+    "windows": 3,
+    "hasfullscreen": false,
+    "lastwindow": "0x5614f0849b40",
+    "lastwindowtitle": "Zen Browser",
+    "ispersistent": false,
+    "tiledLayout": "scrolling"
+}
+2026-11-28 10:22:56 +07 | elapsed=00:00:26 | RDP tabs-before captured and saved at /tmp/r3-037-tabs-before.json; no tab interaction yet
+2026-11-28 10:23:38 +07 | elapsed=00:01:08 | Ctrl+N real input issued via cu.py act-now; result captured for screenshot/hash verification
+2026-11-28 10:23:48 +07 | elapsed=00:01:18 | Ctrl+N screenshot hash changed and new tab state checked through RDP; candidate task tab expected from tabs-after-new
+2026-11-28 10:24:41 +07 | elapsed=00:02:11 | FAILURE: the required own task tab could not be identified. tabs-before had selected tabDescriptor11 and tabDescriptor10; after Ctrl+N, the tabs list was unchanged (still tabDescriptor1-12, selected tabDescriptor11). Screenshot /home/james/.cache/agent-computer-use/95883d5b7659.jpg shows the Zen search panel, while RDP verifies no newly added selected descriptor.
+2026-11-28 10:24:41 +07 | elapsed=00:02:11 | REASONING: brief requires all further RDP reads/actions scoped to the newly added task tab and forbids acting on any other tab. No safe tab scope exists; navigating or clicking would violate lane discipline.
+2026-11-28 10:24:41 +07 | elapsed=00:02:11 | TRIED: one Ctrl+N via cu.py act-now after visible pill check; verified with returned screenshot and a fresh RDP tabs command. The screen hash changed, but expected tab-list state did not.
+2026-11-28 10:24:41 +07 | elapsed=00:02:11 | DECISION: fail closed; no retry on an uncertain desktop input, no interaction with owner tabs, no domain queries performed.
+2026-11-28 10:24:41 +07 | elapsed=00:02:11 | FIX: none attempted; a safe task-tab descriptor is required before continuing.
+2026-11-28 10:24:42 +07 | elapsed=00:02:12 | pill released; final screenshot captured at /home/james/rung3-chung-cu/R3-037-rerun/pill-gone.png
+2026-11-28 10:25:13 +07 | elapsed=00:02:43 | RESULT: rerun drive stopped before domain lookup because required new task tab descriptor was absent. No domain results or domain screenshots exist; no service block page occurred. Pill release confirmed visible=false and pill-gone.png visually contains no active pill.
+2026-11-28 10:25:13 +07 | elapsed=00:02:43 | DOMAIN RESULTS: none; the run stopped before entering the first domain.

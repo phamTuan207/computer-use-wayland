@@ -1,0 +1,18 @@
+{
+ "version": "1",
+ "ok": false,
+ "command": "tabs",
+ "result": null,
+ "error": {
+  "code": "unscoped_refused",
+  "message": "UNSCOPED REFUSED: no tab scope was given. Pass --scope-tab-id / --scope-url-pattern (or a --scope-config), or pass --unscoped-test explicitly for throwaway/test use.",
+  "disposition": {
+   "delivery": "not_delivered",
+   "retry": "safe"
+  }
+ },
+ "disposition": {
+  "delivery": "not_delivered",
+  "retry": "safe"
+ }
+}

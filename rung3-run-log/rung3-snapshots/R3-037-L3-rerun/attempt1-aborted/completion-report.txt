@@ -1,0 +1,11 @@
+Task ID: R3-037 (rerun)
+Session ID: none (computer-use input session was not started; no input was delivered)
+Evidence folder: /home/james/rung3-chung-cu/R3-037-rerun
+Start wall-clock time: 2026-11-28T10:18:18+07:00
+End wall-clock time: 2026-11-28T10:20:59.113674+07:00
+Smoke result: PASS (exit 0; see rdp-smoke.json)
+Pill gap: none during GUI input because no GUI input was delivered. Pill status was visible=true after acquire; it auto-cleared when the acquiring shell PID exited, and status was verified visible=false; pill-gone.png saved.
+Unusual: the brief requires Ctrl+T, but cu.py refused this in Zen because Ctrl+T opens a new window and recommended Ctrl+N. The pre-task tabs listing was also refused as UNSCOPED; no task tab existed to scope.
+Drive result: stopped before user-path navigation and domain lookup; no block from who.is occurred.
+Block evidence path: none (no service block page was reached).
+Completion: NOT completed; stopped fail-closed due the required input conflicting with the lane guard.

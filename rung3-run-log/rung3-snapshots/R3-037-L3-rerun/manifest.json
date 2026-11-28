@@ -1,0 +1,218 @@
+{
+ "files": [
+  {
+   "mtime": 1795837539,
+   "name": "attempt1-aborted/completion-report.txt",
+   "sha256": "e8e8bb13af97015e93f454a0cdbf1b5e52f1141e552fc87702286536cfe3c03f",
+   "size": 1019
+  },
+  {
+   "mtime": 1795837518,
+   "name": "attempt1-aborted/drive.log",
+   "sha256": "ce142d603aae17f502396f291f24f975b816eb70683386524791e552ce1a0d5b",
+   "size": 1353
+  },
+  {
+   "mtime": 1795837538,
+   "name": "attempt1-aborted/end_time.txt",
+   "sha256": "2f4fb81fe627a9b8f3a4b7975d86627e8f29568879ab9f45af69a3759a0d38e1",
+   "size": 33
+  },
+  {
+   "mtime": 1795837530,
+   "name": "attempt1-aborted/pill-active.png",
+   "sha256": "378a898d85817e256a5dfccd86be547e5efd6699868e256c3d8e24f0c9ad46b8",
+   "size": 2093117
+  },
+  {
+   "mtime": 1795837536,
+   "name": "attempt1-aborted/pill-gone.png",
+   "sha256": "a2bbe7fa93799680decc913d3978aff632f166b01b08b40f05aa0363e7a3e0f8",
+   "size": 2116726
+  },
+  {
+   "mtime": 1795837520,
+   "name": "attempt1-aborted/rdp-smoke.json",
+   "sha256": "0261014853a3b8c08e99187b2e7c24fdab1da3c25a2664869de0aa7351966a03",
+   "size": 1706
+  },
+  {
+   "mtime": 1795837516,
+   "name": "attempt1-aborted/start_time.txt",
+   "sha256": "98dc47b79558b2b39ed22f40e83656a3bc2e42e724ed6064277ffc53e4546b00",
+   "size": 26
+  },
+  {
+   "mtime": 1795837523,
+   "name": "attempt1-aborted/tabs-before.json",
+   "sha256": "afc07f2ffbd759acf8b1f138da378fb70265f307fc238411568b4e5938987092",
+   "size": 444
+  },
+  {
+   "mtime": 1795837542,
+   "name": "attempt2-aborted/completion-report.txt",
+   "sha256": "f731bbaadba4eca7aa7bdce95670703d7475ce7c2055318beac0e036cade6456",
+   "size": 892
+  },
+  {
+   "mtime": 1795837544,
+   "name": "attempt2-aborted/drive.log",
+   "sha256": "9a6a628fd66159469f4d906692f3f93453734aaf186193a4d3c1b0dfdfe47b8c",
+   "size": 2773
+  },
+  {
+   "mtime": 1795837545,
+   "name": "attempt2-aborted/end_time.txt",
+   "sha256": "90cb7ce741817c42e658c998490fc19e0b745d38c362cf571501425ad1115e38",
+   "size": 26
+  },
+  {
+   "mtime": 1795837550,
+   "name": "attempt2-aborted/pill-gone.png",
+   "sha256": "f9d93cf7e2ade72bd33c588635dcb531ae5dd04551271487239fb67bdd36f4af",
+   "size": 1904818
+  },
+  {
+   "mtime": 1795837552,
+   "name": "attempt2-aborted/rdp-smoke.json",
+   "sha256": "25bbe668dc1e42208adb7161503603cbe1bf0704fc70ca256169b1ec43d9726d",
+   "size": 1706
+  },
+  {
+   "mtime": 1795837553,
+   "name": "attempt2-aborted/start_time.txt",
+   "sha256": "6333adc2d90daf1615036295c3df57261b672888e0553f703b1fc53fdc952a7d",
+   "size": 26
+  },
+  {
+   "mtime": 1795837561,
+   "name": "back-action.json",
+   "sha256": "17688c9f0d96e98f4d484e08f302f2b31f8b08dd74ebd950c6ca8bb44c19d214",
+   "size": 44
+  },
+  {
+   "mtime": 1795837585,
+   "name": "block-evidence.txt",
+   "sha256": "95f196f349ad338f769c14c17e92c82823048d6c6d23b1c4a281bab51f368ce6",
+   "size": 544
+  },
+  {
+   "mtime": 1795837570,
+   "name": "click-whois-actions.json",
+   "sha256": "c433c322401d7666cb6860010cf15dca35da2e9c7b7b675b380e55bfc65ee9b6",
+   "size": 35
+  },
+  {
+   "mtime": 1795837593,
+   "name": "completion-report.txt",
+   "sha256": "da4ef66056c0f22570f996906289dac04843a40445d3e89a5af254bfb738ca5b",
+   "size": 1573
+  },
+  {
+   "mtime": 1795837556,
+   "name": "drive.log",
+   "sha256": "9eb6c813515499b4702da130eabcbfcb53dd21d599b3191b415a49d8b20d241d",
+   "size": 5988
+  },
+  {
+   "mtime": 1795837591,
+   "name": "end_time.txt",
+   "sha256": "9631ebd2e7d5de9039bf2fff1eb048d39d28e9224123e7e7572baedf635f3588",
+   "size": 26
+  },
+  {
+   "mtime": 1795837559,
+   "name": "enter-whois-actions.json",
+   "sha256": "bfafee6ac3c34659a2ac10e3be11419af102e78ad9203b6d823fb055ebc90a98",
+   "size": 101
+  },
+  {
+   "mtime": 1795837577,
+   "name": "example.com-2026-11-28T103603+0700.jpg",
+   "sha256": "2ddb57d49ce636270fe0fa96bb58fe335a9bae6562acf688ea86ebcfec69ac33",
+   "size": 68571
+  },
+  {
+   "mtime": 1795837567,
+   "name": "fix-ddg-query-actions.json",
+   "sha256": "4672fdb45e709b55653365165d7f83144b5de5fd4f60b1f10c525dce76847424",
+   "size": 133
+  },
+  {
+   "mtime": 1795837586,
+   "name": "ket-qua.txt",
+   "sha256": "ebf3eec6332c0b9638231be161559f4661bc3a4311d1622a759891bbda416846",
+   "size": 586
+  },
+  {
+   "mtime": 1795837588,
+   "name": "pill-gone.png",
+   "sha256": "7d300231e60a8ccf2140893e0f0e9fb9b3eddf217089cfa99f23dd9c5eec7782",
+   "size": 44136
+  },
+  {
+   "mtime": 1795837557,
+   "name": "rdp-smoke.json",
+   "sha256": "a083ca77a9e7b07f13227affba469bc256c20d497d86b8bdc84551037f128389",
+   "size": 1706
+  },
+  {
+   "mtime": 1795837565,
+   "name": "search-commit-actions.json",
+   "sha256": "836d8c41999af0fbb08cc487c2bef9d4690f50e6ff71ca858c7b537edcee29c9",
+   "size": 70
+  },
+  {
+   "mtime": 1795837573,
+   "name": "search-example-actions.json",
+   "sha256": "bd3098f42e937bdd3a29c283f30aaa1556b30988b01e44f1d76b9be58b581e87",
+   "size": 35
+  },
+  {
+   "mtime": 1795837563,
+   "name": "search-suggestion-actions.json",
+   "sha256": "4834138b791c3c9f0e20b15b2746ef218a5387be0d67935035cfdb9b71265de7",
+   "size": 69
+  },
+  {
+   "mtime": 1795837581,
+   "name": "search-wikipedia-actions.json",
+   "sha256": "c872240c7485181e7bf7694df1cb0495bae74292d91337baabfe0241c1fda017",
+   "size": 34
+  },
+  {
+   "mtime": 1795837554,
+   "name": "start_time.txt",
+   "sha256": "dd65a0381743f27a5c1173d4acd519f841de9553e76306b7bb38fbdc87407ae7",
+   "size": 26
+  },
+  {
+   "mtime": 1795837572,
+   "name": "type-example-actions.json",
+   "sha256": "0ee99d1c1360a2394a30487a5d9a6b4afbcb3f10aaf0847a502d50485bfec96d",
+   "size": 72
+  },
+  {
+   "mtime": 1795837579,
+   "name": "type-wikipedia-actions.json",
+   "sha256": "e35639052bb13ef5768a197c1b42b961c6ab6c29d2b8fc8ed69e5436eec82946",
+   "size": 73
+  },
+  {
+   "mtime": 1795837583,
+   "name": "wikipedia.org-block-2026-11-28T103834+0700.jpg",
+   "sha256": "48f0759d5709df422aa5c6dfb3cc3cc02bfed0ca9732d82b85f63c1e1c06181c",
+   "size": 60390
+  },
+  {
+   "mtime": 1795837575,
+   "name": "zoom-out-actions.json",
+   "sha256": "0c433ccf0adaca64e237dea4996ae5741794b136957a97a3aa4868301d8ef2bf",
+   "size": 119
+  }
+ ],
+ "manifest_sha256": "ef682d715087649fb155b10da1139347d7b98a703ec5d81cdef48dd7b4564c55",
+ "snapshot_dir": "rung3-run-log/rung3-snapshots/R3-037-L3-rerun",
+ "source_dir": "/home/hatch/workspace/r3-037-rerun-evidence",
+ "task": "r3-037-rerun-evidence"
+}

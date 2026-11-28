@@ -1,0 +1,9 @@
+Block evidence for R3-037 rerun
+Observed after waiting 60 seconds as required.
+URL: https://who.is/whois/wikipedia.org
+Page title: wikipedia.org WHOIS Domain Name Lookup - Who.is
+Visible page text: Information Blocked. Access to WHOIS information for the domain wikipedia.org has been restricted.
+Ray ID: None shown.
+Screenshot: wikipedia.org-block-2026-11-28T103834+0700.jpg
+Screenshot SHA-256: 48f0759d5709df422aa5c6dfb3cc3cc02bfed0ca9732d82b85f63c1e1c06181c
+Outcome: Stopped further requests; INVALID candidate under the service-block rule.
