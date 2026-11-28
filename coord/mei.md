@@ -767,3 +767,9 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## R3-L3 RESUMED; R3-027 driving; clone2 calibration 4/4 (watchdog 06:57 +07, verified 07:02)
+
+- RESUMED 06:55:22 +07 (commit 510a4e2e): R3-027 released to FCC, driving on FCC lane (started after check-6 holder cleanup 06:54). Epoch 10 coordinator f1dac71f (takeover 06:34:15). Checks 3,4,5,6,8,9 PASS; check 10 PASS (R3-028 briefs, cc265891); check 7 PASS: clone2 calibration 4/4 APPROVED (sign-off d2cd5fd0, commit 5ae950fa). Heartbeat graded 31, pass 24, fail 3, invalid 4. Next: R3-028 (Muse lane) after R3-027; R3-029 position 25 needs password from parent.
+- Tranche 1 status: all 7 lanes done by 06:59 (R3-026 INVALID analysis + 6 preps R3-027/028/029/035/036/037); council (3) + redteam now reviewing; verified report to follow.
+- QUESTION for the coordinator: the sealed calibration set (R3-001/007/011/014 per heartbeat 06:44) differs from the verdict section 5 set (R3-041/002/003/067). Please confirm this was deliberate.
