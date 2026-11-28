@@ -125,7 +125,7 @@ and it drops two of its own findings (J12, PR #1) out of the queue entirely.
 
 ## Attack A6. Scrub 13 vs final test 14 vs E1 15: the tail of the queue breaks the owner's LAST order
 - The owner stressed TWICE that the final test runs last: memory line
-  1407 ("Dang nhan manh 2 lan: GIO CHUA LAM final test, lam het va hoan
+  1407 ("The owner nhan manh 2 lan: GIO CHUA LAM final test, lam het va hoan
   thien moi viec khac truoc da... chay cuoi cung") and line 1955
   ("final test chay CUOI CUNG sau khi xong het moi viec khac"). PRIO
   ranks E1 fresh comparison at 15, AFTER the item the owner said runs
@@ -224,8 +224,8 @@ and it drops two of its own findings (J12, PR #1) out of the queue entirely.
 ### M5. PRIO's J11 cites the option-C choice at the wrong time
 - PRIO J11 says "owner chose C 18:16". The record says the C choice was
   at flush 18:24: memory lines 1605 ("the owner chon C cho 2.2.3"), 1608
-  ("Dang chon C qua widget: thu Hyprland long nhau..."), and 1713 (event:
-  "On 2026-11-21 dang chose option C"). 18:16 was the Worker W adoption
+  ("The owner chon C qua widget: thu Hyprland long nhau..."), and 1713 (event:
+  "On 2026-11-21 the owner chose option C"). 18:16 was the Worker W adoption
   note (memory line 1611), not the C choice. Small, but PRIO's todolist
   rewrite of 2.2.3 will carry this timestamp, and the crawl's timestamps
   are supposed to be the evidence. Correct to 18:24.
