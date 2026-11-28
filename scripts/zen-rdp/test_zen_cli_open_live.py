@@ -258,11 +258,19 @@ def main():
             rdp_new = next(
                 (t for t in after["rdp"]["tabs"]
                  if marker in (t["url"] or "")), None)
+            # zen_cli reports the getTree URL at open-return time,
+            # which is still about:blank while the new tab is lazy
+            # (pre-existing behavior; pilot2 measured the same).
+            # Tab identity is therefore asserted against RDP ground
+            # truth (index + real URL), not the lazy BiDi URL.
             rep_ok = (
                 code == 0 and opened.get("ok") is True
                 and opened.get("selection_restored") is True
                 and isinstance(opened.get("flash_window_ms"), int)
-                and opened.get("tab", {}).get("url") == url
+                and rdp_new is not None
+                and opened.get("tab", {}).get("index") == rdp_new["i"]
+                and opened.get("tab", {}).get("url") in (url,
+                                                         "about:blank")
                 and same_selected(before_id, after_id)
                 and after_id["tag"] == "baseline-A"
                 and new_tab is not None
