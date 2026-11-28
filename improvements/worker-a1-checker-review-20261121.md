@@ -30,7 +30,7 @@ Commands, from `tests/realistic/a1-pilot/checker-selftest`:
 
 ```
 $ python3 build_matrix.py
-built 16 cases under /home/hatch/workspace/computer-use-wayland/tests/realistic/a1-pilot/checker-selftest/cases
+built 16 cases under ~/workspace/computer-use-wayland/tests/realistic/a1-pilot/checker-selftest/cases
 build exit: 0
 $ python3 run_matrix.py
 matrix: 17/17 passed

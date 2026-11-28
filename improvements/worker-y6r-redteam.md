@@ -155,7 +155,7 @@ Divergence (safety guards the load test had that the v3 runner lacks): the load 
 
 - P1. Staged conf is backup 1; y6e conf is the worktree path.
   Command (laptop): `for c in /tmp/y6-nested/conf/hyprland-wayland.lua /tmp/y6-nested/conf/hyprland-wayland-y6e.lua; do grep -o '/[^"]*hyprglass[^"]*\.so' $c | head -1; done`
-  Output: `/home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so` then `/home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`.
+  Output: `~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so` then `~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`.
   Also: `md5sum` on the laptop gives `0d4ac7a9c2437fb48ecfc505ccd9046b` for the staged conf (matches the repo v2 conf) and `9ccb27017ab63a9d2bce1d9651425d3b` for the y6e conf.
 - P2. Marker present in the Y6e saved nested log, exactly once in the flushed prefix.
   Command (laptop): `grep -c 'Y6-NEST-HOOK' /tmp/y6-nested/hypr-saved-y6e-20261121-215707-*/hyprland.log`

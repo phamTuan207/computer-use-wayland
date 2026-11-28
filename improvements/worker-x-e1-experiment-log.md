@@ -1,7 +1,7 @@
 # E1 experiment log, deliberation vs direct (Worker X-E1)
 
 All times Asia/Ho_Chi_Minh. Coordinator: Worker X-E1. Branch: todolist-push.
-Repo (VM): ~/workspace/computer-use-wayland. Laptop repo: /home/james/workspace/computer-use-wayland.
+Repo (VM): ~/workspace/computer-use-wayland. Laptop repo: ~/workspace/computer-use-wayland.
 Zen: live on laptop, PID 27958, --remote-debugging-port=9222 --marionette (Marionette 2828).
 
 ## Task picked

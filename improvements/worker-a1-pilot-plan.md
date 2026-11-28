@@ -1,6 +1,6 @@
 # A1 narrow pilot plan (FROZEN, 2026-11-21)
 
-- Owner: Pham Tuan. Pilot worker: Worker A1 (Muse).
+- Owner: the repository owner. Pilot worker: Worker A1 (Muse).
 - Proposal: improvements/working-structure-redesign-20261121.md section 6,
   commit fb00973. Owner approved 2026-11-21 18:17, "follow it as Lauren Tan
   advises".

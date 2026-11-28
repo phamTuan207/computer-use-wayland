@@ -62,7 +62,7 @@ stable, and needs no login.
     Never use ydotool. Never touch the owner's other apps, music, or chats.
 11. HOSTS. Every [DOM], [MOUSE], [KEYBOARD], and [CLI laptop] step runs ON
     THE LAPTOP via ~/workspace/ssh-laptop.sh from the VM. Paths on the
-    laptop are absolute (/home/james/computer-use-wayland/scripts/...).
+    laptop are home-relative (~/computer-use-wayland/scripts/...).
     The run log and report live on the VM.
 12. RETRY. Exactly one retry per scenario, and only when a network
     control failed (curl control failed). Never retry a Zen-behaviour
@@ -87,7 +87,7 @@ fixture tab if they are in the snapshot.
   `[{"type": "click", "x": 135, "y": 272}]`
   Command (on the laptop):
   `computer-use session -- computer-use act --observation
-  /home/james/.cache/agent-computer-use/<OBS_ID>.json --actions
+  ~/.cache/agent-computer-use/<OBS_ID>.json --actions
   /tmp/zt-act.json`
   Coordinates for PAGE-CONTENT targets come from a DOM rect (see locate
   below), never from vision estimates. Coordinates for BROWSER-CHROME
@@ -100,19 +100,19 @@ fixture tab if they are in the snapshot.
   type: `[{"type": "type", "text": "en.wikipedia.org"}]`
   key: `[{"type": "key", "keys": ["ctrl", "l"]}]`
 - DOM: scripts/zen_dom.py on the laptop
-  (/home/james/computer-use-wayland/scripts/zen_dom.py, Marionette port
+  (~/computer-use-wayland/scripts/zen_dom.py, Marionette port
   2828, WebDriver port 4444, flock zen_dom.lock). Exact invocations:
-  `python3 /home/james/computer-use-wayland/scripts/zen_dom.py list`
+  `python3 ~/computer-use-wayland/scripts/zen_dom.py list`
   (tab list, title and URL per tab)
-  `python3 /home/james/computer-use-wayland/scripts/zen_dom.py eval
+  `python3 ~/computer-use-wayland/scripts/zen_dom.py eval
   "document.title"` (title of the active tab)
-  `python3 /home/james/computer-use-wayland/scripts/zen_dom.py eval
+  `python3 ~/computer-use-wayland/scripts/zen_dom.py eval
   "location.href"` (URL of the active tab)
-  `python3 /home/james/computer-use-wayland/scripts/zen_dom.py locate
+  `python3 ~/computer-use-wayland/scripts/zen_dom.py locate
   "a[href='/wiki/Vietnam']"` (exact rect of a page element, for a click)
-  `python3 /home/james/computer-use-wayland/scripts/zen_dom.py eval
+  `python3 ~/computer-use-wayland/scripts/zen_dom.py eval
   "document.querySelector('[name=custname]').value"` (field value)
-  `python3 /home/james/computer-use-wayland/scripts/zen_dom.py eval
+  `python3 ~/computer-use-wayland/scripts/zen_dom.py eval
   "Math.floor(performance.now())"` (page age in ms, for reload checks)
 - CLI laptop: `hyprctl activeworkspace`, `hyprctl clients`,
   `hyprctl activewindow`, `ps -eo pid,etime,args | grep zen-bin`,

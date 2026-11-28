@@ -1,7 +1,7 @@
 # Pick 1 P3/P4 fix report
 
 Date: 2026-11-19
-Owner: Pham Tuan
+Owner: the owner
 Verdict: PROVISIONAL (non-Astra). Astra 6 is out of credit and remains blocked.
 
 ## Root causes verified
@@ -18,7 +18,7 @@ The requested P3 negative control and the new poll requirement cannot both be ob
 
 The source confirms the cause is not byte rewriting in code-exec `act()`. `scripts/cu.py:1995-2002` passes the actions list directly to `desktop_act`. The old `prog-pick1-p4.py` matches the base request JSON stdin byte-for-byte; the retry record at label `pick1-p4-code-retry` preserves the accented assertion text. `native/vendor/wtype/main.c:161-187` remaps real newline to Return and maps other characters with `xkb_utf32_to_keysym`.
 
-The old Python program used `\n` in its source string, which Python turns into real newline characters at runtime. wtype therefore pressed Return in the middle of the shell command. The `printf` argument was also unquoted. Diagnostic image `/home/james/.cache/agent-computer-use/d5e0d6a1bee7.png` shows command-not-found errors and the redirect on a separate prompt. The baseline action in `actions-base-p4.json` contains the corrected single-quoted command with literal backslash-n and one final real newline. Baseline verify image `/home/james/.cache/agent-computer-use/cf009120181b.png` shows `cat` printing all three lines with diacritics. Rapid input echo looked mangled in both images, but the baseline output was correct.
+The old Python program used `\n` in its source string, which Python turns into real newline characters at runtime. wtype therefore pressed Return in the middle of the shell command. The `printf` argument was also unquoted. Diagnostic image `~/.cache/agent-computer-use/d5e0d6a1bee7.png` shows command-not-found errors and the redirect on a separate prompt. The baseline action in `actions-base-p4.json` contains the corrected single-quoted command with literal backslash-n and one final real newline. Baseline verify image `~/.cache/agent-computer-use/cf009120181b.png` shows `cat` printing all three lines with diacritics. Rapid input echo looked mangled in both images, but the baseline output was correct.
 
 The fixed runtime string matches the specified characters. One formatting detail in the request's expected repr was not literal Python `repr` output: because the shell argument contains single quotes, Python displays the outer repr with double quotes. The actual repr recorded in the template is:
 
@@ -71,4 +71,4 @@ No windows or broker sessions were opened, the relay was not restarted, and the 
 - Address `55fafcba8080`, class `org.omarchy.herdrdrop`, title `omarchy: Jarvis`, PID `148305`.
 - Address `55faff012300`, class `zen`, title `Giảng lại AD AS (2) \u2014 Zen Browser`, PID `600148`. The title's separator is written as the escaped code point U+2014 to keep this report free of dash punctuation outside ASCII hyphens.
 
-No `code-exec-test-*` paths remained in `/tmp`. The worktree is intended to be clean after the report and log commit. All changes are on branch `speed-swarm-pick1p34fix` and pushed to origin. Pham Tuan's existing Jarvis and Zen clients were left untouched.
+No `code-exec-test-*` paths remained in `/tmp`. The worktree is intended to be clean after the report and log commit. All changes are on branch `speed-swarm-pick1p34fix` and pushed to origin. The owner's existing Jarvis and Zen clients were left untouched.

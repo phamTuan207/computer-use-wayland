@@ -22,7 +22,7 @@ thoroughly, council + redteam, best quality not speed.
   for Codex's own check.mjs --all proof.
 
 ## 18:16 +07 | 00:01 | Worktree created
-- Laptop: git worktree add /home/james/workspace/y5-tests -b y5-tests
+- Laptop: git worktree add ~/workspace/y5-tests -b y5-tests
   origin/todolist-push. HEAD eba3bce. Clean status.
 - Y1 Codex PID 184702 alive (13:55 elapsed at check).
 
@@ -43,7 +43,7 @@ thoroughly, council + redteam, best quality not speed.
 - Fix: single stdin redirect from the brief file only.
 
 ## 18:19 +07 | 00:04 | Relaunch
-- Command: cd /home/james/workspace/y5-tests && setsid nohup codex exec
+- Command: cd ~/workspace/y5-tests && setsid nohup codex exec
   -s danger-full-access --skip-git-repo-check -m gpt-6-luna
   -c model_reasoning_effort="max" - > /tmp/y5-codex.log 2>&1
   < /tmp/y5-codex-brief.md & disown

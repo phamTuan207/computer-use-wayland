@@ -42,7 +42,7 @@ New tabs opened through Marionette `window/new` render with:
 
 ## The Transparent Zen finding (Y4b, byte-level, from the installed XPI)
 
-Extension: Transparent Zen 0.9.4, XPI `{74186d10-f6f2-4f73-b33a-83bb72e50654}.xpi` in `~/.config/zen/ae59l0ak.Default (release)/extensions/`. Manifest content_scripts: matches `<all_urls>`, css `dist/transparent-zen.css`, js `dist/transparent-zen.js`, run_at `document_start`. It runs on EVERY page, including http://127.0.0.1 fixtures and example.com.
+Extension: Transparent Zen 0.9.4, XPI `{74186d10-f6f2-4f73-b33a-83bb72e50654}.xpi` in `~/.config/zen/profile.Default (release)/extensions/`. Manifest content_scripts: matches `<all_urls>`, css `dist/transparent-zen.css`, js `dist/transparent-zen.js`, run_at `document_start`. It runs on EVERY page, including http://127.0.0.1 fixtures and example.com.
 
 Injected CSS (`dist/transparent-zen.css`, minified, 2,532 bytes):
 - `:root body { transition: visibility .25s, opacity .25s, background-color .25s; visibility: visible; opacity: 1 }`

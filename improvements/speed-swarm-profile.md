@@ -1,7 +1,7 @@
 # Speed swarm profile: measured computer-use loop, 2026-11-18
 
 Run date: 2026-11-18, evening (v3 executor 22:04 to 22:31 +07, clean floor probe 22:35).
-Owner: Pham Tuan. Repo: phamTuan207/computer-use-wayland, HEAD 21684e7.
+Owner: the owner. Repo: phamTuan207/computer-use-wayland, HEAD 21684e7.
 Model in the loop: Codex gpt-6-luna, max reasoning, full access, on the laptop.
 Method: real broker loop, optimized discipline (one observation, ground all controls,
 batch actions in one act request, re-observe only to verify).

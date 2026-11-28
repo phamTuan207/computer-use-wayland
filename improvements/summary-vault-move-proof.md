@@ -1,9 +1,9 @@
 # Vault-move proof: Obsidian backlinks, API move vs plain mv
 
 - Date: 2026-11-19, work 13:07 to 13:22 Asia/Ho_Chi_Minh. Worker: Luna 6 Max.
-- Laptop: james@100.70.92.52 (Omarchy/Hyprland). Repo /home/james/computer-use-wayland,
+- Laptop: user@192.0.2.1 (Omarchy/Hyprland). Repo ~/computer-use-wayland,
   branch speed-swarm, HEAD 464df02 at proof time (report correction commit).
-- Vault: /home/james/James's second brain (101 .md files, alwaysUpdateLinks true).
+- Vault: ~/the owner's second brain (101 .md files, alwaysUpdateLinks true).
 - Task: move an Obsidian note to a new location and prove the backlink in the
   linking note is updated; then show plain shell mv leaves the link broken.
 - No broker session, 0 model calls, 0 observations in any run. Every CLI step

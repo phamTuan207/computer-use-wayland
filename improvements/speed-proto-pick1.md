@@ -1,6 +1,6 @@
 # Pick 1 prototype: code execution as the action (M1)
 
-- Owner: Pham Tuan. Repo: phamTuan207/computer-use-wayland, branch speed-swarm.
+- Owner: the repository owner. Repo: phamTuan207/computer-use-wayland, branch speed-swarm.
 - Implementer: Luna 6 Max. Date: Wed 2026-11-18, evening.
 - Status: IMPLEMENTED, COMMITTED, PUSHED. MEASUREMENT PAUSED MID-RUN by user order 23:50 (he is cleaning disk space on the laptop; fleet quiet until resume). No before/after numbers exist yet; the partial run is reported plainly below. Do not claim a saving until the measurement finishes.
 - No em dash or en dash in this file, per standing rule.

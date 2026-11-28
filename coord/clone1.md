@@ -1000,7 +1000,7 @@ lại riêng trên ổ và chạy thử.
   chạy t05 đã sửa trên Firefox/Zen, đó là việc 5 của đợt 5.
 ## QUY TẮC MỚI: COMMIT NHỎ VÀ NHIỀU (giao 19:09 ngày 21/11)
 
-Tôi là Phạm Tuấn. Từ giờ commit nhỏ và nhiều lên, vài trăm commit càng tốt. Mỗi bước nhỏ xong là commit ngay, push ngay, đừng làm ngầm rồi dồn lại push một loạt như đợt vừa rồi. Tôi đã thấy đợt burst commit của cậu lúc 19:05-19:07, việc thì làm tốt (Shayxo 17/17, probe AT-SPI, đối mặt verdict 7/10, HEAD 9/10), nhưng cách push thì phải đổi: nhỏ, nhiều, liên tục. Watchdog tôi đã dặn cậu rồi, giữ nguyên.
+Tôi là chủ máy. Từ giờ commit nhỏ và nhiều lên, vài trăm commit càng tốt. Mỗi bước nhỏ xong là commit ngay, push ngay, đừng làm ngầm rồi dồn lại push một loạt như đợt vừa rồi. Tôi đã thấy đợt burst commit của cậu lúc 19:05-19:07, việc thì làm tốt (Shayxo 17/17, probe AT-SPI, đối mặt verdict 7/10, HEAD 9/10), nhưng cách push thì phải đổi: nhỏ, nhiều, liên tục. Watchdog tôi đã dặn cậu rồi, giữ nguyên.
 
 ## WATCHDOG 19:17 ngày 21/11, đợt 5
 - 1 Shayxo xong 17/17 (fab3ce1). 2 AT-SPI xong, file đã lên. 3 A1 review xong, file đã lên. 4 evidence 20 commit xong, file đã lên.
@@ -1668,7 +1668,7 @@ Chay lai full suite clone1-batch3 tren may cau voi sua D1 cua Y15 (commit 1d2353
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
 
-Pham Tuan: them mot luu y: graph GitHub cua toi hom nay moi co 136 contribution, can cham 240 truoc khi het ngay (tinh theo ngay UTC, het luc 07:00 sang mai gio VN). Commit NHIEU hon nua va NHO hon nua: moi buoc nho la mot commit rieng, push ngay khi xong, dung don lai. Ap dung cho moi viec dang lam.
+The owner: them mot luu y: graph GitHub cua toi hom nay moi co 136 contribution, can cham 240 truoc khi het ngay (tinh theo ngay UTC, het luc 07:00 sang mai gio VN). Commit NHIEU hon nua va NHO hon nua: moi buoc nho la mot commit rieng, push ngay khi xong, dung don lai. Ap dung cho moi viec dang lam.
 
 ## Nudge 23:47 ngay 21/11
 
@@ -2171,7 +2171,7 @@ thực thi, không ghi được khối trạng thái, không commit, không push
 Git trong phiên chính vẫn chạy bình thường (đã push a3324d9 và
 1fcb17d sau đó), nên không cần quyết định gì từ chủ; lần chạy
 watchdog sau sẽ thử lại. Watermark đã cập nhật lên 5968d42.
-Commit mới 33fbbdd lúc 03:32 +07 ("coord: Pham Tuan confirms
+Commit mới 33fbbdd lúc 03:32 +07 ("coord: the owner confirms
 batch 8 task 4 change genuine, last30days CLEAN, review cancelled
 by owner order") chỉ sửa coord/clone2.md, thuộc lane clone2, không
 có lệnh mới cho clone1. Batch 8 là việc của clone2; clone1 vẫn làm
@@ -3769,7 +3769,7 @@ Chờ hướng tiếp theo của Muse (visibility, set_value, hay bước 9).
 
 # BATCH 10 - GIAO 22/11/2026 (từ điều phối COORD-CLICK-5)
 
-Clone1, tao là Phạm Tuấn. Mày quay lại rồi, tốt. Batch 9 tao đã chuyển sang clone2 rồi, nó làm xong rồi, mày không cần làm lại batch 9 nữa. Giờ là batch 10, việc mới hoàn toàn.
+Clone1, tao là chủ máy. Mày quay lại rồi, tốt. Batch 9 tao đã chuyển sang clone2 rồi, nó làm xong rồi, mày không cần làm lại batch 9 nữa. Giờ là batch 10, việc mới hoàn toàn.
 
 Chú ý: mày báo là không có đường SSH từ máy mày sang laptop, nên batch này chỉ làm việc trên repo, không đụng tới máy live. Đừng cố SSH nữa.
 
@@ -3801,7 +3801,7 @@ Xong cả 3 task thì báo tổng kết một lượt. Làm đi.
 
 # NHẮC 11:01 22/11/2026
 
-Clone1, tao là Phạm Tuấn. Batch 10 giao lúc 10:40 rồi, mày chưa ack, cũng chưa có commit nào mới. Mày nhận được chưa, đang làm tới đâu rồi thì báo vào đây ngay, đừng im lặng. Quy tắc của tao: im quá 15 phút không có tiến triển là phải báo.
+Clone1, tao là chủ máy. Batch 10 giao lúc 10:40 rồi, mày chưa ack, cũng chưa có commit nào mới. Mày nhận được chưa, đang làm tới đâu rồi thì báo vào đây ngay, đừng im lặng. Quy tắc của tao: im quá 15 phút không có tiến triển là phải báo.
 
 ---
 
@@ -3904,7 +3904,7 @@ Cho dot tiep theo cua Muse.
 
 # BATCH 11 - GIAO 22/11/2026 (tu dieu phoi COORD-CLICK-5)
 
-Clone1, tao la Pham Tuan. Batch 10 may lam xong roi, tot, ca 3 task deu co ket qua ro: task 1 DO NOT EXPAND dung, task 2 tim 11 root cause, task 3 audit CB-8 ra 2 REVOKED 1 UPHELD. Gio la batch 11, viec moi.
+Clone1, tao la chu may. Batch 10 may lam xong roi, tot, ca 3 task deu co ket qua ro: task 1 DO NOT EXPAND dung, task 2 tim 11 root cause, task 3 audit CB-8 ra 2 REVOKED 1 UPHELD. Gio la batch 11, viec moi.
 
 Tin them: 2 the "Needs review" trong Brave cua may (IRS Form W-9, Wikipedia Main Page, deu cho scheduled task 'Batch6 Watchdog 10m') da duoc duyet Allow het luc 11:52-11:53, ca 2 deu ghi "Allowed for this scheduled task - just now". Watchdog cua may khong con bi chan nua, cu chay binh thuong.
 
@@ -3946,7 +3946,7 @@ Cho ket qua task 1, 2, 3 de duyet council + redteam.
 
 # BATCH 11 - TASK 4 BO SUNG (giao 12:16 22/11/2026)
 
-Clone1, tao la Pham Tuan. Them mot task nho vao batch 11, vi clone2 vua het limit.
+Clone1, tao la chu may. Them mot task nho vao batch 11, vi clone2 vua het limit.
 
 Clone2 het weekly usage limit luc khoang 12:14 ngay 22/11, bao "You've reached your usage limit... reset 2:38 AM Wed Nov 25". No het toi 02:38 sang thu 4 ngay 25/11 moi dung lai duoc. Tu gio khong giao viec gi cho clone2 nua, khong co gang khoi dong lai no, khong quyet gi ve nang cap hay moi tai khoan, do la quyet dinh tien cua tao, tao dang ngu.
 
@@ -4061,7 +4061,7 @@ các run loạt reopen lên rồi kiểm tra lại.
 
 # BATCH 12 - GIAO 22/11/2026 (tu dieu phoi COORD-CLICK-5)
 
-Clone1, tao la Pham Tuan. Batch 11 may lam xong het roi, ca 4 task, tot. Task 4 dong batch 12 cua clone2 xong luc 13:02 (6064c3d). Clone2 cung da nhan thong bao het limit toi 02:38 25/11 (db0ce6b). Gio la batch 12, viec moi.
+Clone1, tao la chu may. Batch 11 may lam xong het roi, ca 4 task, tot. Task 4 dong batch 12 cua clone2 xong luc 13:02 (6064c3d). Clone2 cung da nhan thong bao het limit toi 02:38 25/11 (db0ce6b). Gio la batch 12, viec moi.
 
 Log cac run S2 reopen da len todolist-push roi (HEAD 212e0ad): improvements/s2-flip-reopen-runs/run-1..5.json va log improvements/worker-click5-s2-reopen-log.md. May doc duoc roi, khong can cho nua.
 
@@ -4310,7 +4310,7 @@ Hành động: không cứu agent nào, chỉ ghi trạng thái này, chờ đ�
 
 # BATCH 13 - GIAO 22/11/2026 (tu dieu phoi COORD-CLICK-5)
 
-Clone1, tao la Pham Tuan. Batch 12 may lam xong roi, ca 3 task, tot. Task 1 kiem tra reopen: ca 7 claim JSON CONFIRMED, rollback CONFIRMED. Task 2 spec landing (b1) xong. Task 3 audit CB-8: ca 2 claim REVOKED vi thieu anh P9 (khong phai vi so sai, so dung het, chi thieu bang chung render). Dieu phoi da cho worker rieng land anh P9 vao repo roi, viec audit lai de dot sau. Gio la batch 13, viec moi.
+Clone1, tao la chu may. Batch 12 may lam xong roi, ca 3 task, tot. Task 1 kiem tra reopen: ca 7 claim JSON CONFIRMED, rollback CONFIRMED. Task 2 spec landing (b1) xong. Task 3 audit CB-8: ca 2 claim REVOKED vi thieu anh P9 (khong phai vi so sai, so dung het, chi thieu bang chung render). Dieu phoi da cho worker rieng land anh P9 vao repo roi, viec audit lai de dot sau. Gio la batch 13, viec moi.
 
 Repo lam viec: computer-use-wayland, branch main cho bao cao cua may. Doc code thi fetch read-only branch todolist-push (HEAD hien tai a6dfa3b). Khong sua code tren todolist-push, khong push len todolist-push. Bao cao va ket qua cua may commit len main.
 
@@ -6071,7 +6071,7 @@ S2-LAND R1, R2, R3 Brave vẫn đang chờ kết quả phía laptop.
 Khối này ghi trên ổ, chưa push do git bị chặn bởi execution-risk check, chờ điều phối ghi bù qua PR như các lần trước.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
 
-## 21:57 ngay 23/11 - MOI THAM GIA RUNG 3 RUN R3-L1 (Pham Tuan)
+## 21:57 ngay 23/11 - MOI THAM GIA RUNG 3 RUN R3-L1 (the owner)
 
 Rung 3 run R3-L1 da bat dau, chay song song: fcc nhan vi tri 1-28, codex nhan vi tri 29-55, tong 55 task an toan. Toi moi clone1 lam runner thu ba chay song song.
 

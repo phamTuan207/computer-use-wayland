@@ -308,7 +308,7 @@ My extra fixtures, run at 21:00:45 against the verbatim discovery block
   the parser is local JSON, and the teardown executes no sleeps with empty
   PIDs. On-disk artifacts corroborate execution (PNG 37,475 bytes, extracts,
   layers JSON, 0-byte parser stderr, all stamped 20:56). Not a finding.
-- The laptop repo checkout at `/home/james/workspace/computer-use-wayland`
+- The laptop repo checkout at `~/workspace/computer-use-wayland`
   is at 4500a18 and its `improvements/` dir does not contain the Y6 files
   (older tree). That is pre-existing state, already noted in the Y6c log.
   The C2 source on the laptop is the `/tmp/y6-nested` runtime copy, which is

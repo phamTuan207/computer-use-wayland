@@ -1,6 +1,6 @@
 # Pick 4 — ARM 2 (FAST PATH)
 
-- Chủ sở hữu: Pham Tuan.
+- Chủ sở hữu: the owner.
 - Cờ đo: `CU_PICK4_FASTPATH=1`. Kết quả `printenv | rg '^CU_(PICK|CODE)'` chỉ có `CU_PICK4_FASTPATH=1`; không đặt `CU_CODE_EXEC` hay cờ Pick khác.
 - Không tạo drop-in, không khởi động lại relay, không sửa code hoặc đổi branch.
 - Brief ghi commit `5d4d512`, nhưng repo và broker thực tế đang ở `c1b7034b452b24358206009c40bbf450d575da58` trên branch `speed-swarm`. Broker status lúc kiểm tra ban đầu cũng báo `started_git_head=c1b7034b452b24358206009c40bbf450d575da58` và `loaded_code_sha256=f67d8abe5eb5d933e7f0b50c625066df074dd28dbb959ab5d2fb8f0f05c1342b`. Vì vậy các số đo này thu trên `c1b7034`, không phải commit được nêu trong brief.
@@ -66,7 +66,7 @@
 - Request bị từ chối: `observe=1` (`sequence_gap`), `a11y=3` (`unsupported_command`) (**4** tổng). Lỗi wrapper P1 xảy ra trước khi gửi broker và không nằm trong các số này.
 - Quan sát độc lập: 8 desktop observe được chấp nhận, 1 browser DOM observe được chấp nhận; thêm 1 desktop observe bị từ chối. Các act P1–P4 trả thêm ảnh after; browser act trả DOM after snapshot.
 - Hyprland object-form close trả `ok` cho terminal kiểm tra và Nautilus. Kiểm tra `hyprctl -j clients` cuối báo `test_windows_remaining=0`; PID Chromium quản lý `767756` không còn. Quét process không còn `cu.py session`, `session-driver`, `cursor_session.py guard` hoặc `native/indicator`.
-- `git status --short` cuối có 4 file tracked sửa đổi: `scripts/cu.py`, `scripts/vscode_cli.py`, `skill/cli-anything/registry.json`, `skill/cli-anything/vscode.md`. Mtime của cả 4 là 2026-11-18 23:16–23:20 +07, trước lượt chạy này; tôi không sửa chúng. `browser start` báo profile quản lý tại `/home/james/computer-use-wayland/browser-profile`; không xóa profile để giữ trạng thái tab.
+- `git status --short` cuối có 4 file tracked sửa đổi: `scripts/cu.py`, `scripts/vscode_cli.py`, `skill/cli-anything/registry.json`, `skill/cli-anything/vscode.md`. Mtime của cả 4 là 2026-11-18 23:16–23:20 +07, trước lượt chạy này; tôi không sửa chúng. `browser start` báo profile quản lý tại `~/computer-use-wayland/browser-profile`; không xóa profile để giữ trạng thái tab.
 
 ## Output analyzer
 == overall ==

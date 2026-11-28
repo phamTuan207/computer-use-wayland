@@ -102,7 +102,7 @@ import sys
 import tempfile
 import time
 
-REPO = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path('/home/hatch/workspace/computer-use-wayland')
+REPO = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path('~/workspace/computer-use-wayland')
 
 def load_code_exec(tree=None):
     tree = pathlib.Path(tree) if tree else REPO

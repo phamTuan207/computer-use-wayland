@@ -30,7 +30,7 @@ The Y6d C2 results and the Y6e rebuild/load claims reproduce mechanically, with 
 
 ### 1c. Y6e ldd on the rebuilt .so: VERIFIED (re-run by me)
 
-- Command (laptop): `ldd /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`.
+- Command (laptop): `ldd ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`.
 - Result: 0 lines `not found`. `libaquamarine.so.15 => /usr/lib/libaquamarine.so.15`, `libhyprgraphics.so.5 => /usr/lib/libhyprgraphics.so.5`. All other deps resolve to `/usr/lib`.
 - File: 34,440,704 bytes, md5 `78ac102337ca70842bf604b56c6f4c8e`. Matches Y6r's claim exactly.
 - Control, same session: backup-1 `.so` still dead, `libaquamarine.so.14 => not found` and `libhyprgraphics.so.4 => not found`.
@@ -55,7 +55,7 @@ The Y6d C2 results and the Y6e rebuild/load claims reproduce mechanically, with 
 
 - File (laptop): `/tmp/y6e-c2/c2-laptop2-rerun.log` (2843 bytes), read in full. Start 21:50:19, done 21:50:20. Content reproduces `c2-laptop2.log` exactly except timestamps: same md5s (runner 692d4271, pill da056508, conf 0d4ac7a9), same parser rc=1/0, same GRIM-A/A2 37475 bytes, same LDD-DEAD naming .so.14/.so.4 rc=1, LDD-GOOD rc=0, same teardown asserts 2/RUN-DIR-REMOVED/LOCK-FREE/LIVE-1515-ALIVE.
 - The rerun script `c2-laptop2.sh` checks the OLD conf md5 by design, so the rerun itself does NOT test the new conf. The new-conf coverage is only the separate `ldd-test.sh` run.
-- New-conf ldd check, independently reproduced by me (laptop): `bash /tmp/y6e-c2/ldd-test.sh /tmp/y6-nested/conf/hyprland-wayland-y6e.lua` prints `Y6-WAYLAND: plugin ABI OK: /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`, rc=0. Same command against the old conf prints the dead-ABI FAIL naming .so.14/.so.4, rc=1. This matches the Y6e rebuild-load log line 529 claim.
+- New-conf ldd check, independently reproduced by me (laptop): `bash /tmp/y6e-c2/ldd-test.sh /tmp/y6-nested/conf/hyprland-wayland-y6e.lua` prints `Y6-WAYLAND: plugin ABI OK: ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`, rc=0. Same command against the old conf prints the dead-ABI FAIL naming .so.14/.so.4, rc=1. This matches the Y6e rebuild-load log line 529 claim.
 - Artifact gap: there is no saved log file of Y6e's own `ldd-test.sh` run against the new conf; the evidence is the claim line in `improvements/worker-y6e-rebuild-load-log.md` (line 529) plus the load log's own `plugin ABI OK` line plus my independent re-run just now. Outcome VERIFIED, artifact UNVERIFIED (no file). The next worker should save that run's output to a file.
 
 ### 1g. Hook marker: VERIFIED

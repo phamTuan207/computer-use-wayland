@@ -80,7 +80,7 @@ for i in $(seq 1 45); do sleep 1; kill -0 "$PILL_PID" 2>/dev/null || fail "pill 
 
 ### A3 (HIGH, H5): a retry with the current conf fails fast but misdiagnoses; the only guard is a comment
 
-The conf still loads backup 1 (conf line 16: `hl.plugin.load("/home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")`), which is dead ABI (Y6c F1). The conf comment `do NOT run the measurement with backup 1` is comment-only; no code in the runner checks it, and the runner contains zero `ldd` references (`grep -c ldd` on the runner returns 0).
+The conf still loads backup 1 (conf line 16: `hl.plugin.load("~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")`), which is dead ABI (Y6c F1). The conf comment `do NOT run the measurement with backup 1` is comment-only; no code in the runner checks it, and the runner contains zero `ldd` references (`grep -c ldd` on the runner returns 0).
 
 Fail-fast is confirmed: with plugin-list JSON `[]`, the verbatim gate (runner line 244) fails at once, rc=1, `FAIL: hyprglass not in nested plugin list`. No 60s liquid burn. But the diagnosis is wrong in two ways, both proven from Y6c evidence:
 

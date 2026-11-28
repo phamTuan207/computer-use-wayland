@@ -73,13 +73,13 @@ check_deadline() {
 }
 
 # Owner-return detection (U19): loginctl IdleHint is PROVEN UNUSABLE on this
-# machine (all 8 james sessions report IdleHint=no while the owner is away,
+# machine (all 8 user sessions report IdleHint=no while the owner is away,
 # including the graphical seat0/tty1 session). This check is WARN-ONLY and
 # never aborts. The real protection is the explicit Muse go at run time plus
 # the 25-minute deadline plus the short run duration.
 check_idle() {
   local sess hint
-  sess=$(loginctl --no-legend 2>/dev/null | awk '$3 == "james" && $4 == "seat0" {print $1; exit}')
+  sess=$(loginctl --no-legend 2>/dev/null | awk '$3 == ENVIRON["USER"] && $4 == "seat0" {print $1; exit}')
   if [ -z "$sess" ]; then echo "Y6-WAYLAND: WARN: graphical loginctl session not found, skipping idle check at $1"; return 0; fi
   hint=$(loginctl show-session "$sess" -p IdleHint 2>/dev/null | cut -d= -f2)
   echo "Y6-WAYLAND: idle check at $1: session $sess IdleHint=${hint:-unknown} (warn-only, IdleHint is unreliable on this machine)"
@@ -311,7 +311,7 @@ echo "Y6-WAYLAND: hook marker absent, profile applied"
 nest python3 - << "PYEOF" || fail "liquid gate failed (see above; version mismatch or shader error is NO-GO)"
 import sys
 import time
-sys.path.insert(0, "/home/james/workspace/computer-use-wayland/scripts")
+sys.path.insert(0, __import__("os").path.expanduser("~/workspace/computer-use-wayland/scripts"))
 import indicator
 env = dict(__import__("os").environ)
 deadline = time.monotonic() + 60

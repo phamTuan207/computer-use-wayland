@@ -2,7 +2,7 @@
 
 Wall-clock Asia/Ho_Chi_Minh. Started 17:47 21/11/2026.
 
-- 17:47: Task received. Checked VM repo (todolist-push, HEAD 4b715b8): tests/realistic/clone1-batch3/ NOT present on this branch. Checked main worktree /home/hatch/workspace/cu-jpegq90-land: clone1-batch3 exists (37 files, 220K, t01-t10 + README + lib + results.json + run_all.mjs). Error summary exists: 646 lines, 73162 bytes.
+- 17:47: Task received. Checked VM repo (todolist-push, HEAD 4b715b8): tests/realistic/clone1-batch3/ NOT present on this branch. Checked main worktree ~/workspace/cu-jpegq90-land: clone1-batch3 exists (37 files, 220K, t01-t10 + README + lib + results.json + run_all.mjs). Error summary exists: 646 lines, 73162 bytes.
 - 17:48: Copied clone1-batch3 (tar via ssh-laptop.sh cat) + error summary to laptop /tmp/y3/. Verified: 37 files, 646 lines.
 - 17:48: Wrote fcc prompt (4498 bytes) to /tmp/y3/prompt.txt on laptop. Verified byte count.
 - 17:49: Launched fcc run 1 detached (setsid nohup fcc-claude -p --dangerously-skip-permissions "$(cat prompt)" ). FCC_LAUNCHED printed.

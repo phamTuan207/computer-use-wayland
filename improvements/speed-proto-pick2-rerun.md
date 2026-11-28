@@ -1,7 +1,7 @@
 # Pick 2 solo rerun: baseline vs pick2, both arms redone (Track 2, Phase A)
 
-- Owner: Pham Tuan. Date: 2026-11-19, 02:52 to 03:52 Asia/Ho_Chi_Minh.
-- Repo: laptop /home/james/computer-use-wayland, branch speed-swarm, HEAD c1b7034.
+- Owner: the repository owner. Date: 2026-11-19, 02:52 to 03:52 Asia/Ho_Chi_Minh.
+- Repo: laptop ~/computer-use-wayland, branch speed-swarm, HEAD c1b7034.
 - Status: MEASURED, both arms 5/5 SUCCESS. Verdict PROVISIONAL (non-Astra, Astra 6 out of credit).
 - No em dash or en dash in this file.
 

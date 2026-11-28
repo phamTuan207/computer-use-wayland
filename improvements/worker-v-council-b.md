@@ -5,7 +5,7 @@
 # Rules followed: full access, no fabrication, no em dash or en dash,
 # never ydotool, nothing edited/restarted/killed on the laptop.
 
-## Evidence collected live (laptop james, 100.70.92.52, via ssh-laptop.sh)
+## Evidence collected live (laptop user, 192.0.2.1, via ssh-laptop.sh)
 
 ### E1. Existing timers and cron, 17:24:25
 - `crontab` is NOT installed on the laptop (command not found).

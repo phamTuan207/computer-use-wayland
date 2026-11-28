@@ -16,7 +16,7 @@ The retry run may NOT proceed as-is. With the current conf + v3 runner it will f
 
 Rebuilt conf, repo copy `improvements/worker-y6e-hyprland-wayland-rebuilt.lua`, md5 9ccb27017ab63a9d2bce1d9651425d3b (re-verified on the laptop just now, same md5):
 
-- Line 16: `hl.plugin.load("/home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so")`
+- Line 16: `hl.plugin.load("~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so")`
 - Line 18: `dofile("/tmp/y6-nested/conf/nested-visuals-hook.lua")`
 
 Hook, laptop `/tmp/y6-nested/conf/nested-visuals-hook.lua`, md5 9d68b2f54f920c6aec2351ab7abe27fc:
@@ -128,7 +128,7 @@ Three sub-options, judged separately. No blocking wait exists or is acceptable: 
 
 ### 4c. Runner applies optics via hyprctl
 
-- Does NOT work. VERIFIED against the pinned plugin source, not just Y6e council 3's word: laptop worktree `/home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/src/Diagnostics.cpp:589` gives the usage string `hyprctl hyprglass <status|stats [reset]|items>`. Only three subcommands exist, and none applies configuration. Council 3's claim is independently confirmed.
+- Does NOT work. VERIFIED against the pinned plugin source, not just Y6e council 3's word: laptop worktree `~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/src/Diagnostics.cpp:589` gives the usage string `hyprctl hyprglass <status|stats [reset]|items>`. Only three subcommands exist, and none applies configuration. Council 3's claim is independently confirmed.
 - Further, neither `status` nor `items` can serve as a positive profile-applied gate. `status` reports version, versionCheck, active, shaders, itemProtocol, and feature flags, but no material values (blur_strength 0.15 is not exposed) and no layer list. `items` lists only live subsurface glass items (`Diagnostics.cpp:200-260` iterates live subsurface entries; empty result is "no active subsurface glass items"): it does not list configured layer registrations, so it cannot confirm `hl.plugin.hyprglass.layer("computer-use-indicator", ...)` ran, and with no pill running there would be no items anyway. (c) is dead. The profile can only be applied from inside Lua config (optics.lua) or by a config re-parse that executes optics.lua.
 
 ### 4d. Other mechanisms

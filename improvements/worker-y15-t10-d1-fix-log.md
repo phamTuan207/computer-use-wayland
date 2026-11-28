@@ -41,7 +41,7 @@ in either file (verified by grep, 0 hits, after every round).
 
 Headless Playwright Chromium on the VM. Env prefix for every run:
 
-  PLAYWRIGHT_CORE_PATH=/tmp/y12-scratch/node_modules/playwright-core CHROMIUM_PATH=/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome node <script>
+  PLAYWRIGHT_CORE_PATH=/tmp/y12-scratch/node_modules/playwright-core CHROMIUM_PATH=~/.cache/ms-playwright/chromium-1187/chrome-linux/chrome node <script>
 
 run_all.mjs writes results.json; it was restored with git checkout
 after every suite run. All runs timed (wall-clock UTC plus elapsed).

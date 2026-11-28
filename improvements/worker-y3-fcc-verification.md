@@ -97,7 +97,7 @@ All 14 fixed by the completed upload itself. Evidence (shared, corroborated by C
 | C4 | FIXED | Commit Changes link location documented (end of right column); for a location-knowledge fix the doc record is the fix |
 | C5 | FIXED | Dashboard > View Problems > Continue path documented |
 | C6 | FIXED (rule) | ydotool ban restated in every brief (MEMORY.md lesson 17/11); brief_check.py machine-checks it (redteam) |
-| C7 | FIXED (rule) | Narrate-each-step standing rule (MEMORY.md, dang 20/11); brief_check.py covers it (redteam) |
+| C7 | FIXED (rule) | Narrate-each-step standing rule (MEMORY.md, the owner 20/11); brief_check.py covers it (redteam) |
 | C8 | FIXED | Cleanup checklist (end broker session, pill gone via grim, desktop clean); matches MEMORY.md shutdown rule |
 
 ### D. Process / communication (D1-D5)

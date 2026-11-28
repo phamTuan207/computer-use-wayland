@@ -256,5 +256,5 @@ council reconvenes with the trigger identified.
    hyprctl reload; default Super I returns.
 3. Monitor: systemctl --user disable --now input-stall-monitor.service.
 4. Hook: delete reapply-indicator-patch.hook.
-5. lotus-autostart.sh: restore /home/james/.local/bin/lotus-autostart.sh.bak-20261121.
+5. lotus-autostart.sh: restore ~/.local/bin/lotus-autostart.sh.bak-20261121.
 6. IM state: fcitx5-remote -s ngosen. Left at ngosen on 21/11 17:39.

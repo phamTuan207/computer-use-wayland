@@ -145,7 +145,7 @@ F3. Time of check versus time of use on the .so files. The digest is computed
 from file bytes (activate-glass.py:17-20, activate-cursor-guard.py:22-25) and
 the file is then loaded by path, with no re-hash after load. A concurrent
 writer (another sync, another worker copying plugins) could swap bytes between
-the hash and the load. Files are 0600 and james owned, so the writer would be
+the hash and the load. Files are 0600 and user owned, so the writer would be
 same user, but several workers share this laptop tonight. Also
 assert_glass_added and assert_guard_added (plugin_inventory.py:71-88) verify
 only name, author, and version, not the loaded handle sha. A different build

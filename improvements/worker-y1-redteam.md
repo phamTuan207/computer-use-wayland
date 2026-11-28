@@ -85,7 +85,7 @@ Measured (probe round 2, codemode.execute_op):
 - `"{0.__globals__}".format(repo_list_scripts)` returns the full repr of the
   codemode module globals dict, keys included
 - `"{0.__globals__[REPO_ROOT]}".format(repo_list_scripts)` returns
-  `/home/hatch/workspace/computer-use-wayland`
+  `~/workspace/computer-use-wayland`
 
 The same hole in the live runner is worse, because code_exec API functions
 are bound methods, and a bound method's `__self__` is the whole session:

@@ -8,6 +8,7 @@ Public data only, learning/research only. No login, no evasion.
 Output: improvements/s2-pilot-data.jsonl (one JSON record per fetch).
 """
 import json
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -15,7 +16,7 @@ from datetime import datetime, timezone
 from scrapling.fetchers import Fetcher
 from scrapling.parser import Adaptor
 
-OUT = "/home/hatch/workspace/computer-use-wayland/improvements/s2-pilot-data.jsonl"
+OUT = os.path.expanduser("~/workspace/computer-use-wayland/improvements/s2-pilot-data.jsonl")
 SLEEP = 2.5
 count = 0
 

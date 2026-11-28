@@ -22,7 +22,7 @@ testing, small commits, push often to todolist-push.
 - Confirmed local git identity: user.name phamTuan207,
   email 232407559+phamTuan207@users.noreply.github.com (matches requirement).
 - Confirmed Chrome binaries exist for offline checkers:
-  /home/james/.cache/puppeteer/chrome/linux-157.0.8103.78/chrome-linux64/chrome
+  ~/.cache/puppeteer/chrome/linux-157.0.8103.78/chrome-linux64/chrome
   and system /usr/bin/chromium.
 - `tests/realistic/` did not exist. Created `tests/realistic/fcc-k/` and
   `tests/realistic/fcc-k/fixtures/`.

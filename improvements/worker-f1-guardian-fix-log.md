@@ -7,7 +7,7 @@
 
 ## 22:19 test start
 - VM repo todolist-push HEAD 5792a82. Installed tree
-  /home/james/.local/share/agent-computer-use/scripts/ md5-identical to the VM
+  ~/.local/share/agent-computer-use/scripts/ md5-identical to the VM
   repo for cu.py, cursor_session.py, cursor_theme.py, indicator.py,
   cancel_hotkey.py. No version skew; the fix goes in the repo and deploys via
   sync-installed.py (or exact-path copy).
@@ -96,7 +96,7 @@ Failing check: `scripts/visuals.py::_login` -
 raise ValueError('profile does not match the pinned optics source')`,
 OPTICS = `<repo>/native/hyprglass-local-optics.lua`, manifest =
 `<repo>/native/visuals.json`, both read from the LAPTOP repo
-(`/home/james/computer-use-wayland`) because `visuals-login.lua` runs that copy.
+(`~/computer-use-wayland`) because `visuals-login.lua` runs that copy.
 
 Layer 4 (THE DRIFT - root): the laptop repo is stale vs the setup-published
 state, in three fields. Laptop repo is at detached HEAD 56f5af4 (predates the
@@ -114,7 +114,7 @@ be force-synced.
   so optics and manifest came from two different stale commits, and both were
   stale against b2afcd1 (blur 0.15).
 - Laptop manifest `library`: hyprglass-`d086bc43...`.so (older build).
-Setup-published state (installed tree `/home/james/.local/share/agent-computer-use/`):
+Setup-published state (installed tree `~/.local/share/agent-computer-use/`):
 - optics sha256 `9a151634...` = commit b2afcd1 (blur 0.15).
 - manifest pins `profile_sha256` 9a151634 + `library` hyprglass-`199153ae...`.so.
 - installed optics sha256 verified = 9a151634. Installed manifest diff vs laptop
@@ -156,7 +156,7 @@ Crawl evidence (corroborates the mechanism, not the local drift):
   No commit guards the plugin-missing case in check_guard or re-pins the
   laptop-repo manifest after an optics change.
 - Login seam: `~/.config/hypr/hyprland.lua` dofiles
-  `/home/james/computer-use-wayland/native/visuals-login.lua` (gitignored,
+  `~/computer-use-wayland/native/visuals-login.lua` (gitignored,
   laptop-local). That file: if hyprglass 1.1.1-cu.1 already loaded, apply
   optics; else `hl.on("hyprland.start", hl.exec_cmd(python3 visuals.py
   <laptop-repo visuals.json>))`. `agent_computer_use_glass.lua` is a stub:
