@@ -13,7 +13,10 @@ Covers, against a fake HOME and a fake BiDi server on loopback:
 - history recent + search against a fixture places.sqlite;
 - tabs / current / page / close against a fake BiDi server that
   answers session.new, getTree, script.evaluate, navigate, activate,
-  close and session.end with canned JSON.
+  close and session.end with canned JSON;
+- open re-activates the opener before the title fetch (Pilot 2),
+  discloses a failed re-activate without failing the open, and
+  open --live stays on the remoting path with no BiDi calls.
 
 The fake server speaks the same minimal WebSocket framing as the
 wrapper: HTTP upgrade, masked client frames, unmasked server frames.
@@ -24,6 +27,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import socket
 import sqlite3
 import struct
@@ -51,9 +55,13 @@ def read_exact(reader, count):
 class FakeBidiServer:
     """A canned WebDriver BiDi server on an ephemeral loopback port."""
 
-    def __init__(self, contexts, title="Fake Title"):
-        self.contexts = contexts
+    def __init__(self, contexts, title="Fake Title",
+                 fail_activate=False):
+        self.contexts = list(contexts)
         self.title = title
+        self.fail_activate = fail_activate
+        self.call_details = []
+        self._opened_count = 0
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("127.0.0.1", 0))
@@ -157,6 +165,8 @@ class FakeBidiServer:
                 method = message.get("method")
                 call_id = message.get("id")
                 params = message.get("params", {})
+                self.call_details.append(
+                    {"method": method, "params": params})
                 if method == "session.new":
                     self._reply(conn, call_id, {
                         "sessionId": "fake-session",
@@ -172,6 +182,23 @@ class FakeBidiServer:
                 elif method == "script.evaluate":
                     expression = params.get("expression", "")
                     if "window.open" in expression:
+                        self._opened_count += 1
+                        opened_url = "https://example.com/opened"
+                        match = re.search(
+                            r'window\.open\(("(?:[^"\\]|\\.)*")',
+                            expression)
+                        if match:
+                            try:
+                                opened_url = json.loads(match.group(1))
+                            except json.JSONDecodeError:
+                                pass
+                        target = params.get("target", {})
+                        self.contexts.append({
+                            "context": "ctx-opened-%d"
+                                       % self._opened_count,
+                            "url": opened_url,
+                            "originalOpener": target.get("context"),
+                            "parent": None})
                         result = {"type": "string", "value": "opened"}
                     elif "document.body" in expression:
                         result = {"type": "object", "value": [
@@ -186,6 +213,12 @@ class FakeBidiServer:
                     self._reply(conn, call_id, {
                         "realm": "fake-realm", "type": "success",
                         "result": result})
+                elif method == "browsingContext.activate" \
+                        and self.fail_activate:
+                    self._send_frame(conn, json.dumps(
+                        {"id": call_id, "type": "error",
+                         "error": "no such frame",
+                         "message": "fake activate failure"}))
                 elif method in ("browsingContext.navigate",
                                 "browsingContext.activate",
                                 "browsingContext.close"):
@@ -445,6 +478,98 @@ class ZenCliTest(unittest.TestCase):
         self.assertTrue(parsed["ok"])
         self.assertEqual(parsed["index"], 0)
         self.assertIn("browsingContext.close", server.calls)
+
+    def test_open_reactivates_opener_before_title_fetch(self):
+        """Pilot 2: window.open selects the new tab, so cmd_open must
+        re-activate the opener immediately after finding the new tab,
+        before fetching its title, and keep tracking the new tab."""
+        url = "https://example.com/opened?rep=unit0"
+        with FakeBidiServer(two_contexts()) as server:
+            code, _, parsed = self.run_wrapper(
+                "--port", str(server.port), "open", url, "--tab", "0")
+            details = list(server.call_details)
+        self.assertEqual(code, 0)
+        self.assertTrue(parsed["ok"])
+        self.assertFalse(parsed["live"])
+        self.assertEqual(parsed["tab"]["index"], 2)
+        self.assertEqual(parsed["tab"]["url"], url)
+        self.assertEqual(parsed["tab"]["title"], "Fake Title")
+        self.assertIs(parsed["selection_restored"], True)
+        self.assertIsInstance(parsed["flash_window_ms"], int)
+        self.assertGreaterEqual(parsed["flash_window_ms"], 0)
+        self.assertNotIn("selection_restore_error", parsed)
+        open_at = next(
+            i for i, d in enumerate(details)
+            if d["method"] == "script.evaluate"
+            and "window.open" in d["params"].get("expression", ""))
+        activate_at = next(
+            i for i, d in enumerate(details)
+            if i > open_at
+            and d["method"] == "browsingContext.activate")
+        title_at = next(
+            i for i, d in enumerate(details)
+            if i > open_at
+            and d["method"] == "script.evaluate"
+            and d["params"].get("expression") == "document.title"
+            and d["params"].get("target", {}).get("context")
+            == "ctx-opened-1")
+        self.assertLess(activate_at, title_at,
+                        "opener must be re-activated before the new "
+                        "tab title is fetched")
+        self.assertEqual(
+            details[activate_at]["params"].get("context"), "ctx-blank",
+            "re-activate must target the opener context")
+        state = json.loads((
+            self.home / ".local" / "share" / "agent-computer-use"
+            / "zen-cli-state.json").read_text())
+        self.assertEqual(state["tab_index"], 2,
+                         "tracked tab stays the new tab")
+        self.assertEqual(state["tab_url"], url)
+
+    def test_open_activate_failure_disclosed_not_silent(self):
+        """Pilot 2: a failed re-activate must not fail the open, but
+        the result must disclose that selection was not restored."""
+        url = "https://example.com/opened?rep=unit1"
+        with FakeBidiServer(two_contexts(),
+                            fail_activate=True) as server:
+            code, _, parsed = self.run_wrapper(
+                "--port", str(server.port), "open", url, "--tab", "0")
+        self.assertEqual(code, 0)
+        self.assertTrue(parsed["ok"])
+        self.assertEqual(parsed["tab"]["index"], 2)
+        self.assertEqual(parsed["tab"]["url"], url)
+        self.assertIs(parsed["selection_restored"], False)
+        self.assertIn("fake activate failure",
+                      parsed["selection_restore_error"])
+        self.assertIn("not restored", parsed["note"])
+        self.assertIsInstance(parsed["flash_window_ms"], int)
+        state = json.loads((
+            self.home / ".local" / "share" / "agent-computer-use"
+            / "zen-cli-state.json").read_text())
+        self.assertEqual(state["tab_index"], 2)
+
+    def test_open_live_uses_remoting_without_bidi(self):
+        """Pilot 2: --live is unchanged (remoting, no BiDi session,
+        no re-activate, no tracking)."""
+        bindir = Path(self.tmp.name) / "bin"
+        bindir.mkdir()
+        argv_file = Path(self.tmp.name) / "live-argv.txt"
+        stub = bindir / "zen-browser"
+        stub.write_text(
+            "#!/bin/sh\nprintf '%%s\\n' \"$@\" > %s\nexit 0\n"
+            % argv_file)
+        stub.chmod(0o755)
+        code, _, parsed = self.run_wrapper(
+            "open", "--live", "https://example.com/live",
+            extra_path=str(bindir))
+        self.assertEqual(code, 0)
+        self.assertTrue(parsed["ok"])
+        self.assertIs(parsed["live"], True)
+        self.assertEqual(parsed["url"], "https://example.com/live")
+        self.assertNotIn("selection_restored", parsed)
+        self.assertNotIn("tab", parsed)
+        self.assertEqual(argv_file.read_text().splitlines(),
+                         ["--new-tab", "https://example.com/live"])
 
 
 if __name__ == "__main__":

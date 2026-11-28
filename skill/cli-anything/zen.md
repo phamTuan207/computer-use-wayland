@@ -95,7 +95,7 @@ always loopback; the wrapper never connects anywhere else.
 | `session stop` | Stop the dedicated session (only the recorded pid with the recorded profile in its cmdline) |
 | `session status` | Dedicated session probe; always exits 0 |
 | `tabs` | List tabs of the dedicated session: index, url, title |
-| `open <url>` | Open an http(s) URL in a NEW tab; records it as current |
+| `open <url>` | Open an http(s) URL in a NEW tab; records it as current; re-activates the opener so visible selection does not move (result reports `selection_restored`, `flash_window_ms`) |
 | `open --live <url>` | Open a URL in a new tab of his RUNNING Zen via remoting; opt-in only, PROPOSED-live, see below |
 | `navigate <url> [--tab INDEX]` | Navigate the current (or named) tab |
 | `activate <index>` | Bring a tab to front; records it as current |
@@ -140,6 +140,23 @@ with the tracked URL. If no tab was tracked, `current` shows the
 first live non-blank tab. Closing the tracked tab clears the
 tracking.
 
+`open` (session path) opens with `window.open`, which selects the
+new tab, then immediately re-activates the opener tab before the
+title fetch, so visible selection ends on the opener while tracked
+stays the new tab: visible != tracked immediately after open. The
+result reports `selection_restored` and `flash_window_ms` (time
+from `window.open` to re-activate completion); if the re-activate
+fails the open still succeeds with `selection_restored: false`
+plus `selection_restore_error` and a note. BiDi exposes no
+selected-tab read, so when the opener was not the pre-open
+selected tab the restore lands on the opener, not on the original
+selected tab. `open --live` is unchanged: remoting foregrounds by
+design and there is no session to re-activate with. Index hazard
+(measured 2026-11-28): the RDP open path (`gBrowser.addTrustedTab`)
+inserts the new tab immediately BEFORE the selected tab, so the
+selected index shifts by +1 on every RDP open; never cache tab
+indices across any open, re-list instead.
+
 The dedicated profile lives at `~/.cache/cli-anything-zen/profile`
 and belongs to the wrapper; it never sees his data. `session start`
 refuses any `--profile` inside `~/.config/zen` (his real profiles).
@@ -175,10 +192,16 @@ output under `result`.
    id from any output: the wrapper never prints one, because it is a
    per-session handle that is stale in the next invocation. If a
    command rejects your tab argument, it is probably a context id;
-   re-list and use the index.
+   re-list and use the index. Never cache an index across an open:
+   an RDP `addTrustedTab` inserts before the selected tab and
+   shifts indices, so a cached index silently points at a
+   different tab; re-list after any open.
 3. `open` always opens a NEW tab in the DEDICATED session. It does
    not touch his Zen. To open a page in his own Zen you must use
-   `open --live`, and only when he asked for it (rule 9).
+   `open --live`, and only when he asked for it (rule 9). After a
+   session `open`, visible selection is the opener tab while
+   tracked (`current`) is the new tab; check `selection_restored`
+   in the result before assuming the new tab is visible.
 4. `close` closes exactly the index the task names. Never close
    a tab you did not list first, and never close all tabs. The last
    remaining tab of the dedicated session cannot be closed; use
