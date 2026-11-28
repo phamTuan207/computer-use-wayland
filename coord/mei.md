@@ -767,3 +767,12 @@ R3-075 (key chi co 3 anh chup terminal lam vat chung, list khong bao chup buoc n
 - Council dung ve su that gan nhu moi truong hop nhung sai ve lop quyet dinh o 11/13 amendment (goi polish la bat buoc). Redteam dung ve lop quyet dinh o 11/13 nhung sai 2 diem: canh bao DP-05 "2 cho" (cau do chi xuat hien 1 lan o L719); bac bo hoan toan pin ten cot R3-016 (thieu ten la that, chi la polish chu khong phai bat buoc).
 - Lane MEDIUM-HIGH ghi R3-029 o vi tri 27 la sai (25). Lane MEDIUM dung nhan "(R3-L2, 2026-11-24)" sai luat dong bang; lane LOW dung nhan "(amendment sau R3-L2...)" thieu ma lan chay. Tat ca da sua thanh R3-L3 o bao cao nay.
 - Em khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot trong triage nay.
+
+## Canh bao: mochi doi coordinator tra loi ve ledger R3-001 (2026-11-25 15:20 +07)
+
+- Watchdog 15:17 +07 bao KHAN: mochi dang doi coordinator tra loi ve ledger R3-001 + task tiep theo (R3-002 hoac R3-040 attempt 4).
+- Da xac minh: cau hoi cua mochi ghi trong PR #537 "mochi: note 25/11 14:34 - watchdog asks epoch 3 coordinator for status update" (mo 14:39:55 +07), den 15:20 van 0 comment, chua co tra loi. Lien lac cuoi giua mochi va coordinator khoang 14:07 +07 (theo watchdog), tuc khoang 70 phut.
+- todolist-push khong doi (0009ca87), khong co commit ledger moi cho R3-001.
+- Coordinator van hoat dong: merge PR #544 luc 15:14:28 +07 (clone1 watchdog), nhung chua tra loi cau hoi cu the cua mochi.
+- De xuat leo thang: coordinator tra loi mochi ve ledger R3-001 va task tiep theo, vi run R3-L3 dang cho quyet dinh nay.
+- Em khong cham diem, khong doc ledger/snapshot, khong lien he scorer/runner, khong sua file dong bang.
