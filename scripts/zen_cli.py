@@ -60,6 +60,15 @@ Commands (each prints exactly one JSON object on stdout):
                         while the tab order and URLs stay the same.
   open <url>            Open url in a NEW tab (window.open) in the
                         dedicated session; records it as current.
+                        window.open selects the new tab, so the opener
+                        is re-activated immediately after the new tab
+                        is found (before the title fetch) and visible
+                        selection ends on the opener while tracked
+                        stays the new tab. The result reports
+                        selection_restored and flash_window_ms (time
+                        from the window.open call send to re-activate
+                        completion; a slight overestimate, it starts
+                        before the new tab lands).
   open --live <url>     Open url in a new tab of his RUNNING Zen
                         (remoting). Opt-in only, see above.
   navigate <url> [--tab INDEX]
@@ -861,28 +870,65 @@ def cmd_open(args):
             tracked = resolve_tracked(session)
             opener_index = tracked["index"] if tracked is not None else 0
         opener_entry, opener = resolve_tab(session, opener_index)
+        # Pilot 2 (2026-11-28): window.open selects the new tab (5/5),
+        # so restore visible selection to the opener as soon as the
+        # new tab is found, before any title fetch. Session path only:
+        # this wrapper can never attach to the owner's Zen (no BiDi
+        # port there), so the re-activate can never yank the owner's
+        # selection. browsingContext.createContext is unknown-command
+        # in this build, so no background create exists to use instead.
+        # Known limitation: BiDi exposes no selected-tab read, so when
+        # the opener was not the pre-open selected tab this restores
+        # to the opener, not to the original selected tab.
+        open_started = time.monotonic()
         evaluate(session, opener,
                  "window.open(%s, '_blank')" % json.dumps(url))
         deadline = time.monotonic() + OPEN_POLL_SECONDS
-        new_tab = None
-        while time.monotonic() < deadline:
-            time.sleep(0.5)
+        found = None
+        while True:
             for index, entry in enumerate(list_contexts(session)):
                 if entry.get("originalOpener") == opener:
-                    new_tab = {"index": index,
-                               "url": entry.get("url", ""),
-                               "title": tab_title(
-                                   session, entry.get("context", ""))}
+                    found = (index, entry)
                     break
-            if new_tab is not None:
+            if found is not None or time.monotonic() >= deadline:
                 break
-        if new_tab is None:
+            time.sleep(0.5)
+        if found is None:
             raise RuntimeError(
                 "window.open did not produce a new tab within %ds; the "
                 "opener tab was not navigated" % OPEN_POLL_SECONDS)
+        new_index, new_entry = found
+        selection_restored = True
+        restore_error = ""
+        try:
+            session.call("browsingContext.activate", {"context": opener})
+        except (RuntimeError, OSError) as exc:
+            # Fail open with disclosure: the tab exists, so the open
+            # still succeeds, but the result must say selection was
+            # not restored. Never silent.
+            selection_restored = False
+            restore_error = str(exc)
+        flash_window_ms = int(round(
+            (time.monotonic() - open_started) * 1000))
+        new_tab = {"index": new_index,
+                   "url": new_entry.get("url", ""),
+                   "title": tab_title(
+                       session, new_entry.get("context", ""))}
+        # Tracked stays the new tab (addressing is index/context
+        # based); only visible selection returns to the opener, so
+        # visible != tracked immediately after open.
         track_current(new_tab)
-        return {"ok": True, "command": "open", "live": False, "port": port,
-                "tab": new_tab}
+        result = {"ok": True, "command": "open", "live": False,
+                  "port": port, "tab": new_tab,
+                  "selection_restored": selection_restored,
+                  "flash_window_ms": flash_window_ms}
+        if not selection_restored:
+            result["selection_restore_error"] = restore_error
+            result["note"] = (
+                "new tab opened and tracked, but visible selection "
+                "was not restored to the opener tab; the new tab "
+                "remains selected")
+        return result
     finally:
         session.end()
 
