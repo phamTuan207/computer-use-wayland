@@ -127,7 +127,7 @@ Three concrete failures:
 Reconciliation: the env var does satisfy the design's "explicit
 authorisation, never inferred from silence" half. It satisfies none
 of the measurement half. There is also a standing handover order in
-memory (2026-11-21 18:24, dang handed the machine over, out of the
+memory (2026-11-21 18:24, the owner handed the machine over, out of the
 house), but the code neither cites it nor checks it; an env var set
 for that window stays valid after the window ends.
 

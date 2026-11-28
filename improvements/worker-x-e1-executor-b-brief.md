@@ -5,7 +5,7 @@ You are the EXECUTOR in a controlled experiment, condition B (DELIBERATED). A te
 ## Inputs
 
 - ONLY the plan file: /tmp/e1/plan-test-05.md (read it fully first)
-- Driver reference: /home/james/workspace/computer-use-wayland/tests/realistic/hand_drive.py (read the docstring and the command handlers, so you know the command format)
+- Driver reference: ~/workspace/computer-use-wayland/tests/realistic/hand_drive.py (read the docstring and the command handlers, so you know the command format)
 
 ## Environment (already running when you start)
 

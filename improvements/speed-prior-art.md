@@ -1,7 +1,7 @@
 # Prior art survey: merged (latency, grounding, planning) - Track 2
 
 - Merger: Luna 6 Max, 2026-11-18 (merge run 22:49 to 23:20 +07, Asia/Ho_Chi_Minh)
-- Owner: Pham Tuan. Repo: phamTuan207/computer-use-wayland, VM clone at 21684e7, branch speed-swarm
+- Owner: the repository owner. Repo: phamTuan207/computer-use-wayland, VM clone at 21684e7, branch speed-swarm
 - Merged from three surveys, all dated 2026-11-18:
   - speed-prior-art-latency.md (412 lines, 44 entries, W-PA1): LLM latency, prompts, routing, token and latency measurement
   - speed-prior-art-grounding.md (352 lines, about 30 sources, W-PA2): grounding, observation, benchmarks
@@ -17,7 +17,7 @@
 - Think-before-act mean 14.9s (41 percent of a clean task). Think before first observe 7.7s (21 percent). Think before verify observe 6.7s (18 percent). Think before windows 4.9s (13 percent).
 - Scripted zero-thinking harness floor: 2.116s per loop. A perfect harness saves at most about 2s per task.
 - Executor: Codex gpt-6-luna at max reasoning effort, via the Codex CLI on the laptop. OpenAI API key is out of credit, so Astra 6 is blocked and no new OpenAI API experiments can be billed to that key.
-- Laptop: ASUS TUF F16, RTX 4050 6GB VRAM, 32GB RAM. Harness: Python, Wayland/Hyprland 0.57.2, broker plus relay plus session driver.
+- Machine: a Linux laptop. Harness: Python, Wayland/Hyprland 0.57.2, broker plus relay plus session driver.
 - Consequence: only ideas that cut MODEL THINK TIME (or cut the number of model calls, or move work off the big model) can move the total. Harness-only speedups are second priority.
 - Local precedent: tc02 trial 1 (no procedure) 823s vs trial 3 (reused learned procedure) about 100s, 8.23x, with the Save As region alone accounting for 541s of the 723s gap. Procedure reuse is already proven on this repo; the question for each source below is whether it generalises that win, and at what cost.
 - Already adopted, do NOT re-propose as new: local checked plans, deterministic execution with model supervisor (3 levels), selective observation, local task execution.

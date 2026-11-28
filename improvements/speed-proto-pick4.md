@@ -1,6 +1,6 @@
 # Speed prototype Pick 4: grounding fast path, AT-SPI extents plus DOM-first browser (M8 plus M9)
 
-- Implementer: Luna 6 Max. Owner: Pham Tuan. Repo: phamTuan207/computer-use-wayland.
+- Implementer: Luna 6 Max. Owner: the owner. Repo: phamTuan207/computer-use-wayland.
 - Branch: speed-swarm. Commit: 5d4d512 (pushed, on origin/speed-swarm).
 - Date: Wed 2026-11-18, evening. Flag: CU_PICK4_FASTPATH=1, default off.
 - No em dash or en dash in this file, per standing rule.

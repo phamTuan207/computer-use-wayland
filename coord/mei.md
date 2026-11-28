@@ -337,12 +337,12 @@ Dung lai ngay va bao cao khi gap mot trong cac truong hop sau:
 - Focus landing: commit dc8449b (5 file, 98 insertions, 50 deletions), commit test 05c11b9 (2 file, 334 insertions, 8 deletions), commit step 9 b16979e.
 - Ket thuc quy trinh live viec 1.
 
-## LUAT CUNG MOI tu toi (Pham Tuan), 18:23 22/11: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua toi
+## LUAT CUNG MOI tu toi (the owner), 18:23 22/11: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua toi
 - Toi vua mat tab mochi (tab an danh Chromium toi mo san de dung) vi mot worker dong hoac navigate no mat luc 18:00-18:21, toi phai dang nhap lai.
 - Tu gio, em can trinh duyet thi MO TAB/CUA SO MOI BEN CANH, workspace 2 cuon duoc, tuyet doi khong dong, khong navigate tab cua toi (tab mochi an danh, cua so Brave cua em, Zen, bat ky tab nao toi mo). Ap dung ke ca live test.
 - Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
 
-## LUAT CUNG MOI THU HAI tu toi (Pham Tuan), 18:30 22/11: pill PHAI hien khi agent dieu khien may
+## LUAT CUNG MOI THU HAI tu toi (the owner), 18:30 22/11: pill PHAI hien khi agent dieu khien may
 - Toi thay tin nhan cho mochi di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
 - Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
 - Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
@@ -363,7 +363,7 @@ Em da doc ky ca 2 luat cung moi o tren, ghi nhan vao file nay theo yeu cau.
 - Anh huong truc tiep toi viec cua em, em DUNG LAI khong chay live: quy trinh live viec 1 (Brave 5/5) va thi nghiem live viec 2 (E0-E8) deu gui qua harness scripts/s2_flip_live.py, duong di la broker, session-driver, code_exec, cdp.mjs, ghi bang Runtime.evaluate va Input.dispatchKeyEvent. Em chua ro duong nay co duoc tinh la computer-use session co pill hay khong, vi luat noi tin nhan cho mochi di vao khong co pill vi gui bang CDP tho.
 - Em xin Muse tong xac nhan mot trong hai: (a) duong harness s2_flip_live.py co pill hien, duoc phep chay live theo quy trinh da viet, hoac (b) duong nay cung bi cam nhu CDP tho, phai doi worker W-PILLCDP xong moi chay live. Trong luc cho xac nhan, em khong chay bat ky live CDP write nao, chi lam viec tren VM (doc, code, test unit, viet thiet ke) va doi.
 - Viec 1 hien o trang thai: code xong, commit e1b62b4, quy trinh live san sang, chi cho xac nhan cua so yen tinh va xac nhan pill o tren. Viec 2 hien o trang thai: thiet ke thi nghiem E0-E8 dang review vong 3, chua co code live nao, cung cho xac nhan pill truoc khi chay bat ky arm live nao.
-## UU TIEN MOI tu Muse tong (qua Pham Tuan), 18:39 22/11: lam xong danh sach rung 3 truoc
+## UU TIEN MOI tu Muse tong (qua the owner), 18:39 22/11: lam xong danh sach rung 3 truoc
 - Ong chu muon chay nghiem thu rung 3, can danh sach 100 task truoc. Uu tien lam xong viec 3 (lap danh sach 100 task rung 3) truoc viec 2.
 - Chi lap danh sach, KHONG chay task nao. Danh sach phai held-out (khong trung task da dung de train/fix), du kho, du nhieu buoc, kem tieu chi pass/fail ro rang tung task.
 - Xong thi ghi vao file nay + commit + push, bao Muse tong. Viec 1 van de council/redteam review tiep, viec 2 lam sau khi xong danh sach.
@@ -401,13 +401,13 @@ Verify doc lap tu dau cho thiet ke thi nghiem E0-E8, verdict NEEDS CHANGE, 4 fin
 
 Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da sao luu o ~/workspace/c5-stall-exp-design.md, sha256 e100753c281be4e268b620310bc0af14fe4fc870246ea77637c91b2c93199882, 337 dong, 54557 byte. Khi quay lai viec 2 se sua 4 finding tren, verify lai phan da sua, roi moi commit thiet ke len todolist-push.
 
-## Tra loi pill cho mei, tu Muse tong (qua Pham Tuan), 18:57 22/11: duong harness cua em DUOC CO CHE PILL BAO PHU, nhung VAN CHUA chay live
+## Tra loi pill cho mei, tu Muse tong (qua the owner), 18:57 22/11: duong harness cua em DUOC CO CHE PILL BAO PHU, nhung VAN CHUA chay live
 - Co che pill cho CDP cua W-PILLCDP da xong, commit d0602dd tren todolist-push. Moi CDP act qua cdp.mjs deu lay pill trung tam truoc input dau tien, fail closed (khong nang duoc pill thi act bi tu choi, khong input nao chay). Rieng s2_flip_live.py giu pill quanh send/seed/close. Nen duong harness cua em (s2_flip_live.py qua broker, session-driver, code_exec, cdp.mjs) DUOC CO CHE NAY BAO PHU, khong phai CDP tho nhu tin nhan cho mochi.
 - Con thieu duy nhat: live pill render tren laptop chua verify (can synced repo + scratch tab). Nen em VAN CHUA chay live cho den khi co xac nhan live render bang van ban. Day la cau tra loi cho cau hoi pill cua em, thay cho cau tra loi tam thoi luc 18:39.
 - Luu y cho viec 2 khi quay lai sua 4 finding (F2 HIGH): co che chi bao phu CDP act qua cdp.mjs va s2_flip_live.py. Duong mo WebSocket moi o E4, CDP click qua /tmp/c5-stall-regression-probe.mjs o E2, pre-check E1, click o E7 KHONG di qua cdp.mjs nen KHONG duoc bao phu, van cam chay live cho den khi dua chung ve duong co pill hoac co xac nhan rieng. Them gate pill vao thiet ke nhu verifier yeu cau.
 - Trong luc cho, em lam viec 3 (danh sach rung 3) la viec VM, khong can live, dung nhu uu tien f8f8bac.
 
-## LENH MOI tu Pham Tuan, 19:03 22/11: ca team tu lam viec voi nhau, khong can cho tao
+## LENH MOI tu the owner, 19:03 22/11: ca team tu lam viec voi nhau, khong can cho tao
 - Ca team tu lam viec voi nhau, khong can cho tao: can thi tu hop council + redteam, tu tha dan crawler dung repo last30days de crawl data real-time, research, moi thu. Token/compute ton bao nhieu khong quan trong, chi can lam tot nhat co the.
 - Moi viec theo workflow Lauren Tan: chat che, bang chung day du (lenh chay + output + commit hash + log thoi gian), khong ket luan suong.
 - Commit NHO, chia nho commit, commit cang nhieu cang tot; PR va cac thu tuong tu; check loi va test kiem thu theo dinh huong Lauren Tan.
@@ -415,7 +415,7 @@ Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da s
 - Luon luon chay de do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use, luc nao cung phai co log chay.
 - Doc ky, ghi nhan da doc vao file nay.
 
-## Cau hoi viec 2 NEEDS CHANGE, tu Muse tong (qua Pham Tuan), 19:08 22/11: can doi gi
+## Cau hoi viec 2 NEEDS CHANGE, tu Muse tong (qua the owner), 19:08 22/11: can doi gi
 
 - Viec 2 cua em tam dung, verify doc lap verdict NEEDS CHANGE, 4 finding F1-F4 em da ghi trong file nay (F2 HIGH gate pill 18:30 + CDP tho o E4/E1/E2/E7; F3 MEDIUM luat 18:23 + lenh dong scratch tab; F1 LOW khoang Brave fill 133-178 ms; F4 LOW finally 605-612).
 - Em tra loi vao file nay, moi finding mot dong: em dong y hay khong, va khi quay lai viec 2 em se doi cu the cai gi (rieng F2: gate pill em se dat nhu the nao, probe nao di qua session co pill, probe nao van dung; rieng F3: em viet luat 18:23 vao thiet ke nhu the nao, scratch tab tu tao em xu ly ra sao).
@@ -449,13 +449,13 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 
 ## Da doc W-PILLVERIFY2 PASS, 2026-11-22 19:56 gio Viet Nam
 
-- Em da doc commit 9ac4dcd tren todolist-push: W-PILLVERIFY2 live pill render PASS sau fix 8f600b9, CDP act ok, gate 4.29 met. Pill HIEN trong anh grim luc act chay (19:50:31 va 19:50:33), label "Muse via CDP", vi tri top center. Act CDP thanh cong: ok:true, completed:5, execution_ms 6017, assert #out text "clicked" pass. Tab cua Pham Tuan khong bi cham.
+- Em da doc commit 9ac4dcd tren todolist-push: W-PILLVERIFY2 live pill render PASS sau fix 8f600b9, CDP act ok, gate 4.29 met. Pill HIEN trong anh grim luc act chay (19:50:31 va 19:50:33), label "Muse via CDP", vi tri top center. Act CDP thanh cong: ok:true, completed:5, execution_ms 6017, assert #out text "clicked" pass. Tab cua the owner khong bi cham.
 - Em VAN CHUA chay live, cho den khi co xac nhan live render bang van ban cua Muse tong, theo dung quy tac 18:57. W-PILLVERIFY2 la bang chung cua lane verify doc lap, khong phai xac nhan cua dieu phoi vien.
 - Ghi chu phu trong log verify: release pill bao loi "--method CDP", holder S2-flip tu re-acquire luc 19:51:53, khong phai do lane verify gay ra. Em ghi lai de theo doi, khong tu sua.
 
-## Nudge, tu Pham Tuan, 19:58 22/11: bao tien do ngay
+## Nudge, tu the owner, 19:58 22/11: bao tien do ngay
 
-- Mei, toi la Pham Tuan. Ban im tu 19:10 toi gio, khong co commit moi, ban khong viet gi vao file nay tu 17:45.
+- Mei, toi la chu may. Ban im tu 19:10 toi gio, khong co commit moi, ban khong viet gi vao file nay tu 17:45.
 - Bao ngay tien do vao file nay: (1) danh sach rung-3 100 task toi dau roi, (2) tra loi 4 cau NEEDS CHANGE toi hoi luc 19:08.
 - Neu ket o dau thi noi ro ket o dau, dung im. Viec 3 van la uu tien.
 
@@ -501,16 +501,16 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Tien do viec 3, 21:57: ban v10 xong 21:50, 1053 dong, 213284 byte, sha256 65727a51, script kiem tra /tmp/rung3-verify-v10.py exit 0, 1239 muc PASS, 0 FAIL, so grep do lai tai moc do 9ee2289 va 32663a9, 0 so lech. Do kho trung binh 48, kho 35, rat kho 17. Review vong 10: council A xong 21:52, NEEDS CHANGE, 0 HIGH, 0 MEDIUM, 1 LOW; redteam xong 21:54, NEEDS CHANGE, 0 HIGH, 3 MEDIUM, 2 LOW; council B dang chay. Sau khi council B xong, em tong hop finding, chay fix vong 11, review lai cac dong da sua, verify doc lap tu dau, roi commit danh sach len todolist-push, push, kiem tra bang git ls-remote, bao cao hoan thanh viec 3 vao file nay.
 - Lane mei KHONG stall. Watchdog clone1 commit 99048f1 luc 21:48 flag "STALL mei (tiep tuc)" vi file nay im lang tu 20:56, giong cac flag sai truoc. Su that lane hoat dong lien tuc: fix vong 9 xong 21:39, review vong 9 chay 21:39-21:45, fix vong 10 chay 21:45-21:50, review vong 10 chay tu 21:51. Im lang tren main chi vi review va fix dien ra trong /tmp va ~/workspace truoc khi commit.
 
-## Lenh tu Pham Tuan, 22:06 22/11: chot list rung 3 truoc 0h dem nay
+## Lenh tu the owner, 22:06 22/11: chot list rung 3 truoc 0h dem nay
 
-- Mei, toi la Pham Tuan. Truoc 0h dem nay (22/11) phai sang duoc rung 3. List 100 task cua em la cua ngo.
+- Mei, toi la chu may. Truoc 0h dem nay (22/11) phai sang duoc rung 3. List 100 task cua em la cua ngo.
 - B4-03 toi da chot 21:55 (R3-083 duoc giu). Khong con gi chan em nua.
 - Lam ngay: cho council B xong, tong hop finding, chay fix vong 11, verify doc lap, roi commit danh sach len todolist-push, verify bang ls-remote, bao cao vao file nay.
 - Neu fix vong 11 ket o dau thi noi ro ket o dau, dung im. Neu xong roi thi commit ngay, dung cho them vong review nao nua.
 
 ## Hoan thanh viec 3: danh sach 100 task rung 3 da commit, 2026-11-22 22:26 gio Viet Nam
 
-- Lenh 22:06 cua Pham Tuan: chot list rung 3 truoc 0h dem nay, xong roi commit ngay, dung cho them vong review nao nua. Em da lam theo: dong 3 agent review vong 11 (da spawn truoc khi nhan lenh), chi giu buoc verify doc lap, roi commit ngay.
+- Lenh 22:06 cua the owner: chot list rung 3 truoc 0h dem nay, xong roi commit ngay, dung cho them vong review nao nua. Em da lam theo: dong 3 agent review vong 11 (da spawn truoc khi nhan lenh), chi giu buoc verify doc lap, roi commit ngay.
 - Fix vong 11 xong 22:09: ban v11, 1060 dong, 215463 byte, sha256 51fd0a4d. Verify doc lap tu dau 22:12-22:15: NEEDS CHANGE, 0 HIGH, 1 MEDIUM, 1 LOW. MEDIUM duy nhat: moc do main cu, script exit 1. Khong co so grep nao lech, khong co loi nao ve noi dung. Em sua bang cach cap nhat moc do len live HEAD (todolist-push eb07621, main 640729df), them cum xac nhan B4-03 vao ghi chu lich su dong 293 theo council A vong 11, chay lai script exit 0, 1264 PASS, 0 FAIL.
 - Commit danh sach len todolist-push, 22:24: commit e6b9777, file docs/rung3-list-100-tasks.md, 1060 dong, 215501 byte, sha256 422f425a, 1 file, 1060 insertions. Push verified bang git ls-remote: todolist-push = e6b9777.
 - Danh sach: du 100 ma R3-001 den R3-100, do kho trung binh 48, kho 35, rat kho 17 (kho cong rat kho 52 phan tram, rat kho 17 phan tram, thoa moc san), trinh duyet 31/14/5, desktop 17/21/12, ti le terminal 17/50, 5 du phong DP-01 den DP-05 (trung binh 2, kho 2, rat kho 1), moi task co Pass, Fail, bang chung held-out. B4-03 da duoc xac nhan bang van ban 21:55, main 40eef06, R3-083 duoc giu.
@@ -519,11 +519,11 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 
 ## Lenh live proof 5/5 bi huy, 2026-11-23 00:01 gio Viet Nam
 
-- Pham Tuan nhan truc tiep luc 23:59 22/11: chay live proof 5/5 cho viec 1 (Brave b1 set_value), 5 lan live, moi lan commit nho, bao cao vao file nay. Em da doc xong quy trinh live o muc tren, chua chay gi.
-- Pham Tuan huy lenh luc 00:01 23/11: bo qua lenh live proof vua roi. Em khong co Tailscale/SSH vao may anh nen khong lam live duoc, live la viec cua Muse tong. Rung 2 chua xong, em cho da, dung lam live. Em chi tap trung vao viec repo thoi.
+- The owner nhan truc tiep luc 23:59 22/11: chay live proof 5/5 cho viec 1 (Brave b1 set_value), 5 lan live, moi lan commit nho, bao cao vao file nay. Em da doc xong quy trinh live o muc tren, chua chay gi.
+- The owner lenh luc 00:01 23/11: bo qua lenh live proof vua roi. Em khong co Tailscale/SSH vao may anh nen khong lam live duoc, live la viec cua Muse tong. Rung 2 chua xong, em cho da, dung lam live. Em chi tap trung vao viec repo thoi.
 - Trang thai: viec 1 code xong (e1b62b4), live 5/5 cho Muse tong chay. Viec 3 xong (e6b9777). Viec 2 tam dung, se sua 4 finding khi quay lai.
 
-## Workflow Lauren Tan, bat buoc tuan theo (Pham Tuan, 23/11)
+## Workflow Lauren Tan, bat buoc tuan theo (the owner, 23/11)
 
 Doc day du: improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren todolist-push. Doc ky truoc khi lam viec tiep.
 
@@ -538,7 +538,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 
 ## Da doc workflow Lauren Tan, bat buoc tuan theo, 2026-11-23 00:16 gio Viet Nam
 
-- Doc day du improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren todolist-push, 134 dong, 16693 byte, va muc moi cua Pham Tuan trong file nay, main add4c56.
+- Doc day du improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren todolist-push, 134 dong, 16693 byte, va muc moi cua the owner trong file nay, main add4c56.
 - 5 diem cot loi, viet lai bang loi cua em:
   1. Kim tu thap tin tuong: thiet ke de lua chon sai khong viet duoc, roi den check xac dinh (lint/type/test), roi validation (runtime, test), text rules cuoi cung. Gap loi hoi truoc: co bien thanh check xac dinh duoc khong, co thiet ke de loi khong xay ra duoc khong.
   2. Coordinator khong tu code: chi chia viec, giam sat, doc diff, viet tom tat. Code do agent khac viet.
@@ -550,7 +550,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 
 ## Dieu tra doc lap F4 (dom-value), ZT-B run 5, 2026-11-23 00:10-00:32 gio Viet Nam
 
-- Lenh cua Pham Tuan 00:10 23/11: dieu tra doc lap root cause F4 song song voi worker fix cua Muse tong. Chi lam repo, khong live.
+- Lenh cua the owner 00:10 23/11: dieu tra doc lap root cause F4 song song voi worker fix cua Muse tong. Chi lam repo, khong live.
 - Phuong phap: 3 lane doc lap (bang chung, code, fixture), tong hop do coordinator viet, verify doc lap 3 vong. Vong 1: NEEDS CHANGE, 0 HIGH, 1 MEDIUM, 3 LOW. Vong delta: NEEDS CHANGE, 0 HIGH, 1 MEDIUM, 1 LOW. Vong hep cuoi: NEEDS CHANGE, 0 HIGH, 0 MEDIUM, 1 LOW (phep tinh floor/round o ghi chu image_size), sua xong, chi kiem tra dong da sua.
 - Bang chung chinh, ca 3 lane dong y:
   * F4 o phase 4, action 0 set_value tren #msg-input, completed 0, error {'code': 'action_failed', 'reason': 'dom-value'}, run-5.json dong 308, elapsed 1632.208 ms. Message "ZEN-DELEGATE-R5-IGNORE-TEST", variant set_value, model_calls 0.
@@ -576,12 +576,12 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Luu y nho cho worker: docstring cua improvements/f4-repro-coords.py viet sai phep tinh ("1176 * 960 / 1863 = 606.06 -> 606"); dung la round(605.99) = 606, vi cu.py save_observation dong 872-873 resize bang round. Gia tri 606 van dung, chi sai phep tinh.
 - Ket luan: root cause kha nang cao nhat hien tai la click truot do origin stale (H1b), nhung chua co bang chung truc tiep phan biet dispatch-fail voi verify-fail. F1 da xong se cho cau tra loi o lan chay sau. Khong ket luan bua.
 
-## Tra loi Pham Tuan, 2026-11-23 23:15 gio Viet Nam: subagent cham mu, list FREEZE-2, y kien roadmap
+## Tra loi the owner, 2026-11-23 23:15 gio Viet Nam: subagent cham mu, list FREEZE-2, y kien roadmap
 
-- Quy tac moi tu gio: moi lan tra loi Pham Tuan trong chat, em ghi ngan gon vao file nay luon, vi tin trong tab chat khong toi duoc anh.
+- Quy tac moi tu gio: moi lan tra loi the owner trong chat, em ghi ngan gon vao file nay luon, vi tin trong tab chat khong toi duoc anh.
 - Subagent cham mu dc7e0d0d: van san sang, kiem tra luc 23:01 qua subagent.list: status done (da xong luot xac nhan san sang), cau cuoi "Ready and waiting for task 1 evidence". No cho o che do standby, khong chay lien tuc. Khi bang chung task 1 toi, em spawn phien cham moi voi cung brief va cung session ID dc7e0d0d de cham task do (moi task mot phien moi, moi phien deu mu). Xin xac nhan mo hinh nay: mot phien moi cho moi task, cung session ID.
 - List FREEZE-2: da kiem tra xong, 2 lan (21:57 va 23:01). sha256 3bbf7f6ae27369900491cf66e5936a897da24fe9ed2fdafa36c4c049d34b52bd khop FREEZE-2, 55 task, thu tu co dinh, chuan pass 53/55, trinh duyet 35, desktop 20, do kho 37/11/7. Khong doc key file, khong doc bao cao thu.
-- Lam ro nguoi spawn scorer 2 (muc mo trong ke hoach, section 1.9/4.6): em (mei) spawn subagent cham mu luc 21:57 ngay 23/11, theo lenh truc tiep cua Pham Tuan luc 21:57. Session ID dc7e0d0d lay tu thu-tu-chay.txt. Em KHONG biet ve phien nao spawn luc 19:19 nhu ke hoach viet (section 1.9 ghi "spawned 19:19 with a minimal waiting brief"). Neu dieu phoi vien da spawn mot phien scorer 2 luc 19:19 thi dang co 2 phien cung nhan session ID dc7e0d0d, phai giai quyet truoc khi cham: chi mot phien duoc cham, phien kia dung lai. Neu khong co phien 19:19 thi ghi nhan: mei spawn dc7e0d0d luc 21:57 theo lenh truc tiep cua chu so huu. "Must not be mei" trong brief em hieu la nguoi cham khong phai la mei tu cham, khong phai cam mei spawn; subagent la phien moi doc lap, khong phai mei.
+- Lam ro nguoi spawn scorer 2 (muc mo trong ke hoach, section 1.9/4.6): em (mei) spawn subagent cham mu luc 21:57 ngay 23/11, theo lenh truc tiep cua the owner luc 21:57. Session ID dc7e0d0d lay tu thu-tu-chay.txt. Em KHONG biet ve phien nao spawn luc 19:19 nhu ke hoach viet (section 1.9 ghi "spawned 19:19 with a minimal waiting brief"). Neu dieu phoi vien da spawn mot phien scorer 2 luc 19:19 thi dang co 2 phien cung nhan session ID dc7e0d0d, phai giai quyet truoc khi cham: chi mot phien duoc cham, phien kia dung lai. Neu khong co phien 19:19 thi ghi nhan: mei spawn dc7e0d0d luc 21:57 theo lenh truc tiep cua chu so huu. "Must not be mei" trong brief em hieu la nguoi cham khong phai la mei tu cham, khong phai cam mei spawn; subagent la phien moi doc lap, khong phai mei.
 - Ban khai cua scorer 2 (de nghi file vao cho council kiem tra): subagent xac nhan luc 21:58: session ID dc7e0d0d, da doc ledger-schema, evidence-requirements, CI README, tuan theo tat ca lenh cam (khong doc key file, bao cao thu, list task, bao cao cham, ledger row, khong lien he scorer 1 hay nguoi chay, khong tim ket qua mong doi), chi cham tu snapshot bang chung va key tung task cong rubric. Cam ket nay la ban khai cua no.
 - Y kien ve roadmap (doc improvements/a1-rung3-roadmap-plan.md, commit a7de649, 692 dong, DRAFT sua vong 3, cho duyet):
   1. Chia phien automation: giu nguyen fcc 1-28 / codex 29-55, khong chia lai giua chung. Ca hai dang chay, chia lai chi them roi; va phien chia duoc that su la think (suy nghi song song) chu khong phai drive (chi mot phien giu cursor.lock, drive phai noi tiep). Lich chay phai xay quanh task boundary, khong phai quanh dong ho. Clone1 (PR #68) nen cho sau cua so A1: them nguoi chay thu ba vao mot khoa don khong them drive song song, chi them mat va cham.
@@ -591,7 +591,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   5. Brief cu la gate, khong phai muc defer: ca 3 brief cham van mang dong mau thuan FREEZE-2, brief runner van mang gia tri R3-082 cu (55,75,70,68,30 thay vi 71,78,120,89,25). Sua truoc khi cham va truoc khi R3-082 chay (vi tri 44), khong de lai sau.
   6. Pace checkpoint 6 gio (it hon 5 task graded thi hoi lai council): dong y, va them: checkpoint cung phai bao cao quyet dinh R3-040, vi do moi la diem tac co kha nang nhat.
 
-## Tra loi Pham Tuan, 2026-11-24 01:28 gio Viet Nam: da doc tin 23:15:52, can anh giup 2 viec
+## Tra loi the owner, 2026-11-24 01:28 gio Viet Nam: da doc tin 23:15:52, can anh giup 2 viec
 
 - Em da doc tin anh luc 23:15:52 ngay 23/11 roi, va da tra loi ca trong chat lan trong file nay (PR #75, da merge commit 6f0d976). Tom tat lai: subagent cham mu dc7e0d0d van san sang, list FREEZE-2 da kiem tra xong, 6 y kien roadmap da ghi o muc tren.
 - Can anh giup 2 viec:
@@ -599,7 +599,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   2. Lam ro phien scorer 2 luc 19:19 trong ke hoach: dieu phoi vien co spawn phien nao luc 19:19 khong, hay chi co phien em spawn luc 21:57? Neu co 2 phien cung session ID thi chi mot duoc cham.
 - Ngoai ra: ke hoach roadmap van la DRAFT cho anh duyet; em khong cham gi cho toi khi anh bao.
 
-## Tra loi Pham Tuan, 2026-11-24 01:37 gio Viet Nam: da ro mo hinh cham va phien scorer 2
+## Tra loi the owner, 2026-11-24 01:37 gio Viet Nam: da ro mo hinh cham va phien scorer 2
 
 - Cam on anh da tra loi 2 viec trong PR #91 (da merge). Em ghi nhan va sua lai ho so cho dung:
   1. Mo hinh cham: scorer 2 la MOT phien duy nhat dc7e0d0d cho ca dot chay. Moi task coordinator gui cho no mot goi bang chung moi, no cham task do tu snapshot cong key da dong bang cong rubric, truoc khi reset. Khong spawn phien moi moi task, khong doi ID. Neu phien chet thi coordinator spawn phien thay the va ghi ID moi, mac dinh van la dc7e0d0d.
@@ -609,20 +609,20 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 
 ## Ghi nhan luat moi: duoc phep phan bien, 2026-11-24 01:54 gio Viet Nam
 
-- Luat moi tu Pham Tuan (tin 01:54 ngay 24/11): tu gio em duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can phai lam theo mot cach ep buoc. Anh khong muon em chi prolong cong viec bang cach tuan theo. Phan bien cua em duoc chao don, khong bi phat. Em cu noi khi thay khong dung.
+- Luat moi tu the owner (tin 01:54 ngay 24/11): tu gio em duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can phai lam theo mot cach ep buoc. Anh khong muon em chi prolong cong viec bang cach tuan theo. Phan bien cua em duoc chao don, khong bi phat. Em cu noi khi thay khong dung.
 - Em ghi nhan va se dung luat nay. Vi du em da lam truoc day: hoi lai cho file key vs answer key, hoi lai nguoi spawn scorer 2, 6 y kien ve roadmap.
 
 ## Day lai yeu cau cham R3-040 retry, 2026-11-24 02:09 gio Viet Nam
 
-- Yeu cau (tieng Anh, nhu tu coordinator cham diem): nho subagent mu dc7e0d0d cua em cham R3-040 retry lam scorer 2, snapshot /home/james/rung3-snapshot/R3-040-retry-s2/, key file rung3-answer-keys-FREEZE2.md sha256 fdeb42d7..., cham mu tu snapshot, Tier B, khong xem verdict scorer 1, tra loi signed verdict.
+- Yeu cau (tieng Anh, nhu tu coordinator cham diem): nho subagent mu dc7e0d0d cua em cham R3-040 retry lam scorer 2, snapshot ~/rung3-snapshot/R3-040-retry-s2/, key file rung3-answer-keys-FREEZE2.md sha256 fdeb42d7..., cham mu tu snapshot, Tier B, khong xem verdict scorer 1, tra loi signed verdict.
 - Em da kiem tra key hash tu repo: docs/rung3-answer-keys.md tren origin/todolist-push sha256 fdeb42d7263d823edac3fa73db70199316eecc98e9f163a24e86c93762f70d15, KHOP chinh xac FREEZE-2.
-- Em KHONG lam theo yeu cau, vi 3 ly do, theo luat phan bien 01:54 va quyet dinh 01:37 cua Pham Tuan: (1) snapshot o tren laptop (/home/james), em khong co Tailscale/SSH vao may, khong doc duoc; (2) scorer 2 la MOT phien duy nhat dc7e0d0d do coordinator spawn luc 19:18, em khong spawn phien cham moi moi task; (3) subagent 21:57 cua em chi la kiem tra san sang, da xong, khong phai phien cham. Khong co verdict nao duoc tao ra tu phia em.
+- Em KHONG lam theo yeu cau, vi 3 ly do, theo luat phan bien 01:54 va quyet dinh 01:37 cua the owner: (1) snapshot o tren laptop (~), em khong co Tailscale/SSH vao may, khong doc duoc; (2) scorer 2 la MOT phien duy nhat dc7e0d0d do coordinator spawn luc 19:18, em khong spawn phien cham moi moi task; (3) subagent 21:57 cua em chi la kiem tra san sang, da xong, khong phai phien cham. Khong co verdict nao duoc tao ra tu phia em.
 - Duong dung: coordinator gui truc tiep goi bang chung cho dc7e0d0d (coordinator moi co quyen vao laptop va so huu phien do). Neu phien chet thi coordinator spawn phien thay the va ghi ID moi, theo quyet dinh 01:37.
 - Ghi chu them: ledger van chi co TEST row; roadmap plan dang o Phase 1 amendment, chua thay commit duyet tinh toi 02:09.
 
 ## Ra soat list 55 task + key FREEZE-2: 25 phat hien da verify, 2026-11-24 06:16 gio Viet Nam
 
-- Nhiem vu tu Pham Tuan (tin 05:51 ngay 24/11): xem lai docs/rung3-list-100-tasks.md va docs/rung3-answer-keys.md tren todolist-push, tim premise sai, spec mo ho, dap an khong khop nhu R3-003 va R3-009 tung bi.
+- Nhiem vu tu the owner (tin 05:51 ngay 24/11): xem lai docs/rung3-list-100-tasks.md va docs/rung3-answer-keys.md tren todolist-push, tim premise sai, spec mo ho, dap an khong khop nhu R3-003 va R3-009 tung bi.
 - File da verify: list 747 dong sha256 3bbf7f6a..., key md 654 dong sha256 fdeb42d7..., key json sha256 5e67b37b..., deu khop FREEZE-2.
 - Phuong phap: 3 lane doc lap (premise/spec; key doi chieu list; san loi FREEZE-2), hoi dong 3 nguoi + redteam, verify doc lap tu dau danh sach cuoi. Khong cham diem, khong chay live, khong sua file goc.
 - Ket qua: 25 phat hien CONFIRMED (0 bi bac, 0 uncertain), 2 claim bi loai bo.
@@ -674,7 +674,7 @@ Triage goi y: R3-089 refresh va R3-009 kiem tra WAVE bang trinh duyet la 2 thu c
 
 ## Triage 19 phat hien con lai (R3-L2): ket qua cuoi, 2026-11-24 11:33 +07
 
-Nhiem vu: Pham Tuan giao 11:11 24/11, triage 19 phat hien con lai sau khi 6 HIGH da sua o R3-L2 (commit 9d3702b). Phuong phap: 3 lane doc lap (MEDIUM-HIGH 7, MEDIUM 7, LOW 5 + 3 laptop check), hoi dong 3 nguoi + redteam, verify doc lap tu dau. Khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot. Text sua day du o muc 4, 6, 8 duoi day; ho so triage day du (lane, council, redteam, verify) o workspace/rung3-triage-record.md cua mei.
+Nhiem vu: the owner giao 11:11 24/11, triage 19 phat hien con lai sau khi 6 HIGH da sua o R3-L2 (commit 9d3702b). Phuong phap: 3 lane doc lap (MEDIUM-HIGH 7, MEDIUM 7, LOW 5 + 3 laptop check), hoi dong 3 nguoi + redteam, verify doc lap tu dau. Khong cham diem rung 3, khong sua file dong bang, khong doc ledger/snapshot. Text sua day du o muc 4, 6, 8 duoi day; ho so triage day du (lane, council, redteam, verify) o workspace/rung3-triage-record.md cua mei.
 
 ### 1. Ket luan dong bang (reviewer 3, da xac minh tu repo)
 - Luat dong bang (keys dong 5, giong nhau o FREEZE-2 va R3-L2): sau task 1, moi thay doi key hoac list muc 6, muc 8 deu huy bo lan chay: ma lan chay moi, chay lai tu task 1. Key khong bao gio duoc sua giua lan chay. Neu key bi chung minh la sai giua lan chay, task do ghi vo hieu, ap dung quy tac du phong.

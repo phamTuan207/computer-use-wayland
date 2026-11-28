@@ -1,6 +1,6 @@
 # A1 re-measure after the D1 startup-race fix, 2026-11-19
 
-Owner: Pham Tuan. Worker: Luna 6 Max. Verdict: PASS success bar (PROVISIONAL, non-Astra).
+Owner: the owner. Worker: Luna 6 Max. Verdict: PASS success bar (PROVISIONAL, non-Astra).
 All 10 tasks (5 baseline + 5 code-exec) passed functionally. Code-exec wins on every
 task: fewer calls AND lower wall, with 0 refusals, 0 misclicks, 0 session deaths in
 both arms. The D1 race fix works live: D1 passed on attempt 1 with no IndexError

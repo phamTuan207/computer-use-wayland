@@ -343,7 +343,7 @@ Scenario: X's report holds E1 until (1) Y4 is done and (2) the user hands the
 machine over again, and the 17:59 AGENTS.md rule forbids live tab driving while
 the user is at the keyboard. Y8's design restates condition (1) but drops
 condition (2). UPDATE 18:24, after this attack was drafted: MEMORY.md now
-records dang's standing order that from now on the machine is handed over,
+records the owner's standing order that from now on the machine is handed over,
 he is out of the house and not touching the laptop, any signal saying he is
 using it is a false signal, and work runs continuously with no idle check;
 Y4d runs the agy-q2 rerun and Y8 runs E1 right after, one runner at a time.
@@ -521,7 +521,7 @@ and correctly scoped; the hole is only the missing re-verification at launch
 the right standard; the hole is the asymmetric read set (S2-2), not the standard.
 - Sequential arms, one live runner, and the Y4d precondition are correct;
 the holes are the fixed order (S2-4) and the missing clean-slate check (S2-5).
-The owner-away half of S2-5 is closed in substance by dang's 18:24 handover
+The owner-away half of S2-5 is closed in substance by the owner's 18:24 handover
 order in MEMORY.md, but it is not restated in the design.
 - Removing the V2 category and classifying class-absent plus computed-hidden
 as OTHER_HIDDEN follows Y4b correctly.

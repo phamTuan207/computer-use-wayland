@@ -2,7 +2,7 @@
 
 Purpose: owner's GitHub graph (UTC day) shows 145 contributions for Nov 21, fleet committed 290x to todolist-push today (UTC) vs 119 to main. Graph counts only default-branch commits. Merging todolist-push into main brings those commits onto the graph, past the owner's 240 target.
 
-Worktree: /home/hatch/workspace/cu-jpegq90-land, branch main.
+Worktree: ~/workspace/cu-jpegq90-land, branch main.
 Rule: resolve conflicts by KEEPING BOTH SIDES. Never delete either side's lines. If the merge breaks the suite or a conflict cannot be resolved cleanly, ABORT (git merge --abort) and report.
 All times Asia/Ho_Chi_Minh, wall-clock + elapsed where measured.
 

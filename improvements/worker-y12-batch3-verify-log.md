@@ -29,7 +29,7 @@ headless Playwright Chromium on the VM, never the live Zen.
 
 Environment: node v24.22.1, playwright-core 1.65.1 installed once to
 /tmp/y12-scratch (npm install playwright-core@1.65.1),
-CHROMIUM_PATH=/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome.
+CHROMIUM_PATH=~/.cache/ms-playwright/chromium-1187/chrome-linux/chrome.
 
 ## What was verified
 
@@ -44,7 +44,7 @@ in-page sampler (min <= 2) + advancing check (sleep 350 ms, position
 ## Positive runs: 6/6 full suites 10/10 PASS
 
 Command (each run):
-`PLAYWRIGHT_CORE_PATH=/tmp/y12-scratch/node_modules/playwright-core CHROMIUM_PATH=/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome node tests/realistic/clone1-batch3/run_all.mjs`
+`PLAYWRIGHT_CORE_PATH=/tmp/y12-scratch/node_modules/playwright-core CHROMIUM_PATH=~/.cache/ms-playwright/chromium-1187/chrome-linux/chrome node tests/realistic/clone1-batch3/run_all.mjs`
 
 Sequential x3, from ~/workspace/y12-verify:
 - Run 1, 19:22:27 +07: 10/10, exit 0, wall 26929 ms.

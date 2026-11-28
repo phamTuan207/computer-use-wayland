@@ -223,7 +223,7 @@ and it drops two of its own findings (J12, PR #1) out of the queue entirely.
 
 ### M5. PRIO's J11 cites the option-C choice at the wrong time
 - PRIO J11 says "owner chose C 18:16". The record says the C choice was
-  at flush 18:24: memory lines 1605 ("dang chon C cho 2.2.3"), 1608
+  at flush 18:24: memory lines 1605 ("the owner chon C cho 2.2.3"), 1608
   ("Dang chon C qua widget: thu Hyprland long nhau..."), and 1713 (event:
   "On 2026-11-21 dang chose option C"). 18:16 was the Worker W adoption
   note (memory line 1611), not the C choice. Small, but PRIO's todolist

@@ -2,8 +2,8 @@
 
 ## Run metadata
 
-- Owner: Pham Tuan
-- Repo: `/home/james/computer-use-wayland`, branch `speed-swarm`, HEAD `0491c10` (verified at start, no fast-forward needed)
+- Owner: the owner
+- Repo: `~/computer-use-wayland`, branch `speed-swarm`, HEAD `0491c10` (verified at start, no fast-forward needed)
 - Relay: restarted 12:26:41 +07 for the probe (MainPID 113859, drop-in pick4.conf with CU_PICK4_FASTPATH=1, started_git_head 0491c10); restored to clean env 12:33:47 +07 (MainPID 118290, no CU vars, broker idle, next_sequence 1, started_git_head 0491c10)
 - Session owner: `pick4-g1sb`. Run dir: `/tmp/speed-pick4-20261118/g1-sidebar`
 - Nautilus window `0x55ac9a76b5d0` at [3448, 914], 924x1176, title Home. Nautilus AT-SPI PID 116441.
@@ -28,7 +28,7 @@ NEGATIVE, with exact evidence. Sidebar-item precision is NOT achievable through 
 
 ## Blocker 3: degenerate extents, all rows report the identical box
 
-- Cross-checked three ways (broker observe, direct walk, direct extents plus position plus size read): every sidebar list item reports extents [0, 0, 172, 36], position [0, 0], size [172, 36]. All 13 rows: Open Personal Folder, Recent Files, Starred Files, Open Network Locations, Open Trash, /home/james/Work, /home/james/Documents, /home/james/Downloads, /home/james/Projects, /home/james/Videos, /home/james/Pictures, Mount and Open "63 GB Volume", Mount and Open "32 GB Volume".
+- Cross-checked three ways (broker observe, direct walk, direct extents plus position plus size read): every sidebar list item reports extents [0, 0, 172, 36], position [0, 0], size [172, 36]. All 13 rows: Open Personal Folder, Recent Files, Starred Files, Open Network Locations, Open Trash, ~/Work, ~/Documents, ~/Downloads, ~/Projects, ~/Videos, ~/Pictures, Mount and Open "63 GB Volume", Mount and Open "32 GB Volume".
 - Size is right per row (172x36); position is missing for every row. Ground could not distinguish one row from another even with the depth cap fixed. All Nautilus extents are window-relative (x=0, y=0 everywhere, frame [0, 0, 924, 1176] equals the window size), consistent with the G1 re-probe coord_frame window finding.
 - The Home row is selected=true in the live tree (Nautilus is showing Home), and its label child reads "Home". The row exists and is identifiable by tree position, just not by broker query or by extents.
 

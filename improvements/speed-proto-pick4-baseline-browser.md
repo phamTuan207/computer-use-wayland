@@ -1,6 +1,6 @@
 # Pick 4 D1 baseline browser task (PROVISIONAL, non-Astra)
 
-- Owner: Pham Tuan. Worker: Luna 6 Max (Codex gpt-6-luna, max reasoning).
+- Owner: the repository owner. Worker: Luna 6 Max (Codex gpt-6-luna, max reasoning).
 - Run dir: /tmp/speed-pick4-20261118/baseline-browser/. Executor summary: summary-baseline-browser.md. Records: records-baseline-browser.jsonl. Log: baseline-browser-codex.log.
 - Relay: restarted 07:52 to clean env before launch (new generation dcf39ccf, HEAD c8595f3, no CU_ vars in relay env, no drop-in on disk). Executor shell: CU_PICK4_FASTPATH=unset, CU_CODE_EXEC=unset, 0 pick flags. Broker SOLO, no waiter scripts, direct codex launch.
 - Task: the same D1 Chromium task as Pick 4 arm 2. Managed Chromium, open file:///tmp/speed-pick4-20261118/pick4-fixture.html, click "Show result", verify #result contains "pick4-ok". Baseline method: screenshot-based grounding only. Browser observe WITH --image, button grounded by looking at the screenshot, desktop pointer click, verification by desktop screenshot plus tesseract OCR. No DOM ref click, no browser act, no DOM assert.

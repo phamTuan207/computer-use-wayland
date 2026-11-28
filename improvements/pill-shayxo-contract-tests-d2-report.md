@@ -167,7 +167,7 @@ test_shader_literals_and_bound_profile_values_are_traced (shayxo_contract_negati
 FAIL: test_shader_literals_and_bound_profile_values_are_traced (shayxo_contract_negative_control.ShayxoNoInventedConstants.test_shader_literals_and_bound_profile_values_are_traced)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/james/computer-use-wayland/tests/test_glass_shayxo_contract.py", line 518, in test_shader_literals_and_bound_profile_values_are_traced
+  File "~/computer-use-wayland/tests/test_glass_shayxo_contract.py", line 518, in test_shader_literals_and_bound_profile_values_are_traced
     self.assertEqual(
     ~~~~~~~~~~~~~~~~^
         findings,
@@ -220,7 +220,7 @@ test_selected_task_values_are_bound (shayxo_missing_artifact_control.ShayxoPortC
 FAIL: test_selected_task_values_are_bound (shayxo_missing_artifact_control.ShayxoPortContract.test_selected_task_values_are_bound)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/james/computer-use-wayland/tests/test_glass_shayxo_contract.py", line 153, in setUp
+  File "~/computer-use-wayland/tests/test_glass_shayxo_contract.py", line 153, in setUp
     self.assertTrue(
     ~~~~~~~~~~~~~~~^
         PATCH.is_file(),
@@ -256,7 +256,7 @@ Lần chạy test đầu phát hiện bộ tách branch đòi `#endif` trong dò
 FAIL: test_zero_blur_profile_rim_sharp_and_after_push_sample_order (test_glass_shayxo_contract.ShayxoPortContract.test_zero_blur_profile_rim_sharp_and_after_push_sample_order)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/james/computer-use-wayland/tests/test_glass_shayxo_contract.py", line 352, in test_zero_blur_profile_rim_sharp_and_after_push_sample_order
+  File "~/computer-use-wayland/tests/test_glass_shayxo_contract.py", line 352, in test_zero_blur_profile_rim_sharp_and_after_push_sample_order
     self.assertGreater(branch_end, marker_at, 'Legacy sharp sample branch is unterminated')
     ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 AssertionError: -1 not greater than 6198 : Legacy sharp sample branch is unterminated

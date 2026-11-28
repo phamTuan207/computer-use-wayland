@@ -1,7 +1,7 @@
 # Worker Y2 log: agy generates 10 new hard realistic tests (agy-y2)
 
 - Started: 2026-11-21 ~17:50 +07
-- Driver: agy via /home/james/.local/bin/agy-hypr (keyring only reachable inside graphical logind session). Each invocation max 10 min, continuation prompts for longer work.
+- Driver: agy via ~/.local/bin/agy-hypr (keyring only reachable inside graphical logind session). Each invocation max 10 min, continuation prompts for longer work.
 - Target: tests/realistic/agy-y2/ on branch todolist-push, 10 tests, 15-40 steps each.
 - Fresh topics only (no overlap with fcc-k, agy-q, agy-q2, clone1-batch3, clone2-batch3):
   1. tmux terminal multiplexer session

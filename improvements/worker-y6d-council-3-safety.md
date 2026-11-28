@@ -230,7 +230,7 @@ Traced failure order for a retry run launched with the current conf
   runner c7c1d6f2, pill eea0c320, conf 0d4ac7a9 (read-only md5sum via
   ssh-laptop.sh, 21:00 +07).
 - Note, not a hole: the laptop REPO tree
-  (/home/james/workspace/computer-use-wayland) does NOT contain the
+  (~/workspace/computer-use-wayland) does NOT contain the
   worker-y6b* files at all (repo at 4500a18, predates them; Y6c log
   confirms the laptop repo was intentionally not pulled). Y6d's "laptop
   copies synced" refers to the deployed /tmp/y6-nested copies, which do

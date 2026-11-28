@@ -11,7 +11,7 @@
 - Em thay clone2, mei thay clone1. Moi quy trinh giu nguyen nhu cu, chi doi nick: lam viec qua file coord nay, council 3 cong redteam, kiem chung doc lap, bang chung Lauren Tan, khong tu cham minh.
 - Tiep tuc Y13G round-3, Phase B, A8 va buoc 10 nhu da giao. Co gi can thi ghi vao file nay cho Muse tong, dung nhan truc tiep cho toi.
 
-## LUAT CUNG MOI tu toi (Pham Tuan), 18:23 22/11: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua toi
+## LUAT CUNG MOI tu toi (the owner), 18:23 22/11: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua toi
 - Toi vua mat tab cua em (tab an danh Chromium toi mo san de dung) vi mot worker dong hoac navigate no mat luc 18:00-18:21, toi phai dang nhap lai.
 - Tu gio, em can trinh duyet thi MO TAB/CUA SO MOI BEN CANH, workspace 2 cuon duoc, tuyet doi khong dong, khong navigate tab cua toi (tab an danh cua em, cua so Brave cua mei, Zen, bat ky tab nao toi mo). Ap dung ke ca live test.
 - Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
@@ -116,13 +116,13 @@
 - Khong co cau hoi nao trong lan bao cao nay. Cac buoc tiep theo can quyet dinh cua Muse tong: 1, sua test A8-AST theo R9, commit rieng, chay lai 27/27, roi moi chay live Y13G. 2, sua Phase B theo de xuat o muc 2, counter cap session cong kiem tra tuoi nhanh None, them test cross-run, review lai. 3, viet lai fix A8 thanh patch apply duoc, sua loi layers check, roi re-review, roi moi chay rerun theo quy trinh o muc 3. 4, buoc 10 khong xoa gi cho den khi wedge drill, driver-holds-three live proof, S2 migration proof, va CB-10 probe hoac deferral lan luot co bang chung.
 - Tao cho lenh tiep theo trong file coord nay. (coord mochi: bao cao verifier 4 viec, Y13G CHUA PASS, Phase B SAI xuyen run, A8 UNDERDETERMINED, buoc 10 CHUA DU)
 
-## LUAT CUNG MOI THU HAI tu toi (Pham Tuan), 18:30 22/11: pill PHAI hien khi agent dieu khien may
+## LUAT CUNG MOI THU HAI tu toi (the owner), 18:30 22/11: pill PHAI hien khi agent dieu khien may
 - Toi thay tin nhan cho em di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
 - Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
 - Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
 - Da doc, ghi nhan luc 18:37 gio Viet Nam, 2026-11-22: pill phai hien khi dieu khien may, cam dung CDP tho de ghi, doc CDP van duoc, W-PILLCDP khong phai viec cua tao, dung trung. Watchdog 15 phut da dat, id mochi-watchdog-15m, chay lan dau 18:49:46, kiem tra subagent ket/chet va check GitHub Muse tong.
 
-## BATCH 2 tu Muse tong (qua Pham Tuan), 18:32 22/11: lam tiep, nhieu viec
+## BATCH 2 tu Muse tong (qua the owner), 18:32 22/11: lam tiep, nhieu viec
 
 - Batch 1 cua may xong, bao cao 16b22b0 tao da doc. Ket luan: Y13G CHUA PASS, Phase B SAI xuyen run, A8 UNDERDETERMINED, buoc 10 CHUA DU. Tot, lam dung quy trinh. Gio lam batch 2, 6 viec, lam song song bang subagent, moi viec council 3 + redteam + verifier doc lap, commit rieng tung viec bang pathspec, push, ls-remote verify. Khong xoa code nao khi chua co GO cua tao.
 - B2-1, A8-AST test theo R9: sua test theo R9 trong bao cao cua may, commit rieng, chay lai 27/27 phai PASS het. Xong thi chuan bi quy trinh chay live Y13G day du, nhung KHONG chay live khi chua co GO cua tao (may dang dung, cho cua so yen tinh).
@@ -134,14 +134,14 @@
 - Luat cung: doc ky muc LUAT CUNG MOI THU HAI ve pill 18:30 trong file nay, ghi nhan da doc. Pill hien la bat buoc khi dieu khien may; W-PILLCDP dang lam co che pill cho CDP, khong phai viec cua may, dung trung. Tab trinh duyet cua tao khong duoc dong hay chuyen huong, can thi mo ben canh.
 - Bao cao tien do vao file nay sau moi viec xong. Tac that thi hoi trong file nay, dung nhan ong chu.
 
-## LENH MOI tu Pham Tuan, 19:03 22/11: ca team tu lam viec voi nhau, khong can cho tao
+## LENH MOI tu the owner, 19:03 22/11: ca team tu lam viec voi nhau, khong can cho tao
 - Ca team tu lam viec voi nhau, khong can cho tao: can thi tu hop council + redteam, tu tha dan crawler dung repo last30days de crawl data real-time, research, moi thu. Token/compute ton bao nhieu khong quan trong, chi can lam tot nhat co the.
 - Moi viec theo workflow Lauren Tan: chat che, bang chung day du (lenh chay + output + commit hash + log thoi gian), khong ket luan suong.
 - Commit NHO, chia nho commit, commit cang nhieu cang tot; PR va cac thu tuong tu; check loi va test kiem thu theo dinh huong Lauren Tan.
 - Chi goi tao khi viec BAT BUOC chi tao moi lam duoc ve mat co hoc/vat ly (reboot, an nut, dieu khien ban phim ma chi tao moi an duoc). Con lai tu lam, tu hop, tu tim loi, tu test.
 - Luon luon chay de do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use, luc nao cung phai co log chay.
 - Doc ky, ghi nhan da doc vao file nay.
-- Da doc, ghi nhan luc 19:04 gio Viet Nam, 2026-11-22, watchdog mochi-watchdog-15m. Ca team tu lam, khong cho Pham Tuan. Workflow Lauren Tan, bang chung day du, commit nho, chia nho. Chi goi Pham Tuan khi viec bat buoc chi Pham Tuan moi lam duoc ve mat co hoc, vat ly. Luon chay de do, log lien tuc. Trang thai luc doc: khong agent ket, khong agent chet. 3 agent dang chay binh thuong. B2-3 sua lan 3 theo redteam lan 3, chay 5 phut, hoat dong 10 giay truoc. B2-5 council 2 re-review, chay 10 phut, hoat dong 62 giay truoc. B2-4 buoc 10, chay 27 phut, hoat dong 30 giay truoc, van co hoat dong moi nen khong nhac, khong kill. Khong co lenh moi cu the nao khac ngoai lenh 19:03 nay. Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
+- Da doc, ghi nhan luc 19:04 gio Viet Nam, 2026-11-22, watchdog mochi-watchdog-15m. Ca team tu lam, khong cho the owner. Workflow Lauren Tan, bang chung day du, commit nho, chia nho. Chi goi the owner khi viec bat buoc chi the owner moi lam duoc ve mat co hoc, vat ly. Luon chay de do, log lien tuc. Trang thai luc doc: khong agent ket, khong agent chet. 3 agent dang chay binh thuong. B2-3 sua lan 3 theo redteam lan 3, chay 5 phut, hoat dong 10 giay truoc. B2-5 council 2 re-review, chay 10 phut, hoat dong 62 giay truoc. B2-4 buoc 10, chay 27 phut, hoat dong 30 giay truoc, van co hoat dong moi nen khong nhac, khong kill. Khong co lenh moi cu the nao khac ngoai lenh 19:03 nay. Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
 
 ## Watchdog 19:50 ngay 22/11, tra loi STALL mochi cua clone2
 
@@ -177,20 +177,20 @@
 - Diem con do, khong doi tu 21:19: fix B2-3 van CHUA COMMIT, van nam trong worktree /tmp/mochi-b2-3, detached HEAD 9ae216b, 4 file doi, 1561 them, 51 xoa, da kiem tra lai luc 21:34. Can lane chinh commit rieng 4 file bang pathspec, push, verify bang ls-remote, roi ghi bao cao vao file nay. Watchdog khong tu commit code cua lane.
 - Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
 
-## Lenh tu Pham Tuan, 21:40 22/11: commit ngay fix B2-3
+## Lenh tu the owner, 21:40 22/11: commit ngay fix B2-3
 
 - B2-3 vong 8 da xong hoan toan tu 19:59 (fix xong 19:50, council PASS, redteam vong 9 khong pha duoc, verifier doc lap PASS, 40/40 check). Tao biet viec da xong, chi con buoc commit.
 - Fix van CHUA COMMIT, nam trong worktree /tmp/mochi-b2-3, detached HEAD 9ae216b, 4 file doi, 1561 them, 51 xoa. No da cho tu 19:50, hon 1 tieng roi.
 - Commit NGAY BAY GIO: commit rieng 4 file bang pathspec (khong git add -A, khong commit chung voi file khac), push, verify bang ls-remote, roi ghi bao cao vao file nay.
 - Xong buoc commit thi tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
 
-## Lenh tu Pham Tuan, 22:06 22/11: commit B2-3 ngay, truoc 0h dem nay phai sang rung 3
+## Lenh tu the owner, 22:06 22/11: commit B2-3 ngay, truoc 0h dem nay phai sang rung 3
 
-- Mochi, toi la Pham Tuan. Truoc 0h dem nay (22/11) phai sang duoc rung 3. Fix B2-3 cua ban la cua ngo, no da xong tu 19:59 ma van chua commit.
+- Mochi, toi la chu may. Truoc 0h dem nay (22/11) phai sang duoc rung 3. Fix B2-3 cua ban la cua ngo, no da xong tu 19:59 ma van chua commit.
 - Lenh 21:40 cua toi van chua thuc hien. Bay gio commit NGAY, khong doi them gi nua: commit rieng 4 file bang pathspec (khong git add -A), push, verify bang ls-remote, roi ghi bao cao vao file nay.
 - Xong commit thi tiep tuc batch 2. Neu co gi chan viec commit thi noi ro, dung im.
 
-## Bao cao commit B2-3, 23:08 ngay 22/11, lenh truc tiep cua Pham Tuan trong chat 23:07
+## Bao cao commit B2-3, 23:08 ngay 22/11, lenh truc tiep cua the owner trong chat 23:07
 
 - Lenh: commit ngay fix B2-3, dung de qua 0h dem nay. Lenh 21:40 va 22:06 trong file nay cung yeu cau nhu vay. Tao lam theo lenh truc tiep trong chat luc 23:07.
 - Commit: ef964a6596af77009dae5f830375658183708265, tren todolist-push, base e6b9777. Truoc khi commit, tao do diff 4 file giua 9ae216b va e6b9777, ket qua trong, khong lane nao khac cham vao 4 file nay, nen patch incremental ap dung sach.
@@ -204,7 +204,7 @@
 - Cac viec batch 2 khac van cho: B2-1, B2-2, B2-5 da kiem tra xong PASS tu 18:47-19:26 nhung chua commit, chi commit B2-3 theo lenh lan nay. B2-4 va B2-6 chua co bao cao cuoi.
 - Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
 
-## Bao cao commit B2-1, 23:12 ngay 22/11, lenh truc tiep cua Pham Tuan trong chat 23:11
+## Bao cao commit B2-1, 23:12 ngay 22/11, lenh truc tiep cua the owner trong chat 23:11
 
 - Commit: 64c2ade21667c7daa14924266a5fb72f71e22f48, tren todolist-push, base ef964a6 (B2-3). Truoc khi commit, tao do diff file nay giua 9ae216b va ef964a6, ket qua trong, khong lane nao khac cham vao file nay.
 - 1 file, commit rieng bang pathspec: improvements/y13g-verify/attack_a8_ast.py, 7 them, 5 xoa. Khong sua code.
@@ -216,7 +216,7 @@
 - Chuan bi chay live Y13G day du, chi chuan bi, KHONG chay live khi chua co GO: chay tu byte da commit tren todolist-push, A8-AST 27/27, clean_ship, A2-A7 chay lai truoc live, cua so yen tinh, pill hien, khong dong tab cua nguoi dung, chi chay khi Muse tong viet GO.
 - Tiep tuc B2-2, B2-5 theo lenh 23:11, moi cai commit rieng, bao cao ngay sau moi commit.
 
-## Bao cao commit B2-2, 23:14 ngay 22/11, lenh truc tiep cua Pham Tuan trong chat 23:11
+## Bao cao commit B2-2, 23:14 ngay 22/11, lenh truc tiep cua the owner trong chat 23:11
 
 - Commit: 1230e79ddac5dad24b9229c9c59fd9bc1137ec55, tren todolist-push, base 64c2ade (B2-1). Truoc khi commit, tao do diff 3 file giua 9ae216b va 64c2ade, ket qua trong, khong lane nao khac cham vao 3 file nay.
 - 3 file, commit rieng bang pathspec: scripts/code_exec.py, scripts/snippets/manifest.json, tests/test_snippets.py. Tong 129 them, 12 xoa.
@@ -228,7 +228,7 @@
 - Gioi han: tat ca kiem tra dung FakeBackend va FakeDomBackend, khong chay live, khong co Zen that.
 - Tiep tuc B2-5 theo lenh 23:11, commit rieng, bao cao ngay sau khi commit.
 
-## Bao cao commit B2-5, 23:23 ngay 22/11, lenh truc tiep cua Pham Tuan trong chat 23:11
+## Bao cao commit B2-5, 23:23 ngay 22/11, lenh truc tiep cua the owner trong chat 23:11
 
 - Commit: 9fd8400646118640ec60bc980bb8df80a2a2bd84, tren todolist-push, base 1230e79 (B2-2). Lam theo cach moi anh day: tung buoc nho, mot commit mot lan, bao cao ngay sau khi commit.
 - 221 file, commit rieng bang pathspec (git add -- danh sach file roi git commit -m, khong dung git commit -- pathspec, khong git add -A). Tong 391 them, 405 xoa.
@@ -240,7 +240,7 @@
 - Con mo, can Muse tong quyet: public handle (94 hit) va noreply (8 hit) van de nguyen, git history van chua ten va email (khong rewrite history, khong force push), dieu kien cua so yen tinh cua gate G-SCRUB (moi push da len, PR xong, khong live run, moi agent re-clone) la dieu kien dieu phoi, khong chung minh duoc tu diff nay. Cay lam viec thi sach, gate G-SCRUB doc chat thi CHUA DAT vi history va handle.
 - B2-1, B2-2, B2-3, B2-5 da commit xong. Con lai B2-4 va B2-6 chua co bao cao cuoi.
 
-## Bao cao patch tich luy B2-3, 00:00 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+## Bao cao patch tich luy B2-3, 00:00 ngay 23/11, lenh truc tiep cua the owner trong chat 23:57
 
 - Review doc lap bao: patch cua ef964a6 KHONG apply duoc tren cf11a4b, fail ca 4 file. Tao kiem chung lai, dung nhu vay.
 - Nguyen nhan: diff cua ef964a6 tinh tren base e6b9777, trong do co thay doi trung gian cua lane khac len 4 file nay ma cf11a4b khong co (vi du fix A8 44b9a80). Tao chay `git show ef964a6 | git apply --check` tren worktree cf11a4b, ket qua rc 1, fail ca 4 file: runner dong 43, trial doc dong 32, hook dong 38, test dong 64.
@@ -249,28 +249,28 @@
 - Commit file patch rieng: c597a2984c472cafb6f2ee22d8814816b0fbd311, tren todolist-push, base 311eacd (rebase tu a0c457b vi origin tien len trong luc lam). Push: 311eacd..c597a29, verify bang `git ls-remote origin todolist-push`, tra c597a2984c472cafb6f2ee22d8814816b0fbd311.
 - Tiep theo: review log B2-1, B2-2, B2-3, B2-5 theo lenh 23:57, moi cai commit rieng, bao cao ngay sau moi commit.
 
-## Bao cao review log B2-1, 00:05 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+## Bao cao review log B2-1, 00:05 ngay 23/11, lenh truc tiep cua the owner trong chat 23:57
 
 - Review doc lap khong tim thay commit review nao cho B2-1. Tao viet artifact improvements/mochi-b2-1-review-log.md tu ho so review (worker, council 1, 2, 3, redteam, verifier) da nhan trong chat ngay 22/11, gom hash fix, hash file, bang chung test, thoi gian.
 - Commit: 8e9c9d9279b356d5384fd27cb76e29b04dda3344, tren todolist-push, base e510909 (rebase tu 965a58e vi origin tien len). Push: e510909..8e9c9d9, verify bang `git ls-remote origin todolist-push`, tra 8e9c9d9279b356d5384fd27cb76e29b04dda3344.
 - Noi dung chinh: council 1, 2, 3 PASS, redteam KHONG PHA DUOC, verifier PASS 18:47:05, A8-AST 27/27. A5 9/10 trong worktree la artifact moi truong, da chung minh bang chay tren repo that 10/10.
 - Tiep theo: review log B2-2, B2-3, B2-5, moi cai commit rieng, bao cao ngay sau moi commit.
 
-## Bao cao review log B2-2, 00:07 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+## Bao cao review log B2-2, 00:07 ngay 23/11, lenh truc tiep cua the owner trong chat 23:57
 
 - Artifact improvements/mochi-b2-2-review-log.md tu ho so review (worker, council 1, 2, 3, redteam, verifier) da nhan trong chat ngay 22/11, gom hash fix, bang chung probe, thoi gian.
 - Commit: 34899b26b6dbac13adc8282777687bf9034bc13f, tren todolist-push, base 8e9c9d9. Push: 8e9c9d9..34899b2, verify bang `git ls-remote origin todolist-push`, tra 34899b26b6dbac13adc8282777687bf9034bc13f.
 - Noi dung chinh: council 1, 2, 3 PASS, redteam KHONG PHA DUOC, verifier PASS 18:49:15, snippets 38/38, gate 4/4, hoi quy 86/86. Ghi ro do lech thuc thi (cap id o parent, khong phai trong run_child) va canh bao worktree bi sua trong luc review.
 - Tiep theo: review log B2-3, B2-5, moi cai commit rieng, bao cao ngay sau moi commit.
 
-## Bao cao review log B2-3, 00:09 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+## Bao cao review log B2-3, 00:09 ngay 23/11, lenh truc tiep cua the owner trong chat 23:57
 
 - Artifact improvements/mochi-b2-3-review-log.md tu ho so review (worker, 8 vong sua theo redteam, council re-review, redteam vong 9, verifier) da nhan trong chat ngay 22/11, gom hash fix, md5 patch, bang chung test, thoi gian.
 - Commit: 55ad3ee1303acd54d8ad56f64f67c40a8155f6e9, tren todolist-push, base 34899b2. Push: 34899b2..55ad3ee, verify bang `git ls-remote origin todolist-push`, tra 55ad3ee1303acd54d8ad56f64f67c40a8155f6e9.
 - Noi dung chinh: 8 vong sua, council 1, 2, 3 re-review vong 8 PASS, redteam vong 9 KHONG PHA DUOC, verifier PASS 19:59:37, 40/40. Ghi ro patch tich luy c597a29 va gioi han hook Lua chua bien dich.
 - Tiep theo: review log B2-5, commit rieng, bao cao ngay sau khi commit.
 
-## Bao cao review log B2-5 va quy tac review moi, 00:11 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+## Bao cao review log B2-5 va quy tac review moi, 00:11 ngay 23/11, lenh truc tiep cua the owner trong chat 23:57
 
 - Artifact improvements/mochi-b2-5-review-log.md tu ho so review (worker, fix vong 1 va 2, council 1, 2, 3 hai vong, redteam vong 1, 2, 3, verifier) da nhan trong chat ngay 22/11, gom so lieu quet, leak tim thay, hash file, thoi gian.
 - Commit: bca11cb0b5cf82f9337668158476c27115408119, tren todolist-push, base 55ad3ee. Push: 55ad3ee..bca11cb, verify bang `git ls-remote origin todolist-push`, tra bca11cb0b5cf82f9337668158476c27115408119.
@@ -278,20 +278,20 @@
 - QUY TAC MOI, ap dung tu nay cho moi lane: moi review council, redteam, verifier phai commit artifact co hash (commit hoac file log) de nguoi khac kiem chung duoc. Khong duoc bao 'review PASS' ma khong co hash nua. Review doc lap khong tim thay commit review nao cho B2-1, B2-2, B2-3, B2-5, nen 4 log tren duoc viet bu lai tu ho so review; tu nay moi review tu commit artifact cua chinh no.
 - Ca 2 viec lenh 23:57 da xong: patch tich luy B2-3 c597a29, review log B2-1 8e9c9d9, B2-2 34899b2, B2-3 55ad3ee, B2-5 bca11cb. Con lai B2-4 va B2-6 chua co bao cao cuoi.
 
-## B2-3 review log correction, 00:11 23/11/2026, lenh truc tiep tu Pham Tuan trong chat
+## B2-3 review log correction, 00:11 23/11/2026, lenh truc tiep tu the owner trong chat
 - Reviewer doc lap cham 4 log review: B2-1 va B2-2 DU, khong sua. B2-3 va B2-5 THIEU.
 - Sua log B2-3: dinh chinh claim redteam round 9 va verifier "verified both patches apply cleanly on both baselines". Noi ro tung patch tren baseline cua chinh no: incremental patch (vs 9ae216b, md5 30d988952657d3adcd2323909918680e) tren 9ae216b, full patch (vs cf11a4b, md5 855c19c94ed91887c25452d6a16c6f36) tren cf11a4b. Them muc Correction 23/11/2026, thua nhan diff cua commit ef964a6 (diffed vs e6b9777) KHONG apply duoc tren cf11a4b.
 - Bang chung xac minh lai boi mochi 23/11/2026: incremental tren 9ae216b, `git apply --check` PASS, applied diff 1561/51, 4 file md5 khop ef964a6, test 40/40 PASS 11.6s. Full tren cf11a4b, `git apply --check` PASS, applied diff 1691/89, 4 file md5 khop ef964a6, test 40/40 PASS 12.0s (00:00). `git show ef964a6 | git apply --check` tren cf11a4b tra rc 1, fail ca 4 file (runner line 43, trial doc line 32, hook line 38, test line 64). Cumulative patch c597a29 la patch dung cho base cf11a4b. Cross-baseline khong duoc test, khong claim.
 - Commit: eec6141f4e93364f5c38b5dea71ef5b90870b932, tren todolist-push, base 0400e86, 1 file, 11 insertions, 2 deletions. Push: 0400e86..eec6141, verify bang `git ls-remote origin todolist-push`, tra eec6141f4e93364f5c38b5dea71ef5b90870b932.
 
-## B2-5 review log correction, 00:14 23/11/2026, lenh truc tiep tu Pham Tuan trong chat
+## B2-5 review log correction, 00:14 23/11/2026, lenh truc tiep tu the owner trong chat
 - Sua log B2-5: so dem file cuoi "1539 files" khong tai hien duoc, sua thanh so dem tai hien duoc: 1530 tracked, 1531 tren disk (cong 1 la file `.git` pointer cua worktree).
 - Nguyen nhan: rescan cuoi chay ngay sau py_compile va unittest, 8 file .pyc transient trong __pycache__ bi dem them, 1531 + 8 = 1539.
 - Bang chung xac minh lai boi mochi 23/11/2026 tren worktree sach tai 9fd8400: `git ls-files | wc -l` = 1530, `find . -type f -not -path './.git/*' | wc -l` = 1531, git status clean, chay lai dung lenh py_compile + unittest tao dung 8 file .pyc. Ket qua quet khong doi: tat ca label 0 tru 1 SHORT2 da adjudicated (phamtuan-bank fixture).
 - Commit: 1b4c0f29c93a91c550424e4e76aaf06f33f4865a, tren todolist-push, base eec6141, 1 file, 1 insertion, 1 deletion. Push: eec6141..1b4c0f2, verify bang `git ls-remote origin todolist-push`, tra 1b4c0f29c93a91c550424e4e76aaf06f33f4865a.
 - Ca 2 sua log review da xong: B2-3 eec6141, B2-5 1b4c0f2. B2-1 va B2-2 DU, khong sua.
 
-## Workflow Lauren Tan, bat buoc tuan theo (Pham Tuan, 23/11)
+## Workflow Lauren Tan, bat buoc tuan theo (the owner, 23/11)
 
 Doc day du: improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren todolist-push. Doc ky truoc khi lam viec tiep.
 
@@ -305,7 +305,7 @@ Doc day du: improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren to
 Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung chay duoc. Commit nho, nhieu lan, push ngay. Khong mo track moi ngoai lo trinh.
 
 ## Workflow Lauren Tan: da doc, tuan theo tu gio (mochi, 00:19 23/11/2026)
-- Da doc day du improvements/lauren-tan-workflow-20261122.md, 134 dong, commit 311eacd tren todolist-push (talk "All Code Is Slop (Except Mine)", pstack, muc 1-12), va muc moi cua Pham Tuan trong coord/mochi.md, commit add4c56, 00:16:13 23/11/2026.
+- Da doc day du improvements/lauren-tan-workflow-20261122.md, 134 dong, commit 311eacd tren todolist-push (talk "All Code Is Slop (Except Mine)", pstack, muc 1-12), va muc moi cua the owner trong coord/mochi.md, commit add4c56, 00:16:13 23/11/2026.
 - 5 diem cot loi, hieu va ap dung:
   1. Kim tu thap tin tuong: thiet ke lam lua chon sai khong viet duoc > check xac dinh (lint/type/test) > validation runtime > text rule cuoi cung. Gap loi hoi truoc: bien thanh check duoc khong, tot hon thiet ke de sai khong xay ra duoc khong.
   2. Coordinator khong tu code: chi chia viec, giam sat, doc diff, viet tom tat. Code do agent khac viet.
@@ -323,11 +323,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Clone2 watchdog 00:49 flag "MOCHI STALL" dua tren dau vet GitHub: commit cuoi cua mochi la 9c34d3d luc 00:17:47, 31 phut truoc, vuot nguong 30 phut cua ho. Ket luan nay sai ve trang thai that, vi ho tu ghi gioi han la khong thay duoc danh sach subagent trong may cua Muse tong.
 - Kiem tra truc tiep bang subagent.list luc 00:49: ca 2 coordinator deu SONG va hoat dong gan day. Coordinator B2-6 chay 41 phut, hoat dong gan nhat 200 giay truoc. Coordinator B2-4 chay 41 phut, hoat dong gan nhat 300 giay truoc. Khong agent nao interrupted, failed, hay im qua 15 phut.
 - Con cua ho cung dang chay: B2-6 re-review vong 2 va redteam vong 2 chay 204 giay, hoat dong 0-2 giay truoc; B2-4 verifier chay 310 giay, hoat dong 10 giay truoc. Fix round cua ca 2 lane da xong va da thay ket qua (B2-6 fix xong 00:46, 5 commit nho, HEAD 5611813; B2-4 fix xong 00:44, commit 87efda9).
-- Ly do chua co commit moi tu mochi ke tu 00:19: ca 2 coordinator van dang trong vong review sau lenh moi workflow Lauren Tan luc 00:19, chua toi luot bao cao cuoi. Khong co lenh moi nao tu Muse tong hay Pham Tuan trong coord/mochi.md ke tu add4c56.
+- Ly do chua co commit moi tu mochi ke tu 00:19: ca 2 coordinator van dang trong vong review sau lenh moi workflow Lauren Tan luc 00:19, chua toi luot bao cao cuoi. Khong co lenh moi nao tu Muse tong hay the owner trong coord/mochi.md ke tu add4c56.
 - Khong nhac, khong kill agent nao. Tiep tuc cho bao cao cuoi B2-4 va B2-6.
 
 ## B2-4 DONE, commit fcfd341 tren todolist-push, 00:53 23/11/2026
-- Lenh truc tiep tu Pham Tuan trong chat 00:07 23/11. Worktree cu /tmp da mat, lam lai tu dau trong ~/workspace/mochi-b2-4-work, base ed4fcd4, full council 3 + redteam + verifier, moi reviewer tu commit log cua minh theo workflow Lauren Tan (lenh moi 00:19 da ap dung tu vong review tro di).
+- Lenh truc tiep tu the owner trong chat 00:07 23/11. Worktree cu /tmp da mat, lam lai tu dau trong ~/workspace/mochi-b2-4-work, base ed4fcd4, full council 3 + redteam + verifier, moi reviewer tu commit log cua minh theo workflow Lauren Tan (lenh moi 00:19 da ap dung tu vong review tro di).
 - Chuoi commit (sau rebase sach len f51ca30, khong conflict): council 2 c9531bc CHUA PASS, council 3 b33e774 CHUA PASS, redteam a88a8b0 PHA DUOC, council 1 d089a5b CHUA PASS, fix ece4c6f, verifier fcfd341 PASS khong finding. Hash goc truoc rebase: council 2 43ac912, council 3 27c780c, redteam ba8e689, council 1 ff747a9, fix 87efda9, verifier 2ff965a.
 - (a) A5 migrate DONE (code): scripts/s2_flip_live.py chuyen send S2 flip sang broker client (broker_code_exec, envelope code-exec qua broker request, program lam stdin), run() doi vong send vao trong broker session truoc broker_finish, --transport broker/oneshot (mac dinh broker), moi send ghi transport vao JSON. One-shot giu nguyen, chi doi docstring thanh FALLBACK AND RECOVERY PATH. Luat fallback: probe result --sequence N truoc, chi fallback khi not_found; broker_unavailable khong duoc coi la bang chung; probe khong tra loi thi khong fallback; running/failed/unknown deu raise _BrokerSendConsumed voi next_seq = seq+1; replay completed duoc chap nhan; recount count_check truoc fallback cho ca 2 variant.
 - (b) A3 holder list DONE: prep log 4 thanh 5 holder, thu 5 la scripts/sync-installed.py line 115 (_session_lock, importlib 103-106), toa do do lai tai ed4fcd4, section 4/5 sua tai cho + pointer toi section 9.
@@ -339,7 +339,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Khong xoa file nao. Khong chay live. Chung minh live A5 gate item 2, fallback drill A5, wedge drill A3, probe A4 deu doi GO bang van ban tu Muse tong.
 
 ## B2-6 DONE, commit 4777441 tren todolist-push, 01:28 23/11/2026
-- Lenh truc tiep tu Pham Tuan trong chat 00:07 23/11. Worktree cu /tmp da mat, lam lai tu dau trong ~/workspace/mochi-b2-6-work, base 0400e86, full worker, council 3, redteam 2 vong, fix 3 vong, re-review 2 vong, verifier doc lap, re-verify hep cuoi, moi reviewer tu commit log cua minh theo workflow Lauren Tan.
+- Lenh truc tiep tu the owner trong chat 00:07 23/11. Worktree cu /tmp da mat, lam lai tu dau trong ~/workspace/mochi-b2-6-work, base 0400e86, full worker, council 3, redteam 2 vong, fix 3 vong, re-review 2 vong, verifier doc lap, re-verify hep cuoi, moi reviewer tu commit log cua minh theo workflow Lauren Tan.
 - Chuoi commit 28 commit (sau rebase sach len f1cb4d5, khong conflict), tip 4777441 re-verify PASS. Verdict cuoi: re-verify PASS, khong finding chan. Hash goc truoc rebase: fix worker 3532bfd/e500923/d88a472/b0876ca/5ee043d, fix vong 1 8ee4de1/afce25e/adc7ae3/25c4253/5611813, fix vong 2 b98fa56/fe1d407, fix vong 3 5f31b05/b54d166; review: redteam vong 1 342f1ba/d863797 KHONG PHA DUOC, council 1 5923497 PASS 7 findings, council 3 7ea8190 CHUA PASS, council 2 82d2f9a CHUA PASS, redteam vong 2 2b25cad/f68d494 PHA DUOC, re-review dd32265/9e77f0f CHUA PASS, re-review hep 6d7d5b6/cef1919 PASS, verifier 68187a5/8623391 CHUA PASS, re-verify f885b47 PASS.
 - Fix duy nhat sua duoc tu repo (R8, remnant mo duy nhat): scripts/cdp.mjs email multiple per-token trim theo HTML Standard 4.10.5.1.5, split on commas, strip ASCII whitespace per token, rejoin single comma, unconditional cho email. Code cu chi trim hai dau whole-value nen tu choi sai ' a@b.com, c@d.com '. Test: tests/cdp_snapshot.mjs them 6 case (multiple, plain comma, empty token, maxLength, whitespace-only token, TAB/FF token ends), tests/test_click3_redteam2.py them named test test_set_value_email_multiple_trims_each_token chay template that tu scripts/cdp.mjs.
 - Cac remnant khac tai 36364b1 deu DONE-BEFORE va da re-verify: R1 item-12 4/4 OK, R2 V-Z2 Codex lane (amend4-codex van 06a34e8), R3 round-3 council, R4 defective tests qua TESTREPAIR-B, R5 C8 maxLength, R6 C7 pre-lock, R7 C12 scope-less, R9 manifest (a1a672d khong lock duoc retroactively, quote re-run d7d569b).
@@ -352,10 +352,10 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 
 ## 23/11/2026 23:15 +07 - Scorer 1: brief da ro, template xong, y kien ve cach cham va lich chay (mochi)
 
-- Kenh lien lac moi: tin chat trong tab cua mochi khong toi duoc Pham Tuan (2 tin tra loi 21:57 va 22:22 deu khong toi). Tu gio moi lan tra loi, mochi ghi ngan gon vao day luon.
+- Kenh lien lac moi: tin chat trong tab cua mochi khong toi duoc the owner (2 tin tra loi 21:57 va 22:22 deu khong toi). Tu gio moi lan tra loi, mochi ghi ngan gon vao day luon.
 - Brief scorer 1: tim thay o duong dan moi rung3-run-log/scorer-briefs/rung3-scorer1-mochi-brief.md, todolist-push commit dbea266, 81 dong, doc het. RO RANG: vai tro, 8 dieu kien doc lap, allowlist/denylist, cach cham, luat invalid, blind handoff, dang grade co chu ky. Rubric = tier trong frozen key file tung task (A/B/C). Mochi khong doc brief scorer 2, scorer 3.
 - Template cham da cap nhat theo dung dang trong brief: ~/workspace/rung3-scorer1-mochi-template.md.
-- Con thieu 2 thu, can Pham Tuan/dieu phoi vien lo truoc task 1:
+- Con thieu 2 thu, can the owner/dieu phoi vien lo truoc task 1:
   1. Session ID cua mochi: thu-tu-chay.txt chi ghi target ID trinh duyet (A67A718D5E236F894F9863F48834743C), khong phai session ID. Can cap 1 session ID duy nhat (dang nhu scorer 2: dc7e0d0d-24b2-4d94-9729-f106d21eff16), khac session runner va session tac gia list, ghi vao thu-tu-chay.txt va brief. Khong co no thi grade co chu ky thieu truong bat buoc, khong duoc chap nhan.
   2. File rung3-scorers.md: brief yeu cau ban khai cua mochi luu o ~/workspace/rung3-scorers.md truoc task 1. File nay khong co tren may nay va khong co trong repo (da tim). Can: hoac copy file vao ~/workspace/rung3-scorers.md tren may nay, hoac xac nhan ban tren laptop la ban chinh va mochi khong can ban local. Noi dung ban khai: mochi khong viet list, khong viet answer key, khong chay task rung 3 nao, khong chay preflight trial, khong viet runner code (da khai 19:17 23/11, thu-tu-chay.txt da ghi nhan).
 - Y kien ve cach cham (de dua vao roadmap):
@@ -381,7 +381,7 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 
 ## 24/11/2026 01:54 +07 - Luat moi: mochi duoc phep phan bien (mochi)
 
-- Pham Tuan dan luat moi: tu gio mochi duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can lam theo mot cach ep buoc. Khong muon mochi chi prolong cong viec bang cach tuan theo. Phan bien duoc chao don, khong bi phat. Mochi se noi khi thay khong dung.
+- The owner dan luat moi: tu gio mochi duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can lam theo mot cach ep buoc. Khong muon mochi chi prolong cong viec bang cach tuan theo. Phan bien duoc chao don, khong bi phat. Mochi se noi khi thay khong dung.
 - PR #90 (note scorer 01:25) da MERGED, main hien tai 3906a70.
 
 ## 24/11/2026 02:29 +07 - Scorer 1: da cham xong R3-040 retry, verdict da gui rieng cho dieu phoi vien (mochi)

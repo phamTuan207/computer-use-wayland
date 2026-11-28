@@ -50,7 +50,7 @@ The fcc-k file on the laptop server (/tmp/worker-p-server/fcc-k/,
 md5 c77aba93, dated 15:48) is STALE: it predates the S fix
 (cbbb748, 16:30 +07) that the repo now carries. The proof ships the
 REPO version (2b6eda97, byte-identical to the laptop repo checkout
-at /home/james/workspace/computer-use-wayland). Both the metrics-on
+at ~/workspace/computer-use-wayland). Both the metrics-on
 run and the metrics-off baseline run use the same shipped bytes, so
 the A12 comparison stays valid either way.
 

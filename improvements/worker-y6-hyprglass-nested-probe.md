@@ -25,9 +25,9 @@ is fixed and its files are created and verified, not yet run.
 | 3 | 18:22 | Hyprland child via hyprctl dispatch Lua os.execute (real session), headless env | Crash, identical; tail adds logind.c:309 Device or resource busy | A |
 | 4 | 18:22 | SSH, AQ_BACKENDS=headless, debug.enable_stdout_logs=true in config | Crash, identical. The stdout-logs flag never took effect: all 8 logs print enable_stdout_logs = 0. Attempt 4 duplicates attempt 1. | A |
 | 5 | 18:24 | SSH, headless env, seatd started as root, default socket | Crash, identical + seatd EACCES (seatd.c:66 Permission denied). Socket mode and PID from the draft have no surviving record and are dropped. | A |
-| 6 | 18:40 | SSH, seatd -u james, LIBSEAT_BACKEND=seatd, SEATD_SOCK=/run/seatd.sock, AQ_DRM_DEVICES=/dev/dri/renderD128, AQ_TRACE=1, WAYLAND_DISPLAY unset | Crash, exit 134, coredump 18:40:37 PID 235189. Seat OPENED (see below). DRM backend rejected the render node. | A |
-| 7 | 18:42 | SSH, seatd -u james, vkms loaded (card0 created), AQ_DRM_DEVICES=/dev/dri/card2 | INVALID as a vkms test: my sort -V bug picked live card2 (Intel), not vkms card0. Still informative: backend came up, died later (see below). Crash, coredump 18:42:05 PID 236437. | B: enterLoop / initFB |
-| 8 | 18:43 | SSH, seatd -u james, AQ_DRM_DEVICES=/dev/dri/card0 (correct vkms card), config without monitor line | Crash, exit 134, coredump 18:43:30 PID 238521. Backend, allocator and outputs all came up; died at modeset commit. | B: enterLoop / initFB |
+| 6 | 18:40 | SSH, seatd -u user, LIBSEAT_BACKEND=seatd, SEATD_SOCK=/run/seatd.sock, AQ_DRM_DEVICES=/dev/dri/renderD128, AQ_TRACE=1, WAYLAND_DISPLAY unset | Crash, exit 134, coredump 18:40:37 PID 235189. Seat OPENED (see below). DRM backend rejected the render node. | A |
+| 7 | 18:42 | SSH, seatd -u user, vkms loaded (card0 created), AQ_DRM_DEVICES=/dev/dri/card2 | INVALID as a vkms test: my sort -V bug picked live card2 (Intel), not vkms card0. Still informative: backend came up, died later (see below). Crash, coredump 18:42:05 PID 236437. | B: enterLoop / initFB |
+| 8 | 18:43 | SSH, seatd -u user, AQ_DRM_DEVICES=/dev/dri/card0 (correct vkms card), config without monitor line | Crash, exit 134, coredump 18:43:30 PID 238521. Backend, allocator and outputs all came up; died at modeset commit. | B: enterLoop / initFB |
 
 Observable experiments, not launches: attempts 1, 2, 4 are one experiment (identical
 conditions; AQ_BACKENDS does not exist in the binary, the stdout-logs flag never
@@ -51,7 +51,7 @@ ERR: DRM Backend failed
 ERR: Wayland backend cannot start: wl_display_connect failed
 CRIT: Cannot open backend: no allocator available
 ```
-Seatd log (seatd2.log): socket srwxrwx--- james:seat, client connected
+Seatd log (seatd2.log): socket srwxrwx--- user:seat, client connected
 (pid 235189, uid 1000), "Opened client 1 on seat0". Then 2x
 "Could not make device fd drm master: Device or resource busy" (card1, card2)
 and 2x "Could not revoke drm master: Invalid argument". The seat fix works.
@@ -88,7 +88,7 @@ two stages of manifestation.
 
 8 nested SIGABRT in 24 minutes (18:20-18:43), over the 5/hour threshold
 (watchdog counted 7 at its 18:44 snapshot; the 8th landed 18:43:30). Each crash
-writes a report to /home/james/.cache/hyprland/ and can produce a desktop crash
+writes a report to ~/.cache/hyprland/ and can produce a desktop crash
 notification. STOP launching nested DRM attempts: the wall is proven, further
 attempts without a DRM-master solution only repeat signature B and add noise.
 
@@ -110,12 +110,12 @@ attempts without a DRM-master solution only repeat signature B and add noise.
 ### Plugin file verification (done before launching)
 
 - Backup 1 (decision-doc first path, on the laptop):
-  /home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so,
+  ~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so,
   26,643,888 bytes, sha256
   2671d4ac41941ca62ae8100fc3b57bf3153bf6def893334f3a8ecbc1ea0145d5. IDENTICAL
   (same sha256) to the laptop vendor copy. Note: vendor/ does not exist in the
   repo checkout; the vendor path is the laptop path above.
-- Backup 2: /home/james/.local/share/agent-computer-use/backups/sync-20261116-230254-783160-a9a24690/trees/native/hyprglass.so,
+- Backup 2: ~/.local/share/agent-computer-use/backups/sync-20261116-230254-783160-a9a24690/trees/native/hyprglass.so,
   30,622,520 bytes, sha256 ddfff1c2f2cebb66e10b85a739beae0c7c562ccf9d78e3250647c07f8f31fa8b.
   DIFFERENT build, not used, and never compat-checked against Hyprland 0.57.2.
   That is an open gap: identify the load-compatible .so by loading it, not by hash.
@@ -146,7 +146,7 @@ attempts without a DRM-master solution only repeat signature B and add noise.
 - seatd-launch: /usr/bin/seatd-launch is -rwxr-xr-x, NO setuid bit. Its man page
   requires root or SUID; under sudo the nested process runs as root. It cannot
   do what Council A Path A asked unprivileged. Path A rewritten around
-  `seatd -u james` (flag verified in seatd -h), tested in attempts 6-8, works.
+  `seatd -u user` (flag verified in seatd -h), tested in attempts 6-8, works.
 
 ## Council + redteam debate (resolved)
 
@@ -272,7 +272,7 @@ accurate count.
 12. seatd-launch: A right that raw seatd with default socket ownership was the
     wrong tool and -u exists; A wrong that seatd-launch is a one-command
     unprivileged fix (no setuid; under sudo the nest runs as root). Fix is
-    seatd -u james, tested in attempts 6-8.
+    seatd -u user, tested in attempts 6-8.
 13. vkms risk: A understates it. LOW for GPU and VT, MODERATE as a stacked
     experiment. Ranking third was right; the label was wrong. Now tested:
     the live session grabs the vkms card, which A did not foresee.
@@ -398,14 +398,14 @@ from its printed SUMMARY lines. Do NOT launch more nested DRM attempts.
 - Commands that produced the load-bearing evidence (all on the laptop via
   ssh-laptop.sh): `coredumpctl --no-pager list` (8 Hyprland SIGABRT 18:20:16,
   18:22:00, 18:22:35, 18:23:03, 18:24:52, 18:40:37, 18:42:05, 18:43:30);
-  `grep -a` over /home/james/.cache/hyprland/hyprlandCrashReport{235189,236437,238521}.txt
+  `grep -a` over ~/.cache/hyprland/hyprlandCrashReport{235189,236437,238521}.txt
   and the per-instance logs under /tmp/y6-nested/run/hypr/*/hyprland.log
   (seat lines, DRM lines, allocator lines, atomic-commit lines, backtrace
   frames); seatd logs seatd2/3/4.log (client connected, master-busy errors);
   `fuser -v /dev/dri/card0` + /proc/1515/fd (live holds card0);
   `lsmod | grep vkms` + `modprobe -r vkms` (FATAL: in use, refcount 2);
   `hyprctl -j monitors` live (1 monitor, eDP-2); `ls -l /run/seatd.sock`
-  (srwxrwx--- james:seat); `strings` + `grep -a -c` on
+  (srwxrwx--- user:seat); `strings` + `grep -a -c` on
   /usr/lib/libaquamarine.so.0.16.0 (AQ_DRM_DEVICES present, AQ_BACKENDS 0,
   AQ_NO_KMS_REQUIREMENT literal 0, one AQ_NO_KMS_REQUIR fragment);
   `ls -l /usr/bin/seatd-launch` (-rwxr-xr-x, no setuid); `ffmpeg` + `ffprobe`

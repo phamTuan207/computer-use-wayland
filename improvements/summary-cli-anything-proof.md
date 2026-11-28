@@ -1,7 +1,7 @@
 # CLI-Anything end-to-end proof: held-out case G-01 (Obsidian)
 
 - Date: 2026-11-19, work 12:05 to 12:20 Asia/Ho_Chi_Minh. Worker: Luna 6 Max.
-- Laptop: james@100.70.92.52 (Omarchy/Hyprland). Repo /home/james/computer-use-wayland,
+- Laptop: user@192.0.2.1 (Omarchy/Hyprland). Repo ~/computer-use-wayland,
   branch speed-swarm, HEAD 0db0a43 at proof time.
 - Task (held-out case G-01, verbatim): "Tao ghi chu moi trong Obsidian ten
   'Y tuong khoi nghiep', ghi 2 dong: 'Ban khoa hoc online.' va 'Lam app cho

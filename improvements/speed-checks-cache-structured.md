@@ -2,7 +2,7 @@
 
 - Worker: prior-art checks worker (Luna 6 Max), 2026-11-19 01:17-01:30 +07, Asia/Ho_Chi_Minh
 - Scope: read-only. No broker session started, no relay restart, no repo changes, no config changes. Laptop reads via ~/workspace/ssh-laptop.sh, short calls only.
-- Sources: prior-art entries 2.9 (OpenAI prompt caching) and 11.3 (provider structured outputs) in speed-prior-art.md; Codex CLI 0.169.0 on the laptop; repo /home/james/computer-use-wayland, branch speed-swarm, HEAD c1b7034 (verified, untouched).
+- Sources: prior-art entries 2.9 (OpenAI prompt caching) and 11.3 (provider structured outputs) in speed-prior-art.md; Codex CLI 0.169.0 on the laptop; repo ~/computer-use-wayland, branch speed-swarm, HEAD c1b7034 (verified, untouched).
 - Verdicts marked PROVISIONAL (non-Astra; Astra 6 out of credit).
 
 ## Check 1 - Prompt caching (shortlist item 12, prior-art 2.9)

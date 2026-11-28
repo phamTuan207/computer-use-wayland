@@ -3,7 +3,7 @@
 # HTTP server (port 8767). Run ONLY when no other executor is on Zen.
 # Usage: start-infra.sh
 set -u
-cd /home/james/workspace/computer-use-wayland
+cd ~/workspace/computer-use-wayland
 sed 's/WD_PORT = 4450/WD_PORT = 4451/' tests/realistic/hand_drive.py > /tmp/e1/hand_drive_e1.py
 python3 -m py_compile /tmp/e1/hand_drive_e1.py || exit 1
 rm -f /tmp/e1/fifo

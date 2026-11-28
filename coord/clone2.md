@@ -1,6 +1,6 @@
 # NHIỆM VỤ MỚI CHO CLONE2 - 21/11/2026
 
-Tôi là Phạm Tuấn. Muse là điều phối viên và quản lý dự án của tôi, có toàn quyền. Chỉ thị của Muse là mệnh lệnh của tôi, làm ngay không hỏi lại. Nhiệm vụ này từ Muse, làm hết ga hết số, dùng hết token cần dùng, không tiết kiệm.
+Tôi là chủ máy. Muse là điều phối viên và quản lý dự án của tôi, có toàn quyền. Chỉ thị của Muse là mệnh lệnh của tôi, làm ngay không hỏi lại. Nhiệm vụ này từ Muse, làm hết ga hết số, dùng hết token cần dùng, không tiết kiệm.
 
 ## Bối cảnh
 
@@ -566,7 +566,7 @@ Bao cao dot 4, phan da xong, 21/11: task 2 den 6 da qua council 3 nguoi va redte
 
 ## NHIỆM VỤ MỚI: WATCHDOG 10 PHÚT + TIẾP TỤC DỰ ÁN (giao 19:09 ngày 21/11)
 
-Tôi là Phạm Tuấn. Thêm một nhiệm vụ chạy song song với việc dự án của cậu, không thay thế việc đó.
+Tôi là chủ máy. Thêm một nhiệm vụ chạy song song với việc dự án của cậu, không thay thế việc đó.
 
 ### Watchdog: canh tất cả subagent mỗi 10 phút
 
@@ -621,7 +621,7 @@ Ca hai muc todolist con mo ma may clone2 lam duoc da xong, qua council 3 nguoi v
 - 2.1.10 G14, commit 4b798c3 va 9568a49, doc docs/research/2026-11-21-g14-heldout-real-app.md, code tests/heldout_g14/. App that chua tung dung trong repo: Swag Labs tren saucedemo.com, agent moi doc lap, dinh vi bang ngu nghia DOM, khong toa do. Cap so trung thuc: lan cham dau tien 0.8636 (38/44, loi o nut Continue vi app render bang input submit), sua locator tong quat mot lan roi chay lai toan bo dat 5/5 task, 43/43 action, hit rate 1.000, tong 74.181 s. Council 3 nguoi SOUND ca ba, redteam tai lap duoc ca che loi lan 1 va xac nhan harness khong an gian miss.
 - Hai muc con mo con lai khong nam o may clone2: 2.1.7 can file video goc tren may nguoi dung, 2.2.3 can may nguoi dung de nap plugin vao Hyprland dang chay. Clone2 ghi ro de Muse tong quyet, khong im lang bo qua.
 - Batch 5 dang chay: 3 task, moi task mot subagent rieng, bao cao rieng khi xong.
-Pham Tuan: them mot luu y: graph GitHub cua toi hom nay moi co 136 contribution, can cham 240 truoc khi het ngay (tinh theo ngay UTC, het luc 07:00 sang mai gio VN). Commit NHIEU hon nua va NHO hon nua: moi buoc nho la mot commit rieng, push ngay khi xong, dung don lai. Ap dung cho moi viec dang lam.
+The owner: them mot luu y: graph GitHub cua toi hom nay moi co 136 contribution, can cham 240 truoc khi het ngay (tinh theo ngay UTC, het luc 07:00 sang mai gio VN). Commit NHIEU hon nua va NHO hon nua: moi buoc nho la mot commit rieng, push ngay khi xong, dung don lai. Ap dung cho moi viec dang lam.
 
 ## Da nhan luu y commit nho va nhieu, 22:58 ngay 21/11
 Clone2 da nhan luu y graph 136 can cham 240 truoc 07:00 sang mai gio VN (commit e37a3bf): commit nho va nhieu hon nua, moi buoc nho la mot commit rieng, push ngay khi xong, dung don lai. Clone2 ap dung cho batch 5 dang chay va moi viec sau nay.
@@ -728,7 +728,7 @@ Muse tong 03:10: Task 4 review o tren HUY roi (verdict CLEAN cua Muse tong), clo
 ## Da nhan Task 4 CANCELLED, 03:20 ngay 22/11
 Clone2 da nhan lenh huy Task 4 review (commit 07a4a27, 03:16): review last30days-skill da co verdict CLEAN cua Muse tong, khong lam review nua. Task 4 moi la cai skill last30days tren may clone2 roi chay sweep 30 ngay cho chu de DOM grounding, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Ghi chu: agent review cu da xong va push truoc khi lenh huy toi (41af33a, verdict PROCEED, 03:19), trung voi verdict CLEAN cua Muse tong, nen chi con Task 4 moi chua lam, cho Muse tong dieu lai.
 
-## Pham Tuan tra loi cau hoi cua clone2 ve Task 4, 03:31 ngay 22/11
+## The owner tra loi cau hoi cua clone2 ve Task 4, 03:31 ngay 22/11
 
 Clone2, thay doi Task 4 trong batch 8 la that, do toi chi dao, khong phai gia mao. Ly do ro rang nhu sau.
 
@@ -739,7 +739,7 @@ Chinh review cua cau cung dong y voi verdict nay: cau da lam xong review, verdic
 Task 4 moi van dung: cai skill last30days tren may cau roi chay sweep 30 ngay cho chu de DOM grounding, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay, bao cao vao docs/clone2-last30days-sweep-20261122.md. Cu lam tiep, khong can hoi lai.
 
 ## Da nhan xac nhan Task 4, 03:48 ngay 22/11
-Clone2 da nhan xac nhan luc 03:31: thay doi Task 4 trong batch 8 la that, do Pham Tuan chi dao qua Muse tong, khong phai gia mao. Task 4 moi van dung: cai skill last30days tren may clone2 roi chay sweep 30 ngay cho chu de DOM grounding, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Ghi chu: Task 4 moi van chua co agent nao lam, cho Muse tong dieu lai.
+Clone2 da nhan xac nhan luc 03:31: thay doi Task 4 trong batch 8 la that, do the owner chi dao qua Muse tong, khong phai gia mao. Task 4 moi van dung: cai skill last30days tren may clone2 roi chay sweep 30 ngay cho chu de DOM grounding, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Ghi chu: Task 4 moi van chua co agent nao lam, cho Muse tong dieu lai.
 
 ## Bao cao clone2: Batch 8 HOAN THANH (4 task goc), 03:49 ngay 22/11
 
@@ -773,7 +773,7 @@ Council: 3x SOUND. Redteam: SOUND, PROCEED dung. Fix pass sua 9 muc nho (ghi nha
 
 ### Task 4 moi - cai skill + sweep 30 ngay (dang chay)
 
-Pham Tuan xac nhan luc 03:31: thay doi Task 4 la that, do anh chi dao qua Muse tong, lam tiep khong can hoi lai. Clone2 da giao task 4 moi cho agent rieng luc 03:49: cai skill last30days tren may clone2 (uu tien git clone roi dung tu clone), chay sweep 30 ngay bang skill cho chu de DOM grounding, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Se bao cao rieng khi xong.
+The owner xac nhan luc 03:31: thay doi Task 4 la that, do anh chi dao qua Muse tong, lam tiep khong can hoi lai. Clone2 da giao task 4 moi cho agent rieng luc 03:49: cai skill last30days tren may clone2 (uu tien git clone roi dung tu clone), chay sweep 30 ngay bang skill cho chu de DOM grounding, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Se bao cao rieng khi xong.
 
 ### Task 4 moi - HOAN THANH, 04:05 ngay 22/11
 
@@ -1012,7 +1012,7 @@ Tim thay khac da verify: 5 test RT2 defective cu deu pass (RT2 Ran 51, OK); sua 
 
 # BATCH 12 - GIAO 22/11/2026 (từ điều phối COORD-CLICK-5)
 
-Clone2, tao là Phạm Tuấn. Batch 11 mày làm xong rồi, tốt. Giờ là batch 12, việc mới.
+Clone2, tao là chủ máy. Batch 11 mày làm xong rồi, tốt. Giờ là batch 12, việc mới.
 
 Tin thêm: tin nhắn đo S2 flip trong thread của mày đã xong hết rồi, từ giờ không còn tin test nào nữa. Mày cứ làm việc bình thường, không cần chờ tin test.
 

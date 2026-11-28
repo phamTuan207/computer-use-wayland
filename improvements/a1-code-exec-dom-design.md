@@ -1,6 +1,6 @@
 # A1 design: generalize Pick 1 code-exec to browser and multi-step GUI tasks
 
-Owner: Pham Tuan. Worker: Luna 6 Max. Date: 2026-11-19.
+Owner: the owner. Worker: Luna 6 Max. Date: 2026-11-19.
 Status: DESIGN, written before building. Proposal A1 in improvements/algorithm-research.md.
 Baseline facts: Pick 1 rerun 19/11, 4/4 SUCCESS, mean wall 37.54s to 17.59s (-53 percent),
 think -56 percent, calls 5 to 2 (P1/P2). DOM-first D1: core think 99.2s to 20.7s, n=1 per arm.

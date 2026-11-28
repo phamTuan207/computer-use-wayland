@@ -73,4 +73,4 @@ Two layers, both small:
 ## Cleanup verified
 - All my test tabs closed: 0 leftover worker-t tabs in Zen (22 tabs open, all the user's), Marionette sessions deleted, IM restored to ngosen state 2.
 - Never touched: user tabs, Zalo, Teams, Jarvis, music, indicator.py process (only read its code), pill shader.
-- Scripts used: ~/workspace/worker-t-typing-test.py, ~/workspace/worker-t-probe2.py, ~/workspace/worker-t-tabcheck.py (on the laptop at /home/james/workspace/), run logs /tmp/worker-t-typing-run*.jsonl and /home/james/workspace/worker-t-typing-run*.log.
+- Scripts used: ~/workspace/worker-t-typing-test.py, ~/workspace/worker-t-probe2.py, ~/workspace/worker-t-tabcheck.py (on the laptop at ~/workspace/), run logs /tmp/worker-t-typing-run*.jsonl and ~/workspace/worker-t-typing-run*.log.

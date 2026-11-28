@@ -31,12 +31,12 @@ no file written on the laptop.
    Newest mtimes are bindings.lua and autostart.lua at 17:36-17:38, before
    Y6 started (18:17). Nothing in the live conf dir was touched 18:17-18:56.
 4. 18:56. Lock check on the laptop: lock file
-   /home/james/.cache/agent-computer-use/zen_dom.lock exists (0 bytes,
+   ~/.cache/agent-computer-use/zen_dom.lock exists (0 bytes,
    mtime 17:48), inode 8620372. Python scan of /proc/locks for a FLOCK
    entry on that inode: NO holder. zen_dom.lock is free right now.
 5. 18:56. Live session: `ps -o pid,lstart,cmd -p 1515` shows Hyprland
    alive since Sat Nov 21 15:17:25 2026. `fuser -v /dev/dri/card0` shows
-   james PID 1515 holding card0. `lsmod | grep vkms` shows vkms loaded,
+   user PID 1515 holding card0. `lsmod | grep vkms` shows vkms loaded,
    refcount 2. /dev/dri/card0 (18:41) and /dev/fb1 (18:41) still present.
 6. 18:56. Live signature: `ls /run/user/1000/hypr/` contains exactly
    `11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825`,

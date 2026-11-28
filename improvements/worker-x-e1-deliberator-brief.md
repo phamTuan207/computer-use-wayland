@@ -4,9 +4,9 @@ You are a DELIBERATOR in a controlled experiment. You do NOT drive the browser. 
 
 ## Inputs, read all three
 
-1. Task spec: /home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md
-2. Fixture: /home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html
-3. Driver reference: /home/james/workspace/computer-use-wayland/tests/realistic/hand_drive.py (read the docstring and the command handlers; the driver will already be running when the executor works)
+1. Task spec: ~/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md
+2. Fixture: ~/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html
+3. Driver reference: ~/workspace/computer-use-wayland/tests/realistic/hand_drive.py (read the docstring and the command handlers; the driver will already be running when the executor works)
 
 ## What the executor can do (the ONLY browser actions available)
 

@@ -1,6 +1,6 @@
 # Pick 2 prototype report: subgoal-only verification plus the reasoning dial (M2 plus M12)
 
-- Owner: Pham Tuan. Date: 2026-11-18, 22:58 to 23:52 Asia/Ho_Chi_Minh.
+- Owner: the repository owner. Date: 2026-11-18, 22:58 to 23:52 Asia/Ho_Chi_Minh.
 - Repo: phamTuan207/computer-use-wayland, branch speed-swarm.
 - Status: BUILT, TESTED, PUSHED. MEASUREMENT PAUSED by user order 23:50 (disk cleanup on the laptop). The pick2 arm never ran; the baseline arm produced one partial P1 only. Before/after tables below are therefore marked PENDING except for the gate probe and the partial baseline numbers, which are reported as-is.
 - No em dash or en dash in this file.

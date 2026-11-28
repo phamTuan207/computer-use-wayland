@@ -94,9 +94,9 @@ Merged outcome, per test (best of both, proven by the probes below):
 
 - VM, node v24.22.1. playwright-core 1.65.1 installed once to
   /tmp/y10-scratch (npm install playwright-core). Chromium
-  /home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome.
+  ~/.cache/ms-playwright/chromium-1187/chrome-linux/chrome.
 - Env for every run: PLAYWRIGHT_CORE_PATH=/tmp/y10-scratch/node_modules/playwright-core
-  CHROMIUM_PATH=/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome
+  CHROMIUM_PATH=~/.cache/ms-playwright/chromium-1187/chrome-linux/chrome
 - Baseline before fixes (unfixed code): 10/10 PASS, wall 30269 ms
   (races are flaky; a single clean run does not refute Y3).
 

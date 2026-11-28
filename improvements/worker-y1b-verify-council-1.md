@@ -67,7 +67,7 @@ env = codemode.execute_op('return "{0.__globals__[REPO_ROOT]}".format(repo_list_
 ```
 
 - PASS: env["status"] == "error", and the repo path (the value of
-  codemode.REPO_ROOT, e.g. /home/hatch/workspace/computer-use-wayland)
+  codemode.REPO_ROOT, e.g. ~/workspace/computer-use-wayland)
   does not appear anywhere in str(env).
 - FAIL: env["status"] == "completed" and env["result"] is the repo root
   path. On unfixed code this returns the path verbatim.

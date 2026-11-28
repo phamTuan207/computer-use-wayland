@@ -91,7 +91,7 @@ Why the dispatcher is unknown (live evidence 22:33):
   fix the guard itself; F2's watchdog detects the failure and falls back.
 
 Probe results that cleared the other guardian steps (22:25, installed copy
-`/home/james/.local/share/agent-computer-use/scripts/`):
+`~/.local/share/agent-computer-use/scripts/`):
 
 - owner_lock OK.
 - cursor_theme.snapshot OK (keys gtk/hypr/agent theme+size).
@@ -280,7 +280,7 @@ Design conclusions for the fix:
   the VM working tree (HEAD + act-now wiring) is a safe forward sync.
 - Deployed by exact-path scp: `first_action.py` (new) + `cu.py`
   (HEAD + act-now) to
-  `/home/james/.local/share/agent-computer-use/scripts/`. Verified
+  `~/.local/share/agent-computer-use/scripts/`. Verified
   md5s after copy: first_action.py 68d8e84d..., cu.py 2d208d36...
   (matches the VM working tree). `computer-use act-now --help` works
   on the laptop; `import first_action` OK. No `computer-use session`
@@ -341,9 +341,9 @@ omitted; append as it happens, never batch at the end)
   /tmp/zt00-baseline.json (8974 B). Outcome: PASS. Note: the restart
   restored ALL 67 tabs, undoing the 22:03 cleanup (39 fixture tabs
   back). Example Domain tab at index 10 (F3 likely opened it during
-  verification). ZT doc path /home/james/computer-use-wayland/scripts/
+  verification). ZT doc path ~/computer-use-wayland/scripts/
   zen_dom.py does NOT exist; the file is at
-  /home/james/workspace/computer-use-wayland/scripts/zen_dom.py.
+  ~/workspace/computer-use-wayland/scripts/zen_dom.py.
 - 22:44 (T+240s) ZT-00 gate step 1: ps zen-bin PID 426338 alive
   (etime 07:00). PASS.
 - 22:44 (T+240s) ZT-00 gate step 2: curl 127.0.0.1:9222/ -> 200. PASS.
@@ -356,7 +356,7 @@ omitted; append as it happens, never batch at the end)
 - 22:45:15.749 (T+315s, T_order+0s) fresh observe: id 20a5e52da440,
   capture 39 ms, 1920x1200, image 568,754 B, monitor eDP-2
   [2464,902,1920,1200], scale 1.0. Image
-  /home/james/.cache/agent-computer-use/20a5e52da440.jpg.
+  ~/.cache/agent-computer-use/20a5e52da440.jpg.
 - 22:45 (T+300s) owner correction: open Omarchy menu and switch
   workspaces by COMMAND, never click the bar (hyprctl dispatch in
   hl.dsp form for workspace; find the exact launcher command from the

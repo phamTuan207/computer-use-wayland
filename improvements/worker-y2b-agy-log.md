@@ -2,7 +2,7 @@
 
 - Worker: Y2b (Muse, driving agy via agy-hypr)
 - Started: 2026-11-21 ~18:09 +07
-- Driver: agy via /home/james/.local/bin/agy-hypr (keyring only reachable inside graphical logind session). Each invocation max 10 min, continuation prompts for longer work.
+- Driver: agy via ~/.local/bin/agy-hypr (keyring only reachable inside graphical logind session). Each invocation max 10 min, continuation prompts for longer work.
 - Target: tests/realistic/agy-y2b/ on branch todolist-push, 10 tests, 15-40 steps each.
 - Reason: Worker Z1 (opencode) BLOCKED, 0 tests: nvidia deepseek-v4.1-flash EOL 2026-11-16, opencode free tier "Free usage limit reached". Z1 topics reassigned here. See improvements/worker-z1-opencode-log.md (commit 26aac48).
 - Sequencing: do NOT start agy until Worker Y2 finishes its own agy batch (tests/realistic/agy-y2/). Two agy runs fight over the same graphical session. Poll repo for Y2 completion (10 tests in tests/realistic/agy-y2/ or final report in improvements/worker-y2-agy-log.md).
@@ -37,10 +37,10 @@ Expected end state: 4 entries (gmail, facebook, bank with new username, github.c
 Timing: 180s expected, 300s max.
 
 ### test-04-maps-directions (route)
-Goal: route 339 Vinh Hung to NEU, driving 8.4 km / 22 min, add stop, swap, save.
+Goal: route [address redacted] to NEU, driving 8.4 km / 22 min, add stop, swap, save.
 Fixture: maps UI, origin/destination inputs, mode buttons (driving/walking/transit), route options list, avoid-tolls toggle, stops panel.
-Steps (26): open fixture, verify map empty and no route; type origin "339 Vinh Hung, Hoang Mai"; type destination "NEU, Tran Dai Nghia"; click Driving; verify 3 route options listed, fastest 8.4 km / 22 min; click fastest route, verify summary "8.4 km, 22 min via Giai Phong"; click Add Stop, type "Hoan Kiem Lake", verify route updates to 9.1 km / 27 min; MISTAKE: click Avoid Tolls twice (on then off), verify toggle ends OFF and distance back to 9.1 km; switch mode to Walking, verify "7.9 km, 1h 38m"; switch back to Driving, verify 9.1 km / 27 min; click Swap, verify origin "NEU, Tran Dai Nghia" and destination "339 Vinh Hung, Hoang Mai", distance still 9.1 km; click Save Route, type name "Home to NEU", Save; verify saved routes count 1 and banner "Route saved".
-Expected end state: origin NEU, destination 339 Vinh Hung, driving, 9.1 km / 27 min, 1 stop, 1 saved route, avoid-tolls off.
+Steps (26): open fixture, verify map empty and no route; type origin "[address redacted]"; type destination "NEU, Tran Dai Nghia"; click Driving; verify 3 route options listed, fastest 8.4 km / 22 min; click fastest route, verify summary "8.4 km, 22 min via Giai Phong"; click Add Stop, type "Hoan Kiem Lake", verify route updates to 9.1 km / 27 min; MISTAKE: click Avoid Tolls twice (on then off), verify toggle ends OFF and distance back to 9.1 km; switch mode to Walking, verify "7.9 km, 1h 38m"; switch back to Driving, verify 9.1 km / 27 min; click Swap, verify origin "NEU, Tran Dai Nghia" and destination "[address redacted]", distance still 9.1 km; click Save Route, type name "Home to NEU", Save; verify saved routes count 1 and banner "Route saved".
+Expected end state: origin NEU, destination [address redacted], driving, 9.1 km / 27 min, 1 stop, 1 saved route, avoid-tolls off.
 Timing: 150s expected, 300s max.
 
 ### test-05-calendar-recurring (weekly meeting)
@@ -87,7 +87,7 @@ Timing: 150s expected, 300s max.
 
 ## agy prompt template (use after Y2 finishes)
 Each batch prompt is a full instruction file written to /tmp/prompt-y2b-N.txt on the laptop, then run via agy-hypr. Prompt contents:
-- Repo path on laptop: /home/james/workspace/computer-use-wayland, branch todolist-push.
+- Repo path on laptop: ~/workspace/computer-use-wayland, branch todolist-push.
 - Build tests/realistic/agy-y2b/ with the layout of tests/realistic/agy-q2/ (README.md, check.mjs, simulate.mjs, check-dashes.py, test-XX-<slug>.md, fixtures/test-XX-<slug>.html) BUT with Y2's hard rule: check.mjs reads raw DOM directly with expected values hard-coded in the checker, NO __verify() hook in any fixture.
 - Paste the drafted spec for each test in the batch verbatim (goal, steps with exact element IDs, expected end state, mistake + recovery, timing).
 - Each fixture: standalone offline HTML, pure JS + CSS, no network, no CDN. All interactive elements need stable ids. Deterministic values only (no random, no Date.now in expected values).

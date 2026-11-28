@@ -1,7 +1,7 @@
 # Track 2 rerun plan: Pick 1 fix + rerun, Pick 2 solo rerun, Masking measurement
 
 - Date: 2026-11-19 (after Pick 4 arm2 finished 02:35 +07)
-- Owner: Pham Tuan. Status: PROVISIONAL (non-Astra, Astra 6 out of credit).
+- Owner: the repository owner. Status: PROVISIONAL (non-Astra, Astra 6 out of credit).
 - Precondition met: Pick 4 arm2 finished, broker free (state finished, driver stopped, cancelled false). No executor running.
 
 ## First-round results (why a rerun is needed)
@@ -28,12 +28,12 @@ Time estimate (not a commitment): Phase A about 1-2 hours, Phase B about 1 hour,
 
 Root cause (confirmed): scripts/code_exec.py MAX_TRACE_STEPS = 20000 (line 77). The trace counts every Python line executed, including inside the observe() and act() API implementations, so one observe() burns thousands of steps. The docstring (line 50) says the budget is "20000 executed lines". The error is raised at line 323. The Codex sandbox is NOT the issue (Codex is already danger-full-access, verified in ps). Do NOT change the Codex sandbox.
 
-Fix direction (Pham Tuan, 19/11): stop counting API-implementation lines. Two implementation options; the fix worker picks the cleaner one given the code:
+Fix direction (the owner, 19/11): stop counting API-implementation lines. Two implementation options; the fix worker picks the cleaner one given the code:
 - (a) Clear or reset the trace counter around API calls in _api (in CodeExecSession, when an API function is invoked, save and reset the step counter, then restore it after, so only the program's own lines count).
 - (b) Filter the trace to the program's own file (in the trace function, only increment the counter when the executing frame's filename is the program file; skip frames in the API implementation and stdlib).
 - Fallback only if (a) and (b) are not feasible: raise MAX_TRACE_STEPS substantially (for example to 200000), since the wall-clock limit (60s) and the API-call limit (32) already bound runaway execution. The fix worker must measure per-call step counts first to pick a principled value, not guess.
 
-Work location: SEPARATE worktree (for example /home/james/computer-use-wayland-pick1fix, branch speed-swarm-pick1fix, from origin/speed-swarm). Do NOT touch the live checkout (/home/james/computer-use-wayland). Do NOT restart the relay. Do NOT start a broker session. Verify with pwd and git rev-parse --show-toplevel before every edit.
+Work location: SEPARATE worktree (for example ~/computer-use-wayland-pick1fix, branch speed-swarm-pick1fix, from origin/speed-swarm). Do NOT touch the live checkout (~/computer-use-wayland). Do NOT restart the relay. Do NOT start a broker session. Verify with pwd and git rev-parse --show-toplevel before every edit.
 
 Steps for the fix worker:
 1. Read code_exec.py (CodeExecSession line 225, run_program line 509, the trace hook, MAX_TRACE_STEPS line 77) and the _api module to understand how the trace is counted.
@@ -51,7 +51,7 @@ Merge (coordinator, after Phase A): fast-forward or merge speed-swarm-pick1fix i
 - Solo (broker + desktop to itself, no other workers).
 - Fresh run dir: archive the old /tmp/speed-profile-20261118/pick1/ to /tmp/speed-profile-20261118/pick1-run1/ (preserve records.jsonl 1025 lines + summary-pick1.md), then use a fresh pick1/ dir with timed.py and analyze.py copied from the archive.
 - Follow the ORIGINAL pick1 brief (measure-brief.md) EXCEPT ignore the two COORDINATOR OVERRIDE lines (they were for the parallel run). Do the flag-switch as written, adapted for the shared drop-in:
-  - Baseline (flag OFF): FIRST remove the shared drop-in /home/james/.config/systemd/user/computer-use-relay.service.d/speed-swarm.conf, run systemctl --user daemon-reload, restart the relay, verify active + idle + started_git_head, and verify the disabled envelope (CU_CODE_EXEC=0 code-exec must print disabled). This gives a clean flag-OFF baseline (the first round's baseline ran with the shared drop-in on, which was contaminated in the strict sense).
+  - Baseline (flag OFF): FIRST remove the shared drop-in ~/.config/systemd/user/computer-use-relay.service.d/speed-swarm.conf, run systemctl --user daemon-reload, restart the relay, verify active + idle + started_git_head, and verify the disabled envelope (CU_CODE_EXEC=0 code-exec must print disabled). This gives a clean flag-OFF baseline (the first round's baseline ran with the shared drop-in on, which was contaminated in the strict sense).
   - Pick1 arm (flag ON): create pick1.conf with Environment=CU_CODE_EXEC=1, daemon-reload, restart relay, verify, run the smoke test (must be ok:true). Then run the pick1 arm.
   - After the pick1 arm: remove pick1.conf, daemon-reload, restart the relay to a clean env, verify active + idle.
 - Do restore steps 1-3 only (finish sessions, remove the drop-in, close test windows, verify desktop clean). Do NOT do the Track 1 restore (steps 4-5); the coordinator does that in Phase D.
@@ -70,7 +70,7 @@ Merge (coordinator, after Phase A): fast-forward or merge speed-swarm-pick1fix i
 
 ## Masking measurement (Pick 5, broker, solo, after the Pick 1 rerun)
 
-- Use the built prototype: worktree /home/james/computer-use-wayland-masking, branch speed-swarm-masking, flag CU_MASK_HISTORY=1, brief improvements/mask-executor-brief.md in the worktree. Tests 31/31 pass. Push confirmed at bfdbfb0.
+- Use the built prototype: worktree ~/computer-use-wayland-masking, branch speed-swarm-masking, flag CU_MASK_HISTORY=1, brief improvements/mask-executor-brief.md in the worktree. Tests 31/31 pass. Push confirmed at bfdbfb0.
 - The measurement worker follows the mask-executor-brief.md: baseline arm first (flag unset, kitty mask-base-term), masked arm second (CU_MASK_HISTORY=1 in the executor shell only, kitty mask-pick-term), same 4 held-out tasks P1-P4, same timed.py and analyze.py pattern, before/after think-time table, per-step-index think growth so the history-growth curve is visible.
 - Solo (broker + desktop to itself).
 - Key constraint: masking is executor-side (a helper module + brief discipline), NOT a harness change. The prompt/history is not built anywhere in the repo (cu.py has zero occurrences of prompt/history; the history lives in the Codex executor's own transcript). So the relay does NOT need to change and no relay restart is needed. The flag lives in the executor's shell only. The executor needs the mask_history.py module from the worktree path.
@@ -101,8 +101,8 @@ Merge (coordinator, after Phase A): fast-forward or merge speed-swarm-pick1fix i
 - Timing always on: every test timed precisely, logged with wall-clock timestamps (Asia/Ho_Chi_Minh) in improvements/live-test-log.md.
 - SSH only via ~/workspace/ssh-laptop.sh. SSH dies about 30s, launch laptop jobs detached (nohup ... > log 2>&1 < /dev/null &) and check with short calls. Never use sudo.
 - Kill a stuck subagent immediately without asking, and report it.
-- In repo/handoff text call him Pham Tuan (or Huy), never "dang".
+- In repo/handoff text refer to him as the owner, never by nickname.
 - Astra 6 is OUT of credit (blocked). Use Luna 6 Max (Codex). Mark verdicts as PROVISIONAL (non-Astra).
 - A dedicated watchdog is already running (polls every 5 min). Do not spawn another.
 - Do NOT message the user directly. Report back to the coordinator.
-- Pham Tuan's 5 standing orders apply: (1) keep working, do not stop, push through blockers, find workarounds; (2) continue what is unfinished; (3) keep optimizing to reduce think time; (4) cut whatever step can be cut; (5) learn from predecessors' docs and repos (improvements/speed-prior-art.md), do not reinvent. Safety limits hold: never bypass a rate limit or account lock, never break his machine or touch his personal data.
+- The owner's 5 standing orders apply: (1) keep working, do not stop, push through blockers, find workarounds; (2) continue what is unfinished; (3) keep optimizing to reduce think time; (4) cut whatever step can be cut; (5) learn from predecessors' docs and repos (improvements/speed-prior-art.md), do not reinvent. Safety limits hold: never bypass a rate limit or account lock, never break his machine or touch his personal data.

@@ -3,7 +3,7 @@
 - Date: 2026-11-21, 18:27-18:45 +07
 - Council member: A (feasibility). Worker: Y6 (Muse subagent). Branch: todolist-push.
 - Sources read: improvements/worker-y6-hyprglass-nested-probe.md (Y6 draft), docs/decision-2-2-3-hyprglass-test-20261121.md (Worker X decision doc).
-- Raw evidence re-checked read-only via ssh-laptop.sh: /tmp/y6-nested/hyprland*.log (5 logs), /home/james/.cache/hyprland/hyprlandCrashReport21*.txt (5 reports), /tmp/y6-nested/conf/hyprland.conf, /tmp/y6-nested/run-nested.sh, /tmp/y6-nested/run/hypr/*/hyprland.log, session/group/device state. No launch, no write, no touch of the live session.
+- Raw evidence re-checked read-only via ssh-laptop.sh: /tmp/y6-nested/hyprland*.log (5 logs), ~/.cache/hyprland/hyprlandCrashReport21*.txt (5 reports), /tmp/y6-nested/conf/hyprland.conf, /tmp/y6-nested/run-nested.sh, /tmp/y6-nested/run/hypr/*/hyprland.log, session/group/device state. No launch, no write, no touch of the live session.
 - Upstream code read: hyprwm/aquamarine src/backend/Backend.cpp (commit 4c72cd4, fetched 2026-11-21), Hyprland wiki environment variables page, seatd man page, libseat seatd backend source notes.
 
 ## Verdict: PARTIAL
@@ -31,7 +31,7 @@ All 5 attempts share the same broken seat, the same nonexistent WAYLAND_DISPLAY=
 Attempt 5 started seatd as root with default socket ownership. The socket came up root:root, and the nested process got EACCES (`Could not connect to socket /run/seatd.sock: Permission denied`). Two facts Y6 did not check:
 
 - `seatd -h` on this machine offers `-u <user>` (user to own the socket) and `-g <group>` (group to own the socket). Y6 used neither.
-- `/usr/bin/seatd-launch` IS installed on this machine (verified). seatd-launch is the purpose-built tool for exactly this: it starts seatd as root, chowns the socket to the target user, chmods it 0700, sets SEATD_SOCK, drops privileges, then runs the command. Y6 ran raw seatd and stopped at the first EACCES instead of using seatd-launch or `seatd -u james`.
+- `/usr/bin/seatd-launch` IS installed on this machine (verified). seatd-launch is the purpose-built tool for exactly this: it starts seatd as root, chowns the socket to the target user, chmods it 0700, sets SEATD_SOCK, drops privileges, then runs the command. Y6 ran raw seatd and stopped at the first EACCES instead of using seatd-launch or `seatd -u user`.
 - The user is not in the seat group (getent group seat: gid 965, no members) and not in the video group (getent group video: only ollama). The EACCES was therefore fully predictable from the launch method, and fully fixable in one command. It is not evidence that seatd cannot serve a seat here.
 
 Caveat, stated honestly: fixing the socket only gets past the connect step. Whether a seatd seat and the logind seat can coexist on the same VT without fighting over input or VT switching is UNVERIFIED. seatd is normally run INSTEAD of logind, not alongside it. The coexistence question, not the permissions question, is the real unknown in Path A. Any attempt must run in a runner-quiet window with seatd killed immediately after and the live session re-verified.

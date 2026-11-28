@@ -13,13 +13,13 @@
 
 Source tree khớp chính xác với plugin đang cài là:
 
-`/home/james/computer-use-handoff/backend/hyprglass-1.1.1`
+`~/computer-use-handoff/backend/hyprglass-1.1.1`
 
 Bằng chứng trực tiếp:
 
-- `native/visuals.json:4` trỏ tới `/home/james/.local/share/agent-computer-use/plugins/hyprglass-69309243789bee75616b5d260882db7597ab7da4f928755971f813dd77b89748.so`.
-- SHA-256 của file cài và `/home/james/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so` đều là `69309243789bee75616b5d260882db7597ab7da4f928755971f813dd77b89748` (đối chiếu trực tiếp bằng `sha256sum`).
-- ELF của artifact source có `DW_AT_comp_dir : /home/james/computer-use-handoff/backend/hyprglass-1.1.1` (`readelf --debug-dump=info`), xác nhận thư mục biên dịch được ghi trong debug info.
+- `native/visuals.json:4` trỏ tới `~/.local/share/agent-computer-use/plugins/hyprglass-69309243789bee75616b5d260882db7597ab7da4f928755971f813dd77b89748.so`.
+- SHA-256 của file cài và `~/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so` đều là `69309243789bee75616b5d260882db7597ab7da4f928755971f813dd77b89748` (đối chiếu trực tiếp bằng `sha256sum`).
+- ELF của artifact source có `DW_AT_comp_dir : ~/computer-use-handoff/backend/hyprglass-1.1.1` (`readelf --debug-dump=info`), xác nhận thư mục biên dịch được ghi trong debug info.
 - `git rev-parse HEAD` của cây này là `03a57c4451b4abee38feda2ffb725f55ecc0f2fd`, đúng pin trong `scripts/build-glass.py:16` và `scripts/setup.py:336`.
 
 Cây này có đúng ba file tracked đang sửa: `src/GlassLayerSurface.cpp`, `src/GlassRenderer.cpp`, `src/Shaders.hpp` (`git status --short --branch`). Hai patch trong repo đều reverse-check thành công trên cây này:
@@ -34,7 +34,7 @@ Trong cây khớp artifact, `src/Shaders.hpp` hiện có đúng profile chai tr�
 Lệnh tái dựng source hiện có là:
 
 ```sh
-python3 scripts/build-glass.py /home/james/computer-use-handoff/backend/hyprglass-1.1.1 --local-optics --allow-dirty
+python3 scripts/build-glass.py ~/computer-use-handoff/backend/hyprglass-1.1.1 --local-optics --allow-dirty
 ```
 
 Đây là **lệnh tái dựng suy ra từ cây hiện có**, không phải lệnh lịch sử được tìm thấy trong log. `scripts/build-glass.py:8–9` nêu dạng gọi; dòng 16 pin commit; dòng 19 đặt duy nhất `PATCH = .../native/hyprglass-local-optics.patch`; dòng 42 bắt buộc `--local-optics`; dòng 57–61 từ chối cây dirty nếu thiếu `--allow-dirty`; dòng 71–79 chỉ kiểm tra/áp dụng local-optics patch; dòng 84 gọi `make -j2 -B HYPRGLASS_VERSION=1.1.1-cu.1`.
@@ -47,7 +47,7 @@ Do script hiện tại **không áp dụng** `hyprglass-cylindrical-bottle.patch
 
 Không thấy log file nào ghi lại chính xác command lịch sử cho artifact này trong các file/log đã kiểm tra. Shell history được để ngoài phạm vi như yêu cầu. Vì vậy command ở trên là command phù hợp để rebuild cây source đã có cả hai patch, không phải khẳng định về command lịch sử hoặc tái lập byte-for-byte.
 
-Các ứng viên khác đã kiểm tra không khớp: `/home/james/computer-use-handoff/backend/hyprglass-local-optics` tạo SHA khác (`dc1567…`); backup `/home/james/backups/omarchy-native-port-20261113/hyprglass-0.57` ở commit khác. Không tìm thấy cây build `Shaders.hpp` khớp trong `/tmp`.
+Các ứng viên khác đã kiểm tra không khớp: `~/computer-use-handoff/backend/hyprglass-local-optics` tạo SHA khác (`dc1567…`); backup `~/backups/omarchy-native-port-20261113/hyprglass-0.57` ở commit khác. Không tìm thấy cây build `Shaders.hpp` khớp trong `/tmp`.
 
 ## 2. Pinned upstream `Shaders.hpp`: uniforms, blur và thứ tự lấy mẫu
 
@@ -238,7 +238,7 @@ Manifest repo hiện là `native/visuals.json`; file này bị `.gitignore:47` i
 Từ repo root, sau khi có artifact mới:
 
 ```sh
-NEW_SO="$(python3 scripts/install-glass.py /home/james/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so /home/james/.local/share/agent-computer-use/plugins)"
+NEW_SO="$(python3 scripts/install-glass.py ~/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so ~/.local/share/agent-computer-use/plugins)"
 python3 scripts/refresh-visuals-manifest.py "$NEW_SO"
 python3 scripts/check-visuals-manifest.py
 python3 scripts/sync-installed.py
@@ -299,11 +299,11 @@ Thứ tự triển khai và xác minh sau khi implementer đã sửa patch/scrip
 
 1. Build pinned tree có cả hai patch:
    ```sh
-   python3 scripts/build-glass.py /home/james/computer-use-handoff/backend/hyprglass-1.1.1 --local-optics --allow-dirty
+   python3 scripts/build-glass.py ~/computer-use-handoff/backend/hyprglass-1.1.1 --local-optics --allow-dirty
    ```
 2. Install artifact hash-immutable:
    ```sh
-   NEW_SO="$(python3 scripts/install-glass.py /home/james/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so /home/james/.local/share/agent-computer-use/plugins)"
+   NEW_SO="$(python3 scripts/install-glass.py ~/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so ~/.local/share/agent-computer-use/plugins)"
    ```
 3. Refresh và kiểm tra manifest; không chỉnh JSON bằng tay:
    ```sh

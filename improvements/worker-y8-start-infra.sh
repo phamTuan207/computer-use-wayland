@@ -21,7 +21,7 @@ done
 if pgrep -x geckodriver >/dev/null 2>&1; then fail "a geckodriver is already running; run stop-infra.sh / check other workers first"; fi
 [ -x /tmp/geckodriver ] || fail "/tmp/geckodriver missing"
 
-cd /home/james/workspace/computer-use-wayland
+cd ~/workspace/computer-use-wayland
 sed 's/WD_PORT = 4450/WD_PORT = 4451/' tests/realistic/hand_drive.py > /tmp/e1/hand_drive_e1.py
 python3 -m py_compile /tmp/e1/hand_drive_e1.py || fail "py_compile failed"
 # I1: verify the sed replacement actually took.

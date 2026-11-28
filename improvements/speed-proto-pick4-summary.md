@@ -1,6 +1,6 @@
 # Pick 4 measurement, combined summary (PROVISIONAL, non-Astra)
 
-- Owner: Pham Tuan. Repo: /home/james/computer-use-wayland, branch speed-swarm, HEAD c1b7034b452b24358206009c40bbf450d575da58 (briefs said 5d4d512; actual HEAD is c1b7034, branch behind 9, 4 files pre-modified, untouched).
+- Owner: the repository owner. Repo: ~/computer-use-wayland, branch speed-swarm, HEAD c1b7034b452b24358206009c40bbf450d575da58 (briefs said 5d4d512; actual HEAD is c1b7034, branch behind 9, 4 files pre-modified, untouched).
 - Relay: serving c1b7034, generation ff23539371b76bbe9e993d380d322a94. Shared drop-in speed-swarm.conf carries CU_CODE_EXEC=1 and CU_PICK4_FASTPATH=1. No drop-in created, no relay restart, no git touch, no Track 1 restore (coordinator overrides honored).
 - Window: 2026-11-19 00:35 to 02:39 Asia/Ho_Chi_Minh. Prior-art survey read first (improvements/speed-prior-art.md): baseline anchor is think 34.2s of 36.4s wall (94 percent), so only model-think cuts can move the total; grounding aids only win if the model skips its own vision re-grounding.
 - Run-1 arm1 files preserved in /tmp/speed-pick4-20261118/run1-blocked/.

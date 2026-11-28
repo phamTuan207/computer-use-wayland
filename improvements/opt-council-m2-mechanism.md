@@ -71,7 +71,7 @@
 
 ### How the suspect mechanism actually works
 
-- Proven from improvements/worker-y4b-hidden-body-root-cause.md, which this voice verified against its cited sources: Transparent Zen 0.9.4, installed at ~/.config/zen/ae59l0ak.Default (release)/extensions/{74186d10-f6f2-4f73-b33a-83bb72e50654}.xpi, injects a content script on every page (all_urls, document_start): CSS dist/transparent-zen.css plus JS dist/transparent-zen.js.
+- Proven from improvements/worker-y4b-hidden-body-root-cause.md, which this voice verified against its cited sources: Transparent Zen 0.9.4, installed at ~/.config/zen/profile.Default (release)/extensions/{74186d10-f6f2-4f73-b33a-83bb72e50654}.xpi, injects a content script on every page (all_urls, document_start): CSS dist/transparent-zen.css plus JS dist/transparent-zen.js.
   - CSS: `:root.tz-hidden body { transition: none; visibility: hidden; background: none; opacity: 0 }` and `:root body { transition: visibility .25s, opacity .25s, background-color .25s; visibility: visible; opacity: 1 }`.
   - JS: `initLoadingScreen()` runs first in the constructor, adds `tz-hidden` to documentElement synchronously at document start. The only removal is `removeLoadingScreen()`, which removes the class 500 ms after being called. Removal is gated on an async chain: fetch of data/ContentScripts.json, then browser.storage.local.get("transparentZenSettings"), then branch paths, with a .catch that also removes. A stall anywhere before a remove call leaves the class on, with NO timeout or fallback in the decoded chain.
   - This produces exactly the observed symptom: body computed visibility hidden plus opacity 0, html visible, no inline style, no author rule, DOM present, innerText empty, visibilityState and hasFocus unaffected.
