@@ -23,6 +23,15 @@ jobs:
           python3 rung3-ci/test-arch-guard.py
           python3 rung3-ci/test-test-discover.py
           python3 rung3-ci/test-stall-detector.py
+          python3 rung3-ci/test-check-commit-identity.py
+      # Phase 0 (2026-11-28): new PR commits must carry noreply
+      # author/committer emails so personal mailbox forms stop
+      # entering history metadata. PR range only; merge-commit
+      # author identity is controlled by the account's GitHub
+      # email-privacy settings.
+      - name: Commit identity (noreply emails on PR commits)
+        if: github.event_name == 'pull_request'
+        run: python3 rung3-ci/check-commit-identity.py ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
       - name: zen-rdp unit tests (pure stdlib, no browser)
         working-directory: scripts/zen-rdp
         run: |

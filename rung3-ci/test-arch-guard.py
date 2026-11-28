@@ -154,6 +154,45 @@ class MachineValueEvasionTests(unittest.TestCase):
         for rel in files:
             self.assertTrue(any(rel in v for v in violations), rel)
 
+    def test_phase0_trees_scanned(self):
+        # Phase 0 (2026-11-28): improvements/, coord/, probes/,
+        # snippets/ and rung3-run-log/ joined the scan scope.
+        files = {"improvements/a.md": "path: /home/paul/x\n",
+                 "coord/b.md": "path: /home/quinn/x\n",
+                 "probes/c.py": 'P = "/home/ruth/x"\n',
+                 "snippets/d.md": "path: /home/sara/x\n",
+                 "rung3-run-log/e.md": "path: /home/tom/x\n"}
+        violations = self.scan_files(files)
+        self.assertEqual(len(violations), 5)
+        for rel in files:
+            self.assertTrue(any(rel in v for v in violations), rel)
+
+    def test_vietnamese_common_words_pass(self):
+        # The bare surname syllable also appears in the common
+        # words for "violation" and "scope"; those are not name
+        # references and must pass (Phase 0 precision fix).
+        surname = _DIAC_A.lower()
+        passing = ["vi " + surname + " V1-V13\n",
+                   "Vi " + surname + " dung\n",
+                   "VI " + surname.upper() + " DUNG\n",
+                   surname + " vi kiem tra\n",
+                   _DIAC_A + " vi: rong\n",
+                   "ngoai " + surname + " vi\n"]
+        for text in passing:
+            self.assertEqual(
+                self.scan_files({"improvements/n.md": text}), [],
+                text)
+        # True name forms and other compounds still hit.
+        hitting = [_DIAC_A + " " + _DIAC_B + " ordered\n",
+                   _DIAC_B + " said\n",
+                   "xam " + surname + "\n",
+                   surname + " toi\n"]
+        for text in hitting:
+            violations = self.scan_files(
+                {"improvements/n.md": text})
+            self.assertEqual(len(violations), 1, text)
+            self.assertIn("personal-name", violations[0])
+
     def test_tailscale_bare_caught_range_doc_allowed(self):
         violations = self.scan_files(
             {"docs/n.md": "addr 100.99.88.77 here\n"})
