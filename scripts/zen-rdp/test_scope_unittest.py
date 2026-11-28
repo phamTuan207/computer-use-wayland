@@ -530,17 +530,94 @@ class TestHardening(unittest.TestCase):
                   allow_unmarked_test_attach=True)
         self.assertIn("BENCH REFUSED", str(cm.exception))
 
-    def test_reattach_url_mismatch_refused(self):
+    def test_reattach_url_changed_nav_aware_recovers(self):
+        # Fix 2 (M1) new contract: the pinned tab itself navigated
+        # (URL changed on the pinned id, old URL absent from the
+        # list, tab count unchanged, F11 flag clear). Re-attach
+        # recovers on the SAME descriptor and re-pins the new URL.
+        # This replaces the pre-Fix-2 test_reattach_url_mismatch_
+        # refused, whose refusal intent is now covered by the
+        # id-shift / count / substr / F11 refusal tests below.
         fake = FakeRDPTransport()
         c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_B]))
         c.attach(TAB_B)
-        # Positional shift: TAB_B's id now shows a different URL.
         for t in fake.tabs:
             if t["actor"] == TAB_B:
                 t["url"] = "http://localhost/other.html"
         fake.fail_evals = 1
+        self.assertEqual(c.evaluate("1+1"), 2)
+        self.assertEqual(c.desc_actor, TAB_B)
+        self.assertEqual(c._pinned_url, "http://localhost/other.html")
+        c.close()
+
+    def test_reattach_id_shift_refused(self):
+        # Old pinned URL survives under a DIFFERENT id while the
+        # pinned id shows a new URL (positional shift). Count kept
+        # equal to isolate this guard. Must refuse as before.
+        fake = FakeRDPTransport()
+        c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_B]))
+        c.attach(TAB_B)
+        for t in fake.tabs:
+            if t["actor"] == TAB_B:
+                t["url"] = "http://localhost/other.html"
+            if t["actor"] == TAB_C:
+                t["url"] = "http://localhost/page-b.html"
+        fake.fail_evals = 1
         with self.assertRaises(RDPError) as cm:
             c.evaluate("1+1")
+        self.assertIn("refusing", str(cm.exception))
+        c.close()
+
+    def test_reattach_count_changed_refused(self):
+        # Tab count changed since pin: ids may have shifted, so the
+        # nav-aware allowance fails closed.
+        fake = FakeRDPTransport()
+        c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_B]))
+        c.attach(TAB_B)
+        for t in fake.tabs:
+            if t["actor"] == TAB_B:
+                t["url"] = "http://localhost/other.html"
+        fake.tabs.append(
+            {"actor": "server1.conn0.tabDescriptor9",
+             "url": "http://localhost/extra.html",
+             "title": "Extra", "selected": False})
+        fake.fail_evals = 1
+        with self.assertRaises(RDPError) as cm:
+            c.evaluate("1+1")
+        self.assertIn("refusing", str(cm.exception))
+        c.close()
+
+    def test_reattach_url_substr_refused(self):
+        # wait_load passes its url_substr: a navigation to a URL
+        # that does not contain it is refused; a matching one is
+        # allowed (same shape, only this guard differs).
+        fake = FakeRDPTransport()
+        c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_B]))
+        c.attach(TAB_B)
+        for t in fake.tabs:
+            if t["actor"] == TAB_B:
+                t["url"] = "http://localhost/other.html"
+        with self.assertRaises(RDPError) as cm:
+            c._reattach_pinned(expected_url_substr="page-b")
+        self.assertIn("refusing", str(cm.exception))
+        c._reattach_pinned(expected_url_substr="other")
+        self.assertEqual(c.desc_actor, TAB_B)
+        self.assertEqual(c._pinned_url, "http://localhost/other.html")
+        c.close()
+
+    def test_reattach_f11_flag_refused(self):
+        # F11 terminal flag set for the pinned descriptor: the
+        # nav-aware allowance must not fire on a destroyed tab.
+        fake = FakeRDPTransport()
+        c = RDPClient(0, transport=fake, scope=Scope(tab_ids=[TAB_B]))
+        c.attach(TAB_B)
+        for t in fake.tabs:
+            if t["actor"] == TAB_B:
+                t["url"] = "http://localhost/other.html"
+        c._terminal_destroyed = {"descriptor": TAB_B,
+                                 "at": "2026-11-28T00:00:00+07:00"}
+        with self.assertRaises(RDPError) as cm:
+            c._reattach_pinned()
         self.assertIn("refusing", str(cm.exception))
         c.close()
 

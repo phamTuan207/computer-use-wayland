@@ -239,6 +239,16 @@ does not block the act. Every verdict carries
 `poolScope: "top-document"` so the count is never mistaken for
 a whole-tab uniqueness proof.
 
+The same top-document limit applies to waits: `wait_for` /
+`wait_for_selector` evaluate in the top document only, so an
+element that exists only inside a shadow root or a same-origin
+iframe is invisible to them, and `gone=true` can report true for
+an element that is merely one root down. A traversing evaluate
+(walking shadow roots / frames by hand) is an unsupported
+workaround; if you use one, the hard count gate applies: count
+first with a traversing count, act only on count==1, and never
+click on first-match.
+
 ```
 rdp_client.py --port <rdp-port> --profile-marker <profile-dir> \
   --scope-url-pattern '<pattern>' act --text Action click

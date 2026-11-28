@@ -1153,6 +1153,12 @@ class RDPClient:
         self._probe_result = None
         self._pinned_tab_id = None
         self._pinned_url = ""
+        # Tab count at pin time (Fix 2, M1): the nav-aware re-attach
+        # allowance requires the count unchanged since pin, because
+        # descriptor ids are positional and a changed count means
+        # ids may have shifted. Set only in get_target on success;
+        # list_tabs must not update it (same discipline as the URL).
+        self._pinned_tab_count = None
         # F11 terminal-death flag: set by the demux skip paths when a
         # descriptor-destroyed packet for the pinned descriptor is
         # skipped. Waits check it each poll iteration and fail fast
@@ -1493,16 +1499,32 @@ class RDPClient:
         # consoleActor, and recovery must land back on THIS tab.
         self._pinned_tab_id = _canon_tab_id(self.desc_actor)
         self._pinned_url = (self._current_tab or {}).get("url", "")
+        # Fix 2 (M1): record the tab count at pin time for the
+        # nav-aware re-attach allowance. None when the tab list is
+        # empty/unknown: the allowance then fails closed.
+        self._pinned_tab_count = len(self._tabs) if self._tabs else None
         return frame
 
-    def _reattach_pinned(self):
+    def _reattach_pinned(self, expected_url_substr=None):
         """Re-attach to the SAME tab after a target swap (RT-06: closing
         DevTools kills the held consoleActor once with noSuchActor).
         Pinned by canonical tab id with URL VERIFICATION: descriptor
         ids are positional, so an id hit whose URL differs from the
         pinned URL is a different tab and is refused (fail-closed).
         URL fallback only when the id is absent. Never falls back to
-        the selected tab: selected-pick can land on the wrong tab."""
+        the selected tab: selected-pick can land on the wrong tab.
+
+        Fix 2 (M1, nav-aware allowance, scoped form only): a URL
+        change on the pinned id is ALSO the post-navigation state,
+        where the tab itself navigated and the old console actor is
+        stale. Allow the re-attach in that one shape only when ALL
+        hold: descriptor match (found by pinned id), F11 terminal
+        flag clear for the descriptor, tab count unchanged since
+        pin, pinned URL absent from the whole tab list (if the old
+        URL survives under another id, refuse as before), and, when
+        expected_url_substr is given, it is contained in the new
+        URL. The URL guard is never deleted outright; get_target
+        still applies scope/denylist guards to the new URL."""
         pin_id, pin_url = self._pinned_tab_id, self._pinned_url
         if not pin_id and not pin_url:
             raise RDPError("no pinned tab to re-attach to")
@@ -1513,10 +1535,20 @@ class RDPClient:
                         if _canon_tab_id(t.get("actor")) == pin_id), None)
             if tab is not None and pin_url \
                     and (tab.get("url") or "") != pin_url:
-                raise RDPError(
-                    f"pinned tab {pin_id!r} url changed {_redact_url(pin_url)!r} -> "
-                    f"{_redact_url(tab.get('url') or '')!r} (positional id shift?); refusing "
-                    f"re-attach, refusing selected-tab fallback")
+                new_url = tab.get("url") or ""
+                nav_aware = (
+                    self._terminal_flag_for(tab.get("actor")) is None
+                    and self._pinned_tab_count is not None
+                    and len(self._tabs) == self._pinned_tab_count
+                    and not any((t.get("url") or "") == pin_url
+                                for t in self._tabs)
+                    and (expected_url_substr is None
+                         or expected_url_substr in new_url))
+                if not nav_aware:
+                    raise RDPError(
+                        f"pinned tab {pin_id!r} url changed {_redact_url(pin_url)!r} -> "
+                        f"{_redact_url(new_url)!r} (positional id shift?); refusing "
+                        f"re-attach, refusing selected-tab fallback")
         if tab is None and pin_url:
             tab = next((t for t in self._tabs
                         if (t.get("url") or "") == pin_url), None)
@@ -1614,6 +1646,7 @@ class RDPClient:
         # instead of sending into a dead console actor.
         if self._terminal_flag_for(self.desc_actor) is not None:
             raise self._tab_destroyed_error(self.desc_actor, "evaluate")
+        actor_before = self.console_actor
         try:
             return self._evaluate_once(expr, timeout)
         except RDPError as e:
@@ -1630,6 +1663,39 @@ class RDPClient:
             self._reattach_pinned()
             self._retries += 1
             return self._evaluate_once(expr, timeout)
+        except TimeoutError:
+            # Fix 1 (M1): a stale console actor after navigation is
+            # SILENT, so _evaluate_once blocks in _recv until the
+            # socket raises TimeoutError and the noSuchActor replay
+            # branch above never runs (measured: 5017 ms median
+            # first-success, replay 0/12 on page-initiated nav).
+            # Replayable only for replay=True callers (read paths),
+            # exactly once, and only when re-attach yields a
+            # DIFFERENT console actor: same actor means the timeout
+            # was slow-but-alive JS, and re-running the script
+            # could double-execute it. act and CLI eval pass
+            # replay=False and never reach here (F1 exactly-once).
+            if not replay:
+                raise
+            # F11 terminal check first: never replay past a
+            # destroyed descriptor.
+            if self._terminal_flag_for(self.desc_actor) is not None:
+                raise self._tab_destroyed_error(self.desc_actor,
+                                                "evaluate")
+            # Buffer guard: bytes held in the receive buffer mean a
+            # partial frame (or an unconsumed complete packet) is
+            # in flight; fail closed, the caller reconnects.
+            if self.buf:
+                raise
+            # Re-attach pinned (generic form). A refusal propagates
+            # (fail loud, no replay).
+            self._reattach_pinned()
+            if self.console_actor == actor_before:
+                # Same actor: slow-but-alive, not dead. Re-raise the
+                # original timeout; do not re-run the script.
+                raise
+            self._retries += 1
+            return self._evaluate_once(expr, timeout)
 
     def _evaluate_once(self, expr, timeout=20):
         self.sock.settimeout(timeout)
@@ -1638,6 +1704,16 @@ class RDPClient:
         while True:
             m = self._recv()
             if m.get("type") == "evaluationResult":
+                # Sender guard (Fix 1, M1): after a timeout replay,
+                # a late evaluationResult from the FIRST send can
+                # arrive during the retry. Only the current console
+                # actor's result is ours; a stale one is observed
+                # and skipped so the retry returns the fresh result
+                # and the next unrelated request stays in sync.
+                # Error packets keep failing loud as before.
+                if m.get("from") != self.console_actor:
+                    self._observe_skipped(m)
+                    continue
                 if m.get("exception"):
                     raise RDPError(f"evaluate exception: {str(m)[:400]}")
                 self._actions["evaluate"] += 1
@@ -1931,7 +2007,8 @@ class RDPClient:
                 last_reattach = time.monotonic()
                 try:
                     if self._pinned_tab_id:
-                        self._reattach_pinned()
+                        self._reattach_pinned(
+                            expected_url_substr=url_substr)
                     else:
                         self.list_tabs()
                         self.get_target()
